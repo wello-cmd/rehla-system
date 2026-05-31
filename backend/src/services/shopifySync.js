@@ -51,11 +51,15 @@ class ShopifySync {
       return response.data;
     } catch (err) {
       if (err.response?.status === 429 && this.retryCount < this.maxRetries) {
-        this.retryCount++;
-        const backoffMs = Math.pow(2, this.retryCount) * 1000;
-        console.warn(`[Shopify] Rate limited. Retrying in ${backoffMs}ms (attempt ${this.retryCount})`);
-        await this.delay(backoffMs);
-        return this.shopifyRequest(endpoint, method, data);
+        try {
+          this.retryCount++;
+          const backoffMs = Math.pow(2, this.retryCount) * 1000;
+          console.warn(`[Shopify] Rate limited. Retrying in ${backoffMs}ms (attempt ${this.retryCount})`);
+          await this.delay(backoffMs);
+          return await this.shopifyRequest(endpoint, method, data);
+        } catch (retryErr) {
+          throw retryErr;
+        }
       }
       throw err;
     }
@@ -146,7 +150,7 @@ class ShopifySync {
       }
 
       const durationMs = Date.now() - startTime;
-      const { error: logErr } = await supabase.from('sync_log').insert({
+      const logWriteResponse = await supabase.from('sync_log').insert({
         products_updated: productsUpdated,
         products_skipped: productsSkipped,
         products_created: productsCreated,
@@ -155,8 +159,8 @@ class ShopifySync {
         error_details: '',
         duration_ms: durationMs
       });
-      if (logErr) {
-        console.error('[Shopify] Failed to write sync log:', logErr.message || logErr);
+      if (logWriteResponse && logWriteResponse.error) {
+        console.error('[Shopify] Failed to write sync log:', logWriteResponse.error.message || logWriteResponse.error);
       }
 
       return {
@@ -171,7 +175,7 @@ class ShopifySync {
       const errorDetails = err.response?.data ? JSON.stringify(err.response.data) : err.message;
       console.error('[Shopify] Product sync failed:', errorDetails);
 
-      const { error: logErr } = await supabase.from('sync_log').insert({
+      const logWriteResponse = await supabase.from('sync_log').insert({
         products_updated: productsUpdated,
         products_skipped: productsSkipped,
         products_created: productsCreated,
@@ -180,8 +184,8 @@ class ShopifySync {
         error_details: errorDetails,
         duration_ms: durationMs
       });
-      if (logErr) {
-        console.error('[Shopify] Failed to write sync log:', logErr.message || logErr);
+      if (logWriteResponse && logWriteResponse.error) {
+        console.error('[Shopify] Failed to write sync log:', logWriteResponse.error.message || logWriteResponse.error);
       }
 
       throw err;

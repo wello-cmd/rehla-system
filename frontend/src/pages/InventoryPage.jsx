@@ -95,6 +95,10 @@ export default function InventoryPage() {
     handleExportCSV();
   }
 
+  function handleModalContentClick(e) {
+    e.stopPropagation();
+  }
+
   useEffect(() => { fetchProducts(); }, []);
 
   async function fetchProducts() {
@@ -297,7 +301,7 @@ export default function InventoryPage() {
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={closeFormModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" onClick={handleModalContentClick}>
             <h2 className="text-title" style={STYLES.modalTitle}>
               {selectedProduct ? 'Edit Product' : 'Add Product'}
             </h2>
@@ -352,7 +356,7 @@ export default function InventoryPage() {
       {/* Barcode View Modal */}
       {showBarcodeModal && selectedProductForBarcode && (
         <div className="modal-overlay" onClick={closeBarcodeModal}>
-          <div className="modal-content" style={STYLES.barcodeModalContent} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={STYLES.barcodeModalContent} onClick={handleModalContentClick}>
             <h2 className="text-title" style={STYLES.barcodeModalTitle}>Product Barcode</h2>
             <p style={STYLES.barcodeModalProduct}>{selectedProductForBarcode.name}</p>
             <p className="font-mono" style={STYLES.barcodeModalMeta}>
