@@ -5,7 +5,7 @@ const rateLimit = (limit = 100, windowMs = 15 * 60 * 1000) => {
   const ipRequests = new Map();
 
   // Periodically clean up old IP entries to prevent memory leaks
-  setInterval(() => {
+  const intervalId = setInterval(() => {
     const now = Date.now();
     for (const [ip, requests] of ipRequests.entries()) {
       const active = requests.filter(time => now - time < windowMs);
@@ -17,7 +17,12 @@ const rateLimit = (limit = 100, windowMs = 15 * 60 * 1000) => {
     }
   }, windowMs);
 
-  return (req, res, next) => {
+  // Allow Node.js process to exit cleanly if this timer is the only thing remaining
+  if (intervalId.unref) {
+    intervalId.unref();
+  }
+
+  const middleware = (req, res, next) => {
     const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const now = Date.now();
 
@@ -38,6 +43,12 @@ const rateLimit = (limit = 100, windowMs = 15 * 60 * 1000) => {
 
     next();
   };
+
+  middleware.close = () => {
+    clearInterval(intervalId);
+  };
+
+  return middleware;
 };
 
 module.exports = rateLimit;

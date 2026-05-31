@@ -57,7 +57,7 @@ class ShopifySync {
         try {
           await this.delay(backoffMs);
         } catch (delayErr) {
-          // Ignore delay failures
+          console.debug('[Shopify] Retry delay interrupted:', delayErr.message || delayErr);
         }
         return this.shopifyRequest(endpoint, method, data);
       }
@@ -80,6 +80,7 @@ class ShopifySync {
     let syncStatus = 'success';
     let errorDetails = '';
 
+    let syncError = null;
     try {
       let hasNextPage = true;
       let pageInfo = null;
@@ -151,6 +152,7 @@ class ShopifySync {
       syncStatus = 'failed';
       errorDetails = err.response?.data ? JSON.stringify(err.response.data) : err.message;
       console.error('[Shopify] Product sync failed:', errorDetails);
+      syncError = err;
     }
 
     const durationMs = Date.now() - startTime;
@@ -168,13 +170,16 @@ class ShopifySync {
       console.error('[Shopify] Failed to write sync log:', logErr.message || logErr);
     }
 
+    if (syncError) {
+      throw syncError;
+    }
+
     return {
       success: syncStatus === 'success',
       productsUpdated,
       productsSkipped,
       productsCreated,
-      durationMs,
-      error: errorDetails || undefined
+      durationMs
     };
   }
 
@@ -232,7 +237,7 @@ class ShopifySync {
     } catch (err) {
       const errorMsg = err.response?.data ? JSON.stringify(err.response.data) : err.message;
       console.error('[Shopify] Order sync failed:', errorMsg);
-      return { success: false, error: errorMsg };
+      throw new Error(`Shopify order sync failed: ${errorMsg}`);
     }
   }
 
@@ -276,6 +281,7 @@ class ShopifySync {
       }
     } catch (err) {
       console.error('[Shopify Webhook] Inventory update failed:', err.message || err);
+      throw err;
     }
   }
 }

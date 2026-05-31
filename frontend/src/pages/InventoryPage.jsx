@@ -297,15 +297,16 @@ export default function InventoryPage() {
               <button className="btn btn-secondary btn-sm" onClick={() => setShowBarcodeModal(false)}>Close</button>
               <button 
                 className="btn btn-secondary btn-sm" 
-                onClick={async () => {
-                  try {
-                    const updatedProduct = await api.post(`/inventory/${selectedProductForBarcode.id}/barcode/generate`);
-                    setSelectedProductForBarcode(updatedProduct);
-                    fetchProducts();
-                    toast.success('Barcode generated successfully!');
-                  } catch (err) {
-                    toast.error('Failed to generate barcode: ' + err.message);
-                  }
+                onClick={() => {
+                  api.post(`/inventory/${selectedProductForBarcode.id}/barcode/generate`)
+                    .then(updatedProduct => {
+                      setSelectedProductForBarcode(updatedProduct);
+                      fetchProducts();
+                      toast.success('Barcode generated successfully!');
+                    })
+                    .catch(err => {
+                      toast.error('Failed to generate barcode: ' + err.message);
+                    });
                 }}
               >
                 {selectedProductForBarcode.barcode ? 'Regenerate' : 'Generate'}
