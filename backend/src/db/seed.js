@@ -24,20 +24,25 @@ async function seed() {
     if (whErr) throw whErr;
     console.log(`✓ Seeded ${whs.length} warehouses`);
 
-    const whMap = whs.reduce((acc, wh) => ({ ...acc, [wh.code]: wh.id }), {});
+    const whMap = {};
+    for (const wh of whs) {
+      whMap[wh.code] = wh.id;
+    }
 
     // 2. Seed Auth Users & User Profiles
     console.log('Seeding Auth Users & Profiles...');
+    const seedPassword = process.env.SEED_USER_PASSWORD || 'rehla123';
     const usersToCreate = [
-      { email: 'ceo@rehla.com', password: 'rehla123', name: 'Sherif CEO', staff_id: 'CEO-01', role: 'ceo', phone: '+201000000001' },
-      { email: 'admin@rehla.com', password: 'rehla123', name: 'Mostafa Admin', staff_id: 'ADMIN-01', role: 'admin', phone: '+201000000002' },
-      { email: 'worker@rehla.com', password: 'rehla123', name: 'Ahmed Worker', staff_id: 'WORKER-01', role: 'worker', phone: '+201000000003' },
-      { email: 'driver@rehla.com', password: 'rehla123', name: 'Ahmed Hassan', staff_id: 'DRIVER-01', role: 'driver', phone: '+201100000001', zone: 'Maadi' },
-      { email: 'driver2@rehla.com', password: 'rehla123', name: 'Karim Mostafa', staff_id: 'DRIVER-02', role: 'driver', phone: '+201100000002', zone: 'Zamalek' },
-      { email: 'driver3@rehla.com', password: 'rehla123', name: 'Omar Sayed', staff_id: 'DRIVER-03', role: 'driver', phone: '+201100000003', zone: '6th October' }
+      { email: 'ceo@rehla.com', password: seedPassword, name: 'Sherif CEO', staff_id: 'CEO-01', role: 'ceo', phone: '+201000000001' },
+      { email: 'admin@rehla.com', password: seedPassword, name: 'Mostafa Admin', staff_id: 'ADMIN-01', role: 'admin', phone: '+201000000002' },
+      { email: 'worker@rehla.com', password: seedPassword, name: 'Ahmed Worker', staff_id: 'WORKER-01', role: 'worker', phone: '+201000000003' },
+      { email: 'driver@rehla.com', password: seedPassword, name: 'Ahmed Hassan', staff_id: 'DRIVER-01', role: 'driver', phone: '+201100000001', zone: 'Maadi' },
+      { email: 'driver2@rehla.com', password: seedPassword, name: 'Karim Mostafa', staff_id: 'DRIVER-02', role: 'driver', phone: '+201100000002', zone: 'Zamalek' },
+      { email: 'driver3@rehla.com', password: seedPassword, name: 'Omar Sayed', staff_id: 'DRIVER-03', role: 'driver', phone: '+201100000003', zone: '6th October' }
     ];
 
     const driverProfiles = [];
+    const userLogs = [];
 
     for (const u of usersToCreate) {
       // Check if user profile already exists
@@ -58,7 +63,7 @@ async function seed() {
         });
 
         if (authError) {
-          console.warn(`[Warn] Could not create auth user for ${u.email}: ${authError.message}`);
+          userLogs.push(`[Warn] Could not create auth user for ${u.email}: ${authError.message}`);
           continue;
         }
 
@@ -80,16 +85,17 @@ async function seed() {
           await supabase.auth.admin.deleteUser(userId);
           throw profileError;
         }
-        console.log(`✓ Created user & profile: ${u.email}`);
+        userLogs.push(`✓ Created user & profile: ${u.email}`);
       } else {
         userId = existingProfile.id;
-        console.log(`- Profile already exists for: ${u.email}`);
+        userLogs.push(`- Profile already exists for: ${u.email}`);
       }
 
       if (u.role === 'driver') {
         driverProfiles.push({ user_id: userId, name: u.name, phone: u.phone, zone: u.zone });
       }
     }
+    console.log(userLogs.join('\n'));
 
     // 3. Seed Drivers
     if (driverProfiles.length > 0) {
@@ -140,6 +146,7 @@ async function seed() {
     console.log('');
   } catch (err) {
     console.error('Fatal Seeding Error:', err.message || err);
+    process.exit(1);
   }
 }
 

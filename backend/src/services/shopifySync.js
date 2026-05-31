@@ -36,9 +36,9 @@ class ShopifySync {
     if (!this.isConfigured()) {
       throw new Error('Shopify credentials not fully configured in .env');
     }
-    await this.delay(RATE_LIMIT_DELAY);
 
     try {
+      await this.delay(RATE_LIMIT_DELAY);
       const config = {
         method,
         url: `${this.baseUrl}${endpoint}`,
@@ -54,7 +54,11 @@ class ShopifySync {
         this.retryCount++;
         const backoffMs = Math.pow(2, this.retryCount) * 1000;
         console.warn(`[Shopify] Rate limited. Retrying in ${backoffMs}ms (attempt ${this.retryCount})`);
-        await this.delay(backoffMs);
+        try {
+          await this.delay(backoffMs);
+        } catch (delayErr) {
+          // Ignore delay failures
+        }
         return this.shopifyRequest(endpoint, method, data);
       }
       throw err;
@@ -150,15 +154,19 @@ class ShopifySync {
     }
 
     const durationMs = Date.now() - startTime;
-    await supabase.from('sync_log').insert({
-      products_updated: productsUpdated,
-      products_skipped: productsSkipped,
-      products_created: productsCreated,
-      triggered_by: triggeredBy,
-      status: syncStatus,
-      error_details: errorDetails,
-      duration_ms: durationMs
-    });
+    try {
+      await supabase.from('sync_log').insert({
+        products_updated: productsUpdated,
+        products_skipped: productsSkipped,
+        products_created: productsCreated,
+        triggered_by: triggeredBy,
+        status: syncStatus,
+        error_details: errorDetails,
+        duration_ms: durationMs
+      });
+    } catch (logErr) {
+      console.error('[Shopify] Failed to write sync log:', logErr.message || logErr);
+    }
 
     return {
       success: syncStatus === 'success',
@@ -206,7 +214,7 @@ class ShopifySync {
           .insert({
             shopify_order_id: shopifyId,
             customer_name: `${shopifyOrder.customer?.first_name || ''} ${shopifyOrder.customer?.last_name || ''}`.trim() || 'Shopify Customer',
-            customer_phone: shopifyOrder.customer?.phone || shopifyOrder.shipping_address?.phone || 'N/A',
+            customer_phone: shopifyOrder.customer?.phone || shopifyOrder.shipping_address?.phone || '',
             customer_email: shopifyOrder.customer?.email || '',
             items: JSON.stringify(items),
             subtotal: parseFloat(shopifyOrder.subtotal_price) || 0,
@@ -235,30 +243,39 @@ class ShopifySync {
     const inventoryItemId = payload.inventory_item_id;
     const available = payload.available;
 
-    const { data: product } = await supabase
-      .from('products')
-      .select('id, sku, stock_quantity')
-      .eq('shopify_variant_id', String(inventoryItemId))
-      .single();
-
-    if (product && available !== undefined) {
-      const prevQty = product.stock_quantity;
-      await supabase
+    try {
+      const { data: product, error: fetchErr } = await supabase
         .from('products')
-        .update({ stock_quantity: available, last_synced_at: new Date().toISOString() })
-        .eq('id', product.id);
+        .select('id, sku, stock_quantity')
+        .eq('shopify_variant_id', String(inventoryItemId))
+        .single();
 
-      if (available > prevQty) {
-        await supabase.from('inventory_log').insert({
-          product_id: product.id,
-          sku: product.sku,
-          event_type: 'restock',
-          quantity_changed: available - prevQty,
-          previous_quantity: prevQty,
-          new_quantity: available,
-          notes: 'Shopify inventory webhook'
-        });
+      if (fetchErr) throw fetchErr;
+
+      if (product && available !== undefined) {
+        const prevQty = product.stock_quantity;
+        const { error: updateErr } = await supabase
+          .from('products')
+          .update({ stock_quantity: available, last_synced_at: new Date().toISOString() })
+          .eq('id', product.id);
+
+        if (updateErr) throw updateErr;
+
+        if (available > prevQty) {
+          const { error: logErr } = await supabase.from('inventory_log').insert({
+            product_id: product.id,
+            sku: product.sku,
+            event_type: 'restock',
+            quantity_changed: available - prevQty,
+            previous_quantity: prevQty,
+            new_quantity: available,
+            notes: 'Shopify inventory webhook'
+          });
+          if (logErr) throw logErr;
+        }
       }
+    } catch (err) {
+      console.error('[Shopify Webhook] Inventory update failed:', err.message || err);
     }
   }
 }

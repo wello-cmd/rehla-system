@@ -1,5 +1,5 @@
 // Inventory Management Page — FR-WH-01 through FR-WH-15
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatNumber, getStatusColor } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
@@ -15,6 +15,11 @@ export default function InventoryPage() {
   const [syncing, setSyncing] = useState(false);
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
   const [selectedProductForBarcode, setSelectedProductForBarcode] = useState(null);
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  }
 
   useEffect(() => { fetchProducts(); }, []);
 
@@ -93,13 +98,25 @@ export default function InventoryPage() {
     setShowModal(true);
   }
 
-  const filtered = products.filter(p =>
-    p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    return products.filter(p =>
+      p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.category.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [products, searchTerm]);
 
-  const lowStockCount = products.filter(p => p.stock_quantity < 10).length;
+  const lowStockCount = useMemo(() => {
+    return products.filter(p => p.stock_quantity < 10).length;
+  }, [products]);
+
+  const totalUnits = useMemo(() => {
+    return products.reduce((s, p) => s + p.stock_quantity, 0);
+  }, [products]);
+
+  const retailValue = useMemo(() => {
+    return products.reduce((s, p) => s + p.stock_quantity * p.price, 0);
+  }, [products]);
 
   return (
     <DashboardShell title="Inventory Management">
@@ -111,7 +128,7 @@ export default function InventoryPage() {
         </div>
         <div className="card" style={{ padding: '16px' }}>
           <p className="text-label" style={{ color: 'var(--color-text-dim)', fontSize: '10px' }}>Total Units</p>
-          <p className="font-mono" style={{ fontSize: '28px', fontWeight: 700 }}>{formatNumber(products.reduce((s, p) => s + p.stock_quantity, 0))}</p>
+          <p className="font-mono" style={{ fontSize: '28px', fontWeight: 700 }}>{formatNumber(totalUnits)}</p>
         </div>
         <div className="card" style={{ padding: '16px' }}>
           <p className="text-label" style={{ color: 'var(--color-text-dim)', fontSize: '10px' }}>Low Stock Alerts</p>
@@ -119,7 +136,7 @@ export default function InventoryPage() {
         </div>
         <div className="card" style={{ padding: '16px' }}>
           <p className="text-label" style={{ color: 'var(--color-text-dim)', fontSize: '10px' }}>Retail Value</p>
-          <p className="font-mono" style={{ fontSize: '18px', fontWeight: 700 }}>{formatEGP(products.reduce((s, p) => s + p.stock_quantity * p.price, 0))}</p>
+          <p className="font-mono" style={{ fontSize: '18px', fontWeight: 700 }}>{formatEGP(retailValue)}</p>
         </div>
       </div>
 
@@ -147,7 +164,7 @@ export default function InventoryPage() {
       <div className="card table-container" style={{ padding: 0 }}>
         {loading ? (
           <div style={{ padding: '40px' }}>
-            {[...Array(5)].map((_, i) => <div key={i} className="skeleton" style={{ height: '40px', marginBottom: '8px' }}></div>)}
+            {[...Array(5)].map((_, i) => <div key={`skeleton-${i}`} className="skeleton" style={{ height: '40px', marginBottom: '8px' }}></div>)}
           </div>
         ) : (
           <table className="data-table">
@@ -214,34 +231,35 @@ export default function InventoryPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
                   <label className="text-label" style={{ display: 'block', marginBottom: '6px', color: 'var(--color-text-dim)' }}>SKU</label>
-                  <input className="input" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} required disabled={!!selectedProduct} />
+                  <input className="input" name="sku" value={form.sku} onChange={handleChange} required disabled={!!selectedProduct} />
                 </div>
                 <div>
                   <label className="text-label" style={{ display: 'block', marginBottom: '6px', color: 'var(--color-text-dim)' }}>Name</label>
-                  <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                  <input className="input" name="name" value={form.name} onChange={handleChange} required />
                 </div>
                 <div>
                   <label className="text-label" style={{ display: 'block', marginBottom: '6px', color: 'var(--color-text-dim)' }}>Price (EGP)</label>
-                  <input className="input" type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
+                  <input className="input" name="price" type="number" step="0.01" value={form.price} onChange={handleChange} required />
                 </div>
                 <div>
                   <label className="text-label" style={{ display: 'block', marginBottom: '6px', color: 'var(--color-text-dim)' }}>Cost/Unit (EGP)</label>
-                  <input className="input" type="number" step="0.01" value={form.cost_per_unit} onChange={(e) => setForm({ ...form, cost_per_unit: e.target.value })} />
+                  <input className="input" name="cost_per_unit" type="number" step="0.01" value={form.cost_per_unit} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="text-label" style={{ display: 'block', marginBottom: '6px', color: 'var(--color-text-dim)' }}>Stock Quantity</label>
-                  <input className="input" type="number" value={form.stock_quantity} onChange={(e) => setForm({ ...form, stock_quantity: e.target.value })} />
+                  <input className="input" name="stock_quantity" type="number" value={form.stock_quantity} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="text-label" style={{ display: 'block', marginBottom: '6px', color: 'var(--color-text-dim)' }}>Category</label>
-                  <input className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+                  <input className="input" name="category" value={form.category} onChange={handleChange} />
                 </div>
                 <div>
                   <label className="text-label" style={{ display: 'block', marginBottom: '6px', color: 'var(--color-text-dim)' }}>Barcode</label>
                   <input 
                     className="input" 
+                    name="barcode"
                     value={form.barcode} 
-                    onChange={(e) => setForm({ ...form, barcode: e.target.value })} 
+                    onChange={handleChange} 
                     placeholder={selectedProduct ? "Barcode value" : "Optional (Auto-generated)"}
                   />
                 </div>

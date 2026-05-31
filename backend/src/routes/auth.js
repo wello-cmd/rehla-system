@@ -4,9 +4,10 @@ const router = express.Router();
 const { supabase } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
+const rateLimit = require('../middleware/rateLimiter');
 
-// POST /api/auth/login — Supabase Auth sign-in
-router.post('/login', async (req, res) => {
+// POST /api/auth/login — Supabase Auth sign-in with rate limiting
+router.post('/login', rateLimit(20, 15 * 60 * 1000), async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password required.' });

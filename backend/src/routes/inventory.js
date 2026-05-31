@@ -4,8 +4,12 @@ const router = express.Router();
 const { supabase } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
+const rateLimit = require('../middleware/rateLimiter');
 const { generateBarcode, generateBulkBarcodes } = require('../services/barcodeGenerator');
 const { stringify } = require('csv-stringify/sync');
+
+// Apply rate limiting to all inventory routes (FR-WH-01 through FR-WH-15)
+router.use(rateLimit(300, 15 * 60 * 1000)); // Max 300 requests per 15 mins per IP
 
 // GET /api/inventory — List all products (FR-WH-01)
 router.get('/', async (req, res) => {
