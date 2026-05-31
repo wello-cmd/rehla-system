@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>REHLA - Warehouse Exit</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#131313",
+                        "on-tertiary-fixed": "#1b1b1b",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "primary-container": "#000000",
+                        "surface-container": "#20201f",
+                        "secondary-fixed": "#e2e2e2",
+                        "primary-fixed": "#e2e2e2",
+                        "tertiary-fixed": "#e2e2e2",
+                        "surface-container-low": "#1c1b1b",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-fixed-variant": "#474747",
+                        "error": "#ffb4ab",
+                        "on-tertiary": "#303030",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "on-secondary-fixed-variant": "#454747",
+                        "surface-tint": "#c6c6c6",
+                        "secondary": "#c6c6c7",
+                        "inverse-surface": "#e5e2e1",
+                        "tertiary-container": "#000000",
+                        "on-primary-fixed-variant": "#474747",
+                        "on-secondary-container": "#b4b5b5",
+                        "on-surface-variant": "#cfc4c5",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#393939",
+                        "tertiary": "#c6c6c6",
+                        "on-primary": "#303030",
+                        "outline": "#988e90",
+                        "on-error": "#690005",
+                        "on-primary-container": "#757575",
+                        "background": "#131313",
+                        "on-tertiary-container": "#757575",
+                        "on-background": "#e5e2e1",
+                        "surface-container-highest": "#353535",
+                        "primary": "#c6c6c6",
+                        "surface-dim": "#131313",
+                        "error-container": "#93000a",
+                        "surface-variant": "#353535",
+                        "outline-variant": "#4c4546",
+                        "surface-container-high": "#2a2a2a",
+                        "inverse-primary": "#5e5e5e",
+                        "on-surface": "#e5e2e1",
+                        "secondary-container": "#454747",
+                        "on-secondary": "#2f3131",
+                        "on-primary-fixed": "#1b1b1b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "8px",
+                        "gutter": "16px",
+                        "touch-target": "44px",
+                        "sidebar-width": "280px",
+                        "container-margin": "24px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800"}],
+                        "data-mono": ["14px", {"lineHeight": "1.5", "fontWeight": "500"}],
+                        "label-sm": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "headline-md": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Hide scrollbar for clean mobile look */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        body {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Scanning line animation */
+        @keyframes scan {
+            0% { top: 10%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 90%; opacity: 0; }
+        }
+        .scan-line {
+            position: absolute;
+            width: 80%;
+            height: 2px;
+            background-color: #c6c6c6; /* primary color */
+            box-shadow: 0 0 8px #c6c6c6;
+            animation: scan 2s infinite linear;
+            left: 10%;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md text-body-md antialiased min-h-screen flex flex-col">
+<!-- Custom Top Header for Mobile Entry -->
+<header class="flex justify-between items-center px-container-margin py-4 border-b border-outline-variant bg-surface sticky top-0 z-40">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="deployed_code" data-weight="fill" style="font-variation-settings: 'FILL' 1;">deployed_code</span>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface tracking-tight">REHLA</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mt-1">Warehouse Exit</p>
+</div>
+</div>
+<div class="text-right">
+<span class="font-data-mono text-data-mono text-on-surface-variant bg-surface-container-low px-2 py-1 border border-outline-variant" id="current-date"></span>
+</div>
+</header>
+<!-- Main Scrollable Content -->
+<main class="flex-grow flex flex-col pb-32">
+<!-- Scanner Input Area (Brutalist Target) -->
+<section class="px-container-margin mt-6">
+<div class="border border-outline-variant bg-surface-container-low p-8 flex flex-col items-center justify-center h-56 cursor-pointer hover:bg-surface-container transition-colors relative overflow-hidden group">
+<!-- Brutalist scanning brackets -->
+<div class="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-on-surface"></div>
+<div class="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-on-surface"></div>
+<div class="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-on-surface"></div>
+<div class="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-on-surface"></div>
+<!-- Animated scan line -->
+<div class="scan-line"></div>
+<span class="material-symbols-outlined text-[48px] text-on-surface-variant mb-4 group-hover:text-primary transition-colors z-10" data-icon="qr_code_scanner">qr_code_scanner</span>
+<p class="font-label-sm text-label-sm text-on-surface uppercase tracking-widest z-10">Tap to Scan Barcode</p>
+<!-- Hidden input for actual scanning if needed -->
+<input aria-label="Barcode Input" class="absolute inset-0 opacity-0 cursor-pointer" type="text"/>
+</div>
+</section>
+<!-- Product Card (Scanned Item) -->
+<section class="px-container-margin mt-6">
+<div id="scanned-product-container" class="border border-outline-variant bg-surface p-1 relative hidden">
+<!-- Status Badge -->
+<div class="absolute -top-3 -right-3 bg-primary text-surface px-3 py-1 font-label-sm text-label-sm uppercase font-black tracking-wider border border-surface z-10 shadow-[2px_2px_0px_#e5e2e1]">
+                    Scanned
+                </div>
+<div class="flex flex-row p-3 gap-4 border border-outline-variant bg-surface-container-lowest">
+<!-- Product Image Placeholder -->
+<div id="exit-product-image" class="w-24 h-24 bg-surface-container-high border border-outline-variant flex-shrink-0 bg-cover bg-center" style="background-image: url('');"></div>
+<div class="flex flex-col justify-between flex-grow py-1">
+<div>
+<h2 id="exit-product-title" class="font-headline-md text-headline-md font-bold text-on-surface leading-tight">Oversized Hoodie</h2>
+<p id="exit-product-sku" class="font-data-mono text-data-mono text-on-surface-variant mt-1 text-xs">SKU: RH-HD-01</p>
+<p id="exit-product-wh-brand" class="font-label-sm text-label-sm text-primary uppercase mt-1 text-[11px] tracking-wider font-bold">REHLA • ZAMALEK HUB</p>
+</div>
+<div class="flex justify-between items-end mt-2 pt-2 border-t border-outline-variant">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Stock</span>
+<span id="exit-product-stock" class="font-data-mono text-data-mono font-bold text-on-surface">42</span>
+</div>
+<div class="flex flex-col text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Qty</span>
+<div class="flex items-center gap-2 mt-1">
+<button id="exit-qty-minus" class="w-6 h-6 border border-outline-variant flex items-center justify-center bg-surface-container hover:bg-surface-bright text-on-surface">-</button>
+<span id="exit-product-qty" class="font-data-mono text-data-mono font-bold text-primary text-lg w-6 text-center">1</span>
+<button id="exit-qty-plus" class="w-6 h-6 border border-outline-variant flex items-center justify-center bg-surface-container hover:bg-surface-bright text-on-surface">+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="scanned-placeholder" class="border border-dashed border-outline-variant bg-surface-container-lowest p-8 text-center text-on-surface-variant font-label-sm uppercase tracking-wider">
+    No scanned item. Tap scanner above to simulate scanning.
+</div>
+</section>
+<!-- Primary Action Button -->
+<section class="px-container-margin mt-8">
+<button id="confirm-exit-btn" disabled class="w-full bg-on-surface text-surface py-5 font-headline-md text-headline-md font-black uppercase tracking-widest hover:bg-primary transition-colors flex items-center justify-center gap-3 border-2 border-transparent active:border-surface active:bg-surface-container-lowest active:text-on-surface shadow-[0_0_20px_rgba(229,226,225,0.1)] opacity-50">
+<span class="material-symbols-outlined" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                Confirm Exit
+            </button>
+</section>
+<!-- Recent Log -->
+<section class="px-container-margin mt-10 mb-6">
+<div class="flex items-center justify-between mb-4 pb-2 border-b border-outline-variant">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]" data-icon="history">history</span>
+                    Today's Log
+                </h3>
+<span id="exit-log-count" class="font-data-mono text-data-mono text-on-surface-variant text-xs">0 Exits</span>
+</div>
+<div id="warehouse-exit-log" class="flex flex-col gap-0 border border-outline-variant bg-surface-container-lowest">
+<!-- Log items populated dynamically -->
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar (Generated from JSON, Active: Stock) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl border-t border-outline-variant dark:border-outline-variant bg-surface/80 dark:bg-surface-container/80 backdrop-blur-md flex justify-around items-center h-16 px-4 pb-safe shadow-lg dark:shadow-none">
+<!-- Home -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 font-label-sm text-label-sm w-16" href="../main_financial_dashboard/code.html">
+<span class="material-symbols-outlined mb-1" data-icon="home">home</span>
+<span class="text-[10px]">Home</span>
+</a>
+<!-- POS -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 font-label-sm text-label-sm w-16" href="../checkout_receipt/code.html">
+<span class="material-symbols-outlined mb-1" data-icon="barcode_scanner">barcode_scanner</span>
+<span class="text-[10px]">POS</span>
+</a>
+<!-- Stock (ACTIVE) -->
+<a class="flex flex-col items-center justify-center text-on-surface dark:text-on-surface font-black font-label-sm text-label-sm scale-95 transition-transform w-16" href="../warehouse_exit_mobile/code.html">
+<span class="material-symbols-outlined mb-1 text-primary" data-icon="warehouse" data-weight="fill" style="font-variation-settings: 'FILL' 1;">warehouse</span>
+<span class="text-[10px] text-primary">Stock</span>
+</a>
+<!-- Orders -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 font-label-sm text-label-sm w-16" href="../driver_delivery_view_mobile/code.html">
+<span class="material-symbols-outlined mb-1" data-icon="local_shipping">local_shipping</span>
+<span class="text-[10px]">Orders</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 font-label-sm text-label-sm w-16" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="account_circle">account_circle</span>
+<span class="text-[10px]">Profile</span>
+</a>
+</nav>
+<script src="../auth-client.js"></script>
+<script>
+    // Validate role
+    Auth.checkAuth(['worker', 'admin', 'ceo']);
+
+    // Simple script to set today's date in JetBrains Mono format
+    const dateElement = document.getElementById('current-date');
+    const today = new Date();
+    const options = { day: '2-digit', month: 'short', year: '2-digit' };
+    dateElement.textContent = today.toLocaleDateString('en-GB', options).toUpperCase().replace(/ /g, ' ');
+
+    let products = [];
+    let scannedProduct = null;
+    let scanQty = 1;
+
+    async function loadExits() {
+        try {
+            products = await Auth.apiRequest('/api/inventory');
+            const exits = await Auth.apiRequest('/api/warehouse/exits');
+            
+            // Render logs
+            const logContainer = document.getElementById('warehouse-exit-log');
+            logContainer.innerHTML = '';
+            document.getElementById('exit-log-count').textContent = `${exits.length} Exits`;
+
+            exits.forEach(exit => {
+                const row = document.createElement('div');
+                row.className = 'flex justify-between items-center p-4 border-b border-outline-variant last:border-b-0 hover:bg-surface-container-low transition-colors';
+                
+                const timeStr = new Date(exit.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                const whDisplay = exit.warehouse_code ? `[${exit.warehouse_code}]` : '';
+
+                row.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-8 h-8 rounded-none border border-outline-variant bg-surface-bright flex items-center justify-center text-on-surface">
+                            <span class="material-symbols-outlined text-[16px]">output</span>
+                        </div>
+                        <div>
+                            <p class="font-data-mono text-data-mono text-on-surface font-bold text-sm">
+                                ${exit.sku} <span class="text-on-surface-variant text-xs font-normal ml-2">x${exit.quantity}</span>
+                            </p>
+                            <p class="font-label-sm text-label-sm text-on-surface-variant mt-1">
+                                ${exit.handler_name} • <span class="text-primary">${exit.status.toUpperCase()}</span> <span class="text-on-surface-variant/70 text-[10px] font-data-mono ml-1.5">${whDisplay}</span>
+                            </p>
+                        </div>
+                    </div>
+                    <span class="font-data-mono text-data-mono text-on-surface-variant text-xs">${timeStr}</span>
+                `;
+                logContainer.appendChild(row);
+            });
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    // Tap to Scan logic (Mocking scan with prompt)
+    const scanTrigger = document.querySelector('section.cursor-pointer');
+    scanTrigger.addEventListener('click', () => {
+        if (products.length === 0) return;
+        const optionsList = products.map((p, idx) => {
+            const wh = p.warehouse_code ? `[${p.warehouse_code}]` : '[UNASSIGNED]';
+            return `${idx + 1}. ${p.sku} (${p.name}) - ${p.brand || 'REHLA'} ${wh}`;
+        }).join('\n');
+        const selection = prompt(`Simulate Barcode Scan. Select a product by number or SKU:\n\n${optionsList}`);
+        
+        if (!selection) return;
+
+        let found = products.find(p => p.sku === selection.trim().toUpperCase());
+        if (!found) {
+            const num = parseInt(selection) - 1;
+            if (num >= 0 && num < products.length) {
+                found = products[num];
+            }
+        }
+
+        if (found) {
+            scannedProduct = found;
+            scanQty = 1;
+            renderScannedCard();
+        } else {
+            alert('Invalid product selection.');
+        }
+    });
+
+    function renderScannedCard() {
+        if (!scannedProduct) return;
+        document.getElementById('scanned-placeholder').classList.add('hidden');
+        
+        const card = document.getElementById('scanned-product-container');
+        card.classList.remove('hidden');
+        
+        document.getElementById('exit-product-image').style.backgroundImage = `url('${scannedProduct.image_url}')`;
+        document.getElementById('exit-product-title').textContent = scannedProduct.name;
+        document.getElementById('exit-product-sku').textContent = `SKU: ${scannedProduct.sku}`;
+        
+        const whNameText = scannedProduct.warehouse_name ? `${scannedProduct.warehouse_name} (${scannedProduct.warehouse_code})` : 'Unassigned';
+        document.getElementById('exit-product-wh-brand').textContent = `${scannedProduct.brand || 'REHLA'} • ${whNameText}`;
+        
+        document.getElementById('exit-product-stock').textContent = scannedProduct.stock_quantity;
+        document.getElementById('exit-product-qty').textContent = scanQty;
+
+        // Enable confirm button
+        const confirmBtn = document.getElementById('confirm-exit-btn');
+        confirmBtn.disabled = false;
+        confirmBtn.classList.remove('opacity-50');
+    }
+
+    // Qty triggers
+    document.getElementById('exit-qty-minus').addEventListener('click', () => {
+        if (scanQty > 1) {
+            scanQty--;
+            document.getElementById('exit-product-qty').textContent = scanQty;
+        }
+    });
+
+    document.getElementById('exit-qty-plus').addEventListener('click', () => {
+        if (scannedProduct && scanQty < scannedProduct.stock_quantity) {
+            scanQty++;
+            document.getElementById('exit-product-qty').textContent = scanQty;
+        } else {
+            alert('Cannot exceed available warehouse stock.');
+        }
+    });
+
+    // Confirm Exit API trigger
+    document.getElementById('confirm-exit-btn').addEventListener('click', async () => {
+        if (!scannedProduct) return;
+        try {
+            await Auth.apiRequest('/api/warehouse/exits', {
+                method: 'POST',
+                body: JSON.stringify({
+                    sku: scannedProduct.sku,
+                    quantity: scanQty
+                })
+            });
+
+            alert('Exit confirmed successfully!');
+            // Reset scan view
+            scannedProduct = null;
+            scanQty = 1;
+            document.getElementById('scanned-product-container').classList.add('hidden');
+            document.getElementById('scanned-placeholder').classList.remove('hidden');
+            
+            const confirmBtn = document.getElementById('confirm-exit-btn');
+            confirmBtn.disabled = true;
+            confirmBtn.classList.add('opacity-50');
+
+            await loadExits();
+        } catch (err) {
+            alert('Confirm Exit failed: ' + err.message);
+        }
+    });
+
+    // Load exits
+    loadExits();
+</script>
+</body></html>

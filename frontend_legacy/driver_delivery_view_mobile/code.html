@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Driver Mobile View - REHLA</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#131313",
+                        "on-tertiary-fixed": "#1b1b1b",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "primary-container": "#000000",
+                        "surface-container": "#20201f",
+                        "secondary-fixed": "#e2e2e2",
+                        "primary-fixed": "#e2e2e2",
+                        "tertiary-fixed": "#e2e2e2",
+                        "surface-container-low": "#1c1b1b",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-fixed-variant": "#474747",
+                        "error": "#ffb4ab",
+                        "on-tertiary": "#303030",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "on-secondary-fixed-variant": "#454747",
+                        "surface-tint": "#c6c6c6",
+                        "secondary": "#c6c6c7",
+                        "inverse-surface": "#e5e2e1",
+                        "tertiary-container": "#000000",
+                        "on-primary-fixed-variant": "#474747",
+                        "on-secondary-container": "#b4b5b5",
+                        "on-surface-variant": "#cfc4c5",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#393939",
+                        "tertiary": "#c6c6c6",
+                        "on-primary": "#303030",
+                        "outline": "#988e90",
+                        "on-error": "#690005",
+                        "on-primary-container": "#757575",
+                        "background": "#131313",
+                        "on-tertiary-container": "#757575",
+                        "on-background": "#e5e2e1",
+                        "surface-container-highest": "#353535",
+                        "primary": "#c6c6c6",
+                        "surface-dim": "#131313",
+                        "error-container": "#93000a",
+                        "surface-variant": "#353535",
+                        "outline-variant": "#4c4546",
+                        "surface-container-high": "#2a2a2a",
+                        "inverse-primary": "#5e5e5e",
+                        "on-surface": "#e5e2e1",
+                        "secondary-container": "#454747",
+                        "on-secondary": "#2f3131",
+                        "on-primary-fixed": "#1b1b1b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "8px",
+                        "gutter": "16px",
+                        "touch-target": "44px",
+                        "sidebar-width": "280px",
+                        "container-margin": "24px",
+                        "safe": "env(safe-area-inset-bottom)"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800" }],
+                        "data-mono": ["14px", { "lineHeight": "1.5", "fontWeight": "500" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md text-body-md antialiased min-h-screen flex flex-col md:hidden pb-24">
+<!-- Header Section -->
+<header class="bg-surface sticky top-0 z-40 border-b border-outline-variant px-container-margin py-container-margin flex flex-col gap-4">
+<div class="flex justify-between items-start w-full">
+<div>
+<h1 id="driver-profile-name" class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Ahmed Hassan</h1>
+<p id="today-date-text" class="font-body-md text-body-md text-on-surface-variant">Today, Oct 24</p>
+</div>
+<div class="h-10 w-10 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center overflow-hidden">
+<img alt="Driver Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDaQ9TzulfLgSMtZysPja-01J7SpUjsLGJ6k9mZnlKZoGz-6haECBAMeAIKnn_PQ065P3NouQy5QajEfK-CIHCGM_yrMBqEf11G4lDoRPpIfL8qu0YH9X3eaeZbDvFjufJKNxTH0OrUIX9Xjgz39x0lIb-6YCFS5yRpKH9tm3Nfi00gPtM_aLeiJ-NXbSGKFts_g985XylIQyz5pX_gQFIVqDLEPqWY5vFMoNhFsUpH2zWnLUdub1Ny1mc7VbBpPr3Et9f1lIOsNww"/>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="bg-surface-container border border-outline-variant rounded p-3 flex flex-col items-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Assigned</span>
+<span id="stat-driver-assigned" class="font-headline-md text-headline-md text-on-surface">0</span>
+</div>
+<div class="bg-surface-container border border-outline-variant rounded p-3 flex flex-col items-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Completed</span>
+<span id="stat-driver-completed" class="font-headline-md text-headline-md text-primary">0</span>
+</div>
+<div class="bg-surface-container border border-outline-variant rounded p-3 flex flex-col items-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Failed</span>
+<span id="stat-driver-failed" class="font-headline-md text-headline-md text-error">0</span>
+</div>
+</div>
+</header>
+<!-- Main Content - Order List -->
+<main class="flex-1 px-gutter py-container-margin flex flex-col gap-4">
+<!-- Section Title -->
+<div class="flex items-center justify-between mb-2">
+<h2 class="font-headline-md text-headline-md text-on-surface">Active Deliveries</h2>
+</div>
+<div id="driver-deliveries-list" class="flex flex-col gap-4">
+<!-- Loaded dynamically -->
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl bg-surface/80 dark:bg-surface-container/80 backdrop-blur-md border-t border-outline-variant dark:border-outline-variant shadow-lg dark:shadow-none flex justify-around items-center h-16 px-4 pb-safe">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 w-16" href="../main_financial_dashboard/code.html">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-sm text-label-sm mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 w-16" href="../checkout_receipt/code.html">
+<span class="material-symbols-outlined">barcode_scanner</span>
+<span class="font-label-sm text-label-sm mt-1">POS</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 w-16" href="../warehouse_exit_mobile/code.html">
+<span class="material-symbols-outlined">warehouse</span>
+<span class="font-label-sm text-label-sm mt-1">Stock</span>
+</a>
+<!-- Active Tab -->
+<a class="flex flex-col items-center justify-center text-on-surface dark:text-on-surface font-black hover:opacity-100 scale-95 transition-transform w-16" href="../driver_delivery_view_mobile/code.html">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">local_shipping</span>
+<span class="font-label-sm text-label-sm mt-1 font-bold">Orders</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 w-16" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="font-label-sm text-label-sm mt-1">Profile</span>
+</a>
+</nav>
+<script src="../auth-client.js"></script>
+<script>
+    // Validate role
+    Auth.checkAuth(['driver']);
+
+    const user = Auth.getUser();
+    document.getElementById('driver-profile-name').textContent = user ? user.name : 'Driver';
+    
+    // Set date
+    const todayDate = new Date();
+    document.getElementById('today-date-text').textContent = `Today, ${todayDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}`;
+
+    let deliveries = [];
+
+    async function loadDriverDeliveries() {
+        try {
+            deliveries = await Auth.apiRequest('/api/deliveries');
+            renderDriverStats();
+            renderDeliveriesList();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function renderDriverStats() {
+        const assigned = deliveries.filter(d => ['assigned', 'journey_started', 'out_for_delivery'].includes(d.status)).length;
+        const completed = deliveries.filter(d => d.status === 'delivered').length;
+        const failed = deliveries.filter(d => d.status === 'failed').length;
+
+        document.getElementById('stat-driver-assigned').textContent = assigned;
+        document.getElementById('stat-driver-completed').textContent = completed;
+        document.getElementById('stat-driver-failed').textContent = failed;
+    }
+
+    function renderDeliveriesList() {
+        const container = document.getElementById('driver-deliveries-list');
+        container.innerHTML = '';
+
+        const active = deliveries.filter(d => !['delivered', 'failed'].includes(d.status));
+        if (active.length === 0) {
+            container.innerHTML = `
+                <div class="border border-dashed border-outline-variant bg-surface-container p-8 text-center text-on-surface-variant font-label-sm uppercase tracking-wider">
+                    No active deliveries assigned to you.
+                </div>
+            `;
+            return;
+        }
+
+        active.forEach(d => {
+            const card = document.createElement('article');
+            card.className = `bg-surface-container border border-outline-variant rounded-lg p-4 flex flex-col gap-4 relative shadow-[4px_4px_0px_#ffffff]`;
+            
+            const isCOD = d.payment_method === 'cash';
+            const codBadge = isCOD 
+                ? `<div class="bg-primary-container border border-primary px-3 py-1.5 flex flex-col items-end">
+                     <span class="font-label-sm text-label-sm text-on-primary-container">COD AMOUNT</span>
+                     <span class="font-data-mono text-data-mono text-primary font-bold">EGP ${(d.cash_to_collect || d.total_amount || 0).toLocaleString('en-US')}</span>
+                   </div>`
+                : `<div class="bg-surface border border-outline-variant px-3 py-1.5 flex flex-col items-end">
+                     <span class="font-label-sm text-label-sm text-on-surface-variant">PREPAID</span>
+                     <span class="font-data-mono text-data-mono text-on-surface">EGP 0.00</span>
+                   </div>`;
+
+            // Dynamic Action Button based on status
+            let buttonsHtml = '';
+            if (d.status === 'assigned') {
+                buttonsHtml = `
+                    <button onclick="updateStatus(${d.id}, 'journey_started')" class="col-span-2 bg-primary text-on-primary font-label-sm text-label-sm py-3 rounded uppercase tracking-wider flex items-center justify-center gap-2 border border-transparent active:opacity-80">
+                        <span class="material-symbols-outlined text-[18px]">directions_run</span>
+                        Start Journey
+                    </button>
+                `;
+            } else if (d.status === 'journey_started') {
+                buttonsHtml = `
+                    <button onclick="updateStatus(${d.id}, 'out_for_delivery')" class="col-span-2 bg-[#2563EB] text-white font-label-sm text-label-sm py-3 rounded uppercase tracking-wider flex items-center justify-center gap-2 border border-transparent active:opacity-80">
+                        <span class="material-symbols-outlined text-[18px]">local_shipping</span>
+                        Out for Delivery
+                    </button>
+                `;
+            } else if (d.status === 'out_for_delivery') {
+                buttonsHtml = `
+                    <button onclick="updateStatus(${d.id}, 'delivered')" class="bg-[#16A34A] text-white font-label-sm text-label-sm py-3 rounded uppercase tracking-wider flex items-center justify-center gap-2 border border-transparent active:opacity-80">
+                        <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                        Delivered
+                    </button>
+                    <button onclick="updateStatus(${d.id}, 'failed')" class="bg-error text-on-error font-label-sm text-label-sm py-3 rounded uppercase tracking-wider flex items-center justify-center gap-2 border border-error active:bg-error-container">
+                        <span class="material-symbols-outlined text-[18px]">cancel</span>
+                        Failed
+                    </button>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="flex justify-between items-start border-b border-outline-variant pb-3">
+                    <div class="flex flex-col">
+                        <div class="flex items-center gap-2">
+                            <span class="font-label-sm text-label-sm text-on-surface-variant">ORDER ID</span>
+                            ${isCOD ? '' : '<span class="material-symbols-outlined text-[14px] text-[#96BF48] font-bold">local_mall</span>'}
+                        </div>
+                        <span class="font-data-mono text-data-mono text-on-surface text-lg">#RH-${d.order_id}</span>
+                    </div>
+                    ${codBadge}
+                </div>
+                <div class="flex flex-col gap-3">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-on-surface-variant">person</span>
+                        <span class="font-headline-md text-headline-md text-on-surface">${d.customer_name || 'Walk-in'}</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="material-symbols-outlined text-on-surface-variant mt-1">location_on</span>
+                        <div class="flex flex-col">
+                            <span class="font-body-md text-body-md text-on-surface">${d.customer_address}</span>
+                        </div>
+                    </div>
+                    ${d.customer_phone ? `
+                    <a class="flex items-center gap-3 mt-2 bg-surface border border-outline-variant p-3 rounded hover:bg-surface-container-high transition-colors" href="tel:${d.customer_phone}">
+                        <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">call</span>
+                        <span class="font-body-md text-body-md text-primary font-bold">${d.customer_phone}</span>
+                    </a>` : ''}
+                </div>
+                <div class="grid grid-cols-2 gap-2 pt-2">
+                    ${buttonsHtml}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    async function updateStatus(deliveryId, nextStatus) {
+        let notes = '';
+        if (nextStatus === 'failed') {
+            notes = prompt('Please enter failure reason code:');
+            if (notes === null) return; // cancel
+        }
+
+        try {
+            await Auth.apiRequest(`/api/deliveries/${deliveryId}/status`, {
+                method: 'PUT',
+                body: JSON.stringify({ status: nextStatus, notes })
+            });
+            alert(`Delivery updated to ${nextStatus.replace('_', ' ').toUpperCase()}`);
+            await loadDriverDeliveries();
+        } catch (err) {
+            alert('Failed to update status: ' + err.message);
+        }
+    }
+
+    // Load initial deliveries
+    loadDriverDeliveries();
+</script>
+</body></html>
+</body></html>

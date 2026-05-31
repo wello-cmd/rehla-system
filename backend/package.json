@@ -1,0 +1,27 @@
+{
+  "name": "rehla-backend",
+  "version": "2.0.0",
+  "description": "Rehla Management System — Backend API (Supabase + Express)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "migrate": "node src/db/migrate.js",
+    "seed": "node src/db/seed.js"
+  },
+  "dependencies": {
+    "@shopify/shopify-api": "^11.0.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "axios": "^1.7.0",
+    "bcryptjs": "^2.4.3",
+    "bwip-js": "^4.5.0",
+    "cors": "^2.8.5",
+    "csv-stringify": "^6.5.0",
+    "dotenv": "^16.4.0",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "node-cron": "^3.0.3",
+    "pdfkit": "^0.15.0",
+    "uuid": "^10.0.0"
+  }
+}

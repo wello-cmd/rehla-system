@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>REHLA - Invoice Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface": "#131313",
+                        "on-tertiary-fixed": "#1b1b1b",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "primary-container": "#000000",
+                        "surface-container": "#20201f",
+                        "secondary-fixed": "#e2e2e2",
+                        "primary-fixed": "#e2e2e2",
+                        "tertiary-fixed": "#e2e2e2",
+                        "surface-container-low": "#1c1b1b",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-fixed-variant": "#474747",
+                        "error": "#ffb4ab",
+                        "on-tertiary": "#303030",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "on-secondary-fixed-variant": "#454747",
+                        "surface-tint": "#c6c6c6",
+                        "secondary": "#c6c6c7",
+                        "inverse-surface": "#e5e2e1",
+                        "tertiary-container": "#000000",
+                        "on-primary-fixed-variant": "#474747",
+                        "on-secondary-container": "#b4b5b5",
+                        "on-surface-variant": "#cfc4c5",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#393939",
+                        "tertiary": "#c6c6c6",
+                        "on-primary": "#303030",
+                        "outline": "#988e90",
+                        "on-error": "#690005",
+                        "on-primary-container": "#757575",
+                        "background": "#131313",
+                        "on-tertiary-container": "#757575",
+                        "on-background": "#e5e2e1",
+                        "surface-container-highest": "#353535",
+                        "primary": "#c6c6c6",
+                        "surface-dim": "#131313",
+                        "error-container": "#93000a",
+                        "surface-variant": "#353535",
+                        "outline-variant": "#4c4546",
+                        "surface-container-high": "#2a2a2a",
+                        "inverse-primary": "#5e5e5e",
+                        "on-surface": "#e5e2e1",
+                        "secondary-container": "#454747",
+                        "on-secondary": "#2f3131",
+                        "on-primary-fixed": "#1b1b1b"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "base": "8px",
+                        "gutter": "16px",
+                        "touch-target": "44px",
+                        "sidebar-width": "280px",
+                        "container-margin": "24px"
+                    },
+                    fontFamily: {
+                        "display-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    fontSize: {
+                        "display-lg": ["48px", { lineHeight: "1.1", letterSpacing: "-0.04em", fontWeight: "800" }],
+                        "data-mono": ["14px", { lineHeight: "1.5", fontWeight: "500" }],
+                        "label-sm": ["12px", { lineHeight: "1", letterSpacing: "0.05em", fontWeight: "600" }],
+                        "body-md": ["16px", { lineHeight: "1.6", fontWeight: "400" }],
+                        "headline-lg-mobile": ["24px", { lineHeight: "1.2", fontWeight: "700" }],
+                        "headline-md": ["20px", { lineHeight: "1.4", fontWeight: "600" }],
+                        "headline-lg": ["32px", { lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md h-screen flex overflow-hidden">
+<!-- SideNavBar -->
+<nav class="bg-surface dark:bg-surface text-primary dark:text-primary w-sidebar-width h-screen sticky left-0 top-0 border-r border-outline-variant dark:border-outline-variant flex flex-col h-full py-container-margin px-gutter hidden md:flex">
+<div class="mb-8">
+<h1 class="font-display-lg text-display-lg font-black tracking-tighter text-on-surface dark:text-on-surface uppercase">REHLA</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Management Engine</p>
+</div>
+<ul class="flex flex-col gap-2 flex-grow">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                    Dashboard
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="point_of_sale">point_of_sale</span>
+                    POS
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+                    Inventory
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 bg-on-surface text-surface dark:bg-primary-fixed dark:text-on-primary-fixed font-bold rounded-none font-label-sm text-label-sm translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+                    Invoices
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+                    Expenses
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="local_shipping">local_shipping</span>
+                    Delivery
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+                    Analytics
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+                    AI Assistant
+                </a>
+</li>
+</ul>
+<ul class="flex flex-col gap-2 mt-auto pt-4 border-t border-outline-variant">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                    Settings
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+                    Logout
+                </a>
+</li>
+</ul>
+</nav>
+<!-- Main Content -->
+<main class="flex-grow flex flex-col h-screen overflow-hidden bg-background">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center px-container-margin w-full bg-surface dark:bg-surface-container-low text-primary dark:text-primary w-full h-touch-target sticky top-0 z-40 border-b border-outline-variant dark:border-outline-variant">
+<div class="flex items-center gap-6">
+<span class="font-headline-md text-headline-md font-bold text-on-surface dark:text-on-surface md:hidden">REHLA</span>
+<div class="hidden md:flex items-center gap-4 bg-surface-container px-3 py-1.5 rounded-DEFAULT border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="search">search</span>
+<input id="search-input" class="bg-transparent border-none text-on-surface placeholder:text-on-surface-variant focus:ring-0 font-label-sm text-label-sm w-48" placeholder="Search invoices..." type="text"/>
+</div>
+</div>
+<nav class="hidden md:flex gap-6">
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-opacity font-label-sm text-label-sm" href="#">Overview</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1 font-label-sm text-label-sm opacity-80" href="#">Reports</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-opacity font-label-sm text-label-sm" href="#">History</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="hidden md:block font-label-sm text-label-sm text-on-surface bg-transparent border border-outline-variant px-4 py-1.5 hover:bg-surface-container transition-colors">Sync Status</button>
+<button class="font-label-sm text-label-sm bg-primary-fixed text-on-primary-fixed px-4 py-1.5 hover:opacity-90 transition-opacity">Quick Action</button>
+<div class="flex gap-2">
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined" data-icon="notifications">notifications</span></button>
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined" data-icon="help_outline">help_outline</span></button>
+</div>
+<img alt="User Avatar" class="w-8 h-8 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSxXsFyulKpM1IPCBwlp9pratQnrVZ5ZSY7aupQdjbzMSI7eZXHOYybIDLhAU6PKw5FgcFRY8ckjLADJuC2zRRIe9pGfdYnz9iilVeLkOKJPexcSjq1Bsx0AklKLbqF4Hf5Nj9gBzg3tZs-7ItFTn_vj_LoeUGLNm_RsQnGUWADsftlEWdS5HFlUQC5-h4InvT6vaI7KSF2plP0aGVulO2J3TZiKSCsq90igngXZqgR3W_sMeidLeHEvtPMQ5OtVHt3GstsPqCb0g"/>
+</div>
+</header>
+<!-- Page Content -->
+<div class="flex-grow overflow-y-auto p-container-margin">
+<div class="max-w-[1440px] mx-auto space-y-6">
+<!-- Header & Actions -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Invoices</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Manage billing and collections.</p>
+</div>
+<button class="bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm px-6 py-3 rounded-none uppercase flex items-center justify-center gap-2 hover:bg-white transition-colors self-start md:self-auto border border-primary-fixed">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                        Create Invoice
+                    </button>
+</div>
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="bg-surface-container border border-outline-variant p-4">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-2">Total Invoiced</p>
+<p id="total-invoiced-val" class="font-data-mono text-data-mono text-on-surface text-xl">EGP 0.00</p>
+</div>
+<div class="bg-surface-container border border-outline-variant p-4">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-2">Paid</p>
+<p id="total-paid-val" class="font-data-mono text-data-mono text-[#00FF66] text-xl">EGP 0.00</p>
+</div>
+<div class="bg-surface-container border border-outline-variant p-4 relative overflow-hidden">
+<div class="absolute inset-0 bg-error/5 z-0"></div>
+<div class="relative z-10">
+<p class="font-label-sm text-label-sm text-error uppercase mb-2">Outstanding</p>
+<p id="total-outstanding-val" class="font-data-mono text-data-mono text-error text-xl font-bold">EGP 0.00</p>
+</div>
+</div>
+<div class="bg-surface-container border border-outline-variant p-4">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-2">Overdue</p>
+<p id="total-overdue-val" class="font-data-mono text-data-mono text-on-surface text-xl">EGP 0.00</p>
+</div>
+</div>
+<!-- Table Controls -->
+<div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-surface-container-low p-3 border border-outline-variant">
+<div class="flex items-center gap-3 w-full md:w-auto">
+<div class="relative w-full md:w-48">
+<select id="status-filter" class="w-full bg-surface border border-outline-variant text-on-surface font-label-sm text-label-sm py-2 pl-3 pr-8 appearance-none focus:ring-0 focus:border-on-surface">
+<option value="All">Status: All</option>
+<option value="Paid">Paid</option>
+<option value="Unpaid">Unpaid</option>
+<option value="Overdue">Overdue</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant" data-icon="arrow_drop_down">arrow_drop_down</span>
+</div>
+<div class="relative w-full md:w-48 hidden md:block">
+<select id="client-filter" class="w-full bg-surface border border-outline-variant text-on-surface font-label-sm text-label-sm py-2 pl-3 pr-8 appearance-none focus:ring-0 focus:border-on-surface">
+<option value="All">Client: All</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant" data-icon="arrow_drop_down">arrow_drop_down</span>
+</div>
+<div class="relative w-full md:w-48 hidden md:block">
+<input id="date-filter" class="w-full bg-surface border border-outline-variant text-on-surface font-label-sm text-label-sm py-2 px-3 focus:ring-0 focus:border-on-surface [color-scheme:dark]" type="date"/>
+</div>
+</div>
+<div class="flex gap-2 w-full md:w-auto">
+<button class="bg-surface border border-outline-variant p-2 hover:bg-surface-container transition-colors text-on-surface"><span class="material-symbols-outlined" data-icon="filter_list">filter_list</span></button>
+<button class="bg-surface border border-outline-variant p-2 hover:bg-surface-container transition-colors text-on-surface"><span class="material-symbols-outlined" data-icon="download">download</span></button>
+</div>
+</div>
+<!-- Invoices Table -->
+<div class="bg-surface border border-outline-variant overflow-x-auto">
+<table class="w-full text-left border-collapse min-w-[800px]">
+<thead>
+<tr class="border-b border-outline-variant bg-surface-container-low">
+<th class="font-label-sm text-label-sm text-on-surface-variant uppercase py-3 px-4 w-24">Invoice #</th>
+<th class="font-label-sm text-label-sm text-on-surface-variant uppercase py-3 px-4">Client</th>
+<th class="font-label-sm text-label-sm text-on-surface-variant uppercase py-3 px-4">Issue Date</th>
+<th class="font-label-sm text-label-sm text-on-surface-variant uppercase py-3 px-4">Due Date</th>
+<th class="font-label-sm text-label-sm text-on-surface-variant uppercase py-3 px-4 text-right">Amount</th>
+<th class="font-label-sm text-label-sm text-on-surface-variant uppercase py-3 px-4 w-32 text-center">Status</th>
+<th class="font-label-sm text-label-sm text-on-surface-variant uppercase py-3 px-4 w-12"></th>
+</tr>
+</thead>
+<tbody id="invoices-tbody">
+</tbody>
+</table>
+</div>
+<!-- Pagination Placeholder -->
+<div class="flex justify-between items-center py-4 text-on-surface-variant">
+<span class="font-label-sm text-label-sm">Showing 1-5 of 142 Invoices</span>
+<div class="flex gap-1">
+<button class="px-2 py-1 border border-outline-variant hover:bg-surface-container disabled:opacity-50"><span class="material-symbols-outlined text-sm" data-icon="chevron_left">chevron_left</span></button>
+<button class="px-2 py-1 border border-outline-variant bg-surface-container-high text-on-surface font-data-mono text-data-mono">1</button>
+<button class="px-2 py-1 border border-outline-variant hover:bg-surface-container font-data-mono text-data-mono">2</button>
+<button class="px-2 py-1 border border-outline-variant hover:bg-surface-container font-data-mono text-data-mono">3</button>
+<button class="px-2 py-1 border border-outline-variant hover:bg-surface-container"><span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span></button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden bg-surface/80 dark:bg-surface-container/80 backdrop-blur-md text-primary dark:text-primary fixed bottom-0 w-full z-50 rounded-t-xl border-t border-outline-variant dark:border-outline-variant shadow-lg dark:shadow-none flex justify-around items-center h-16 px-4 pb-safe">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+            Home
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="barcode_scanner">barcode_scanner</span>
+            POS
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="warehouse">warehouse</span>
+            Stock
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface dark:text-on-surface font-black scale-95 transition-transform font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+            Invoices
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 hover:opacity-100 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+            Profile
+        </a>
+</nav>
+<script src="../auth-client.js"></script>
+<script>
+    // Check auth
+    if (Auth.checkAuth(['admin', 'ceo'])) {
+        document.addEventListener('DOMContentLoaded', () => {
+            loadInvoices();
+            
+            // Wire Create Invoice button
+            const buttons = Array.from(document.querySelectorAll('button'));
+            const createBtnEl = buttons.find(b => b.textContent.includes('Create Invoice'));
+            if (createBtnEl) {
+                createBtnEl.onclick = () => {
+                    window.location.href = '../invoice_creation_preview/code.html';
+                };
+            }
+
+            // Wire search and select filters
+            const searchInput = document.getElementById('search-input');
+            const statusSelect = document.getElementById('status-filter');
+            const clientSelect = document.getElementById('client-filter');
+            const dateInput = document.getElementById('date-filter');
+            
+            if (searchInput) searchInput.addEventListener('input', filterInvoices);
+            if (statusSelect) statusSelect.addEventListener('change', filterInvoices);
+            if (clientSelect) clientSelect.addEventListener('change', filterInvoices);
+            if (dateInput) dateInput.addEventListener('input', filterInvoices);
+        });
+    }
+
+    let allInvoices = [];
+
+    async function loadInvoices() {
+        try {
+            allInvoices = await Auth.apiRequest('/api/invoices');
+            populateClientFilter();
+            updateStats();
+            renderInvoices(allInvoices);
+        } catch (err) {
+            console.error('Failed to load invoices:', err);
+        }
+    }
+
+    function populateClientFilter() {
+        const clientSelect = document.getElementById('client-filter');
+        if (!clientSelect) return;
+        const clients = [...new Set(allInvoices.map(inv => inv.customer_name))].sort();
+        clientSelect.innerHTML = '<option value="All">Client: All</option>';
+        clients.forEach(client => {
+            const opt = document.createElement('option');
+            opt.value = client;
+            opt.textContent = client;
+            clientSelect.appendChild(opt);
+        });
+    }
+
+    function updateStats() {
+        const total = allInvoices.reduce((sum, inv) => sum + inv.total_amount, 0);
+        const paid = allInvoices.filter(inv => inv.status === 'Paid').reduce((sum, inv) => sum + inv.total_amount, 0);
+        const outstanding = allInvoices.filter(inv => inv.status !== 'Paid').reduce((sum, inv) => sum + inv.total_amount, 0);
+        const overdue = allInvoices.filter(inv => inv.status === 'Overdue').reduce((sum, inv) => sum + inv.total_amount, 0);
+
+        document.getElementById('total-invoiced-val').textContent = `EGP ${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        document.getElementById('total-paid-val').textContent = `EGP ${paid.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        document.getElementById('total-outstanding-val').textContent = `EGP ${outstanding.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        document.getElementById('total-overdue-val').textContent = `EGP ${overdue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+
+    function renderInvoices(invoices) {
+        const tbody = document.getElementById('invoices-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (invoices.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-on-surface-variant font-label-sm">No invoices found</td></tr>';
+            return;
+        }
+
+        invoices.forEach(inv => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-outline-variant hover:bg-surface-container-lowest transition-colors group cursor-pointer';
+            
+            const issueDate = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+            const dueDate = inv.due_date ? new Date(inv.due_date).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+            
+            let statusClass = 'bg-transparent text-on-surface-variant border border-outline-variant';
+            if (inv.status === 'Paid') {
+                statusClass = 'bg-[#00FF66] text-black';
+            } else if (inv.status === 'Overdue') {
+                statusClass = 'bg-error text-on-error';
+            } else if (inv.status === 'Unpaid' || inv.status === 'Sent') {
+                statusClass = 'bg-primary-fixed text-on-primary-fixed border border-on-primary-fixed';
+            }
+
+            const shopifyIcon = (inv.invoice_number && (inv.invoice_number.includes('INV-20') || inv.invoice_number.includes('Shopify')))
+                ? `<span class="text-[#96BF48] material-symbols-outlined text-[16px] ml-1" data-icon="storefront" title="Shopify Order">storefront</span>`
+                : '';
+
+            tr.innerHTML = `
+                <td class="py-3 px-4 font-data-mono text-data-mono text-on-surface">${inv.invoice_number}</td>
+                <td class="py-3 px-4 font-body-md text-body-md text-on-surface flex items-center gap-1">
+                    ${inv.customer_name} ${shopifyIcon}
+                </td>
+                <td class="py-3 px-4 font-data-mono text-data-mono text-on-surface-variant">${issueDate}</td>
+                <td class="py-3 px-4 font-data-mono text-data-mono ${inv.status === 'Overdue' ? 'text-error font-bold' : 'text-on-surface-variant'}">${dueDate}</td>
+                <td class="py-3 px-4 font-data-mono text-data-mono text-on-surface text-right">EGP ${inv.total_amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="py-3 px-4 text-center">
+                    <span class="inline-block font-label-sm text-label-sm px-2 py-1 uppercase tracking-wider ${statusClass}">${inv.status}</span>
+                </td>
+                <td class="py-3 px-4 text-right">
+                    <button class="text-on-surface-variant hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity dropdown-btn"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+                </td>
+            `;
+
+            tr.onclick = (e) => {
+                if (e.target.closest('.dropdown-btn') || e.target.closest('button')) return;
+                cycleInvoiceStatus(inv);
+            };
+
+            tbody.appendChild(tr);
+        });
+
+        const showingCount = document.querySelector('.flex.justify-between.items-center.py-4 span.font-label-sm');
+        if (showingCount) {
+            showingCount.textContent = `Showing 1-${invoices.length} of ${invoices.length}`;
+        }
+    }
+
+    async function cycleInvoiceStatus(inv) {
+        let nextStatus = 'Unpaid';
+        if (inv.status === 'Unpaid') nextStatus = 'Paid';
+        else if (inv.status === 'Paid') nextStatus = 'Overdue';
+        else if (inv.status === 'Overdue') nextStatus = 'Unpaid';
+
+        try {
+            await Auth.apiRequest(`/api/invoices/${inv.id}/status`, {
+                method: 'PUT',
+                body: JSON.stringify({ status: nextStatus })
+            });
+            loadInvoices();
+        } catch (err) {
+            alert('Failed to update invoice status: ' + err.message);
+        }
+    }
+
+    function filterInvoices() {
+        const searchInput = document.getElementById('search-input');
+        const searchVal = searchInput ? searchInput.value.toLowerCase() : '';
+        const statusVal = document.getElementById('status-filter').value;
+        const clientVal = document.getElementById('client-filter').value;
+        const dateVal = document.getElementById('date-filter').value;
+
+        let filtered = allInvoices;
+        if (searchVal) {
+            filtered = filtered.filter(inv => 
+                inv.invoice_number.toLowerCase().includes(searchVal) || 
+                inv.customer_name.toLowerCase().includes(searchVal)
+            );
+        }
+        if (statusVal && statusVal !== 'All') {
+            filtered = filtered.filter(inv => inv.status === statusVal);
+        }
+        if (clientVal && clientVal !== 'All') {
+            filtered = filtered.filter(inv => inv.customer_name === clientVal);
+        }
+        if (dateVal) {
+            filtered = filtered.filter(inv => {
+                if (!inv.issue_date) return false;
+                const d1 = new Date(inv.issue_date).toISOString().split('T')[0];
+                return d1 === dateVal;
+            });
+        }
+
+        renderInvoices(filtered);
+    }
+</script>
+</nav>
+</body></html>

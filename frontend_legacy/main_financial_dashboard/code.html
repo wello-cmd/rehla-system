@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Rehla - Main Financial Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#131313",
+                        "on-tertiary-fixed": "#1b1b1b",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "primary-container": "#000000",
+                        "surface-container": "#20201f",
+                        "secondary-fixed": "#e2e2e2",
+                        "primary-fixed": "#e2e2e2",
+                        "tertiary-fixed": "#e2e2e2",
+                        "surface-container-low": "#1c1b1b",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-fixed-variant": "#474747",
+                        "error": "#ffb4ab",
+                        "on-tertiary": "#303030",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "on-secondary-fixed-variant": "#454747",
+                        "surface-tint": "#c6c6c6",
+                        "secondary": "#c6c6c7",
+                        "inverse-surface": "#e5e2e1",
+                        "tertiary-container": "#000000",
+                        "on-primary-fixed-variant": "#474747",
+                        "on-secondary-container": "#b4b5b5",
+                        "on-surface-variant": "#cfc4c5",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#393939",
+                        "tertiary": "#c6c6c6",
+                        "on-primary": "#303030",
+                        "outline": "#988e90",
+                        "on-error": "#690005",
+                        "on-primary-container": "#757575",
+                        "background": "#131313",
+                        "on-tertiary-container": "#757575",
+                        "on-background": "#e5e2e1",
+                        "surface-container-highest": "#353535",
+                        "primary": "#c6c6c6",
+                        "surface-dim": "#131313",
+                        "error-container": "#93000a",
+                        "surface-variant": "#353535",
+                        "outline-variant": "#4c4546",
+                        "surface-container-high": "#2a2a2a",
+                        "inverse-primary": "#5e5e5e",
+                        "on-surface": "#e5e2e1",
+                        "secondary-container": "#454747",
+                        "on-secondary": "#2f3131",
+                        "on-primary-fixed": "#1b1b1b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "8px",
+                        "gutter": "16px",
+                        "touch-target": "44px",
+                        "sidebar-width": "280px",
+                        "container-margin": "24px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800" }],
+                        "data-mono": ["14px", { "lineHeight": "1.5", "fontWeight": "500" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md antialiased min-h-screen flex flex-col md:flex-row">
+<!-- Mobile Nav Override Warning (Hidden visually but enforces rule mapping) -->
+<!-- The user requested Desktop explicitly. -->
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-screen sticky left-0 top-0 w-sidebar-width border-r border-outline-variant dark:border-outline-variant bg-surface dark:bg-surface py-container-margin px-gutter z-50 flex-shrink-0">
+<div class="mb-8 px-2 flex items-center justify-between">
+<div>
+<h1 class="font-display-lg text-display-lg font-black tracking-tighter text-on-surface dark:text-on-surface">REHLA</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mt-1">Management Engine</p>
+</div>
+</div>
+<ul class="flex flex-col gap-1 flex-grow overflow-y-auto">
+<!-- Active Tab: Dashboard -->
+<li>
+<a class="flex items-center gap-3 px-4 py-3 bg-on-surface text-surface dark:bg-primary-fixed dark:text-on-primary-fixed font-bold rounded-none translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined icon-fill text-xl">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">point_of_sale</span>
+<span class="font-label-sm text-label-sm">POS</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">inventory_2</span>
+<span class="font-label-sm text-label-sm">Inventory</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">receipt_long</span>
+<span class="font-label-sm text-label-sm">Invoices</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">payments</span>
+<span class="font-label-sm text-label-sm">Expenses</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">local_shipping</span>
+<span class="font-label-sm text-label-sm">Delivery</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">analytics</span>
+<span class="font-label-sm text-label-sm">Analytics</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">smart_toy</span>
+<span class="font-label-sm text-label-sm">AI Assistant</span>
+</a>
+</li>
+</ul>
+<ul class="flex flex-col gap-1 mt-auto pt-4 border-t border-outline-variant dark:border-outline-variant">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">logout</span>
+<span class="font-label-sm text-label-sm">Logout</span>
+</a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 bg-background overflow-y-auto">
+<!-- Header (Custom based on user request, bypassing TopNavBar generic as it specifies exact title/actions) -->
+<header class="sticky top-0 z-40 bg-surface dark:bg-surface border-b border-outline-variant px-container-margin py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface m-0">Financial Overview</h2>
+</div>
+<div class="flex items-center gap-3">
+<div class="relative">
+<select class="appearance-none bg-surface-container-high text-on-surface font-label-sm text-label-sm border border-outline-variant rounded-none py-2 pl-4 pr-10 outline-none focus:border-primary">
+<option>This Month</option>
+<option>Last Month</option>
+<option>YTD</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant text-sm">expand_more</span>
+</div>
+<button id="sync-shopify-btn" class="bg-primary text-on-primary-fixed font-label-sm text-label-sm uppercase px-4 py-2 hover:bg-white transition-colors border border-transparent">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">sync</span>
+                        Sync Shopify
+                    </span>
+</button>
+</div>
+</header>
+<div class="p-container-margin max-w-[1440px] mx-auto w-full flex flex-col gap-6">
+<!-- Row 1: 5 Stats (Minimalist-Brutalist cards) -->
+<div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+<!-- Stat 1 -->
+<div class="bg-surface-container-low border border-outline-variant p-4 flex flex-col gap-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Total Revenue</span>
+<span id="total-revenue" class="font-data-mono text-data-mono text-xl text-on-surface">EGP 0.00</span>
+<div class="flex items-center gap-1 mt-auto">
+<span class="material-symbols-outlined text-[14px] text-primary">trending_up</span>
+<span class="font-label-sm text-label-sm text-primary">+12.4%</span>
+</div>
+</div>
+<!-- Stat 2 -->
+<div class="bg-surface-container-low border border-outline-variant p-4 flex flex-col gap-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Gross Profit</span>
+<span id="gross-profit" class="font-data-mono text-data-mono text-xl text-on-surface">EGP 0.00</span>
+<div class="flex items-center gap-1 mt-auto">
+<span class="material-symbols-outlined text-[14px] text-primary">trending_up</span>
+<span class="font-label-sm text-label-sm text-primary">+8.2%</span>
+</div>
+</div>
+<!-- Stat 3 -->
+<div class="bg-surface-container-low border border-outline-variant p-4 flex flex-col gap-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Net Profit</span>
+<span id="net-profit" class="font-data-mono text-data-mono text-xl text-on-surface">EGP 0.00</span>
+<div class="flex items-center gap-1 mt-auto">
+<span class="material-symbols-outlined text-[14px] text-primary">trending_up</span>
+<span class="font-label-sm text-label-sm text-primary">+5.1%</span>
+</div>
+</div>
+<!-- Stat 4 -->
+<div class="bg-surface-container-low border border-outline-variant p-4 flex flex-col gap-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Expenses</span>
+<span id="total-expenses" class="font-data-mono text-data-mono text-xl text-on-surface">EGP 0.00</span>
+<div class="flex items-center gap-1 mt-auto">
+<span class="material-symbols-outlined text-[14px] text-error">trending_down</span>
+<span class="font-label-sm text-label-sm text-error">-2.4%</span>
+</div>
+</div>
+<!-- Stat 5 -->
+<div class="bg-surface-container-low border border-outline-variant p-4 flex flex-col gap-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Outstanding</span>
+<span id="total-outstanding" class="font-data-mono text-data-mono text-xl text-on-surface">EGP 0.00</span>
+<div class="flex items-center gap-1 mt-auto">
+<span class="material-symbols-outlined text-[14px] text-outline">horizontal_rule</span>
+<span class="font-label-sm text-label-sm text-outline">0.0%</span>
+</div>
+</div>
+</div>
+<!-- Row 2: Revenue vs Expenses Line Chart -->
+<div class="bg-surface-container-low border border-outline-variant p-6 min-h-[300px] flex flex-col relative">
+<div class="flex justify-between items-start mb-6">
+<h3 class="font-headline-md text-headline-md text-on-surface">Revenue vs Expenses</h3>
+<div class="flex gap-4">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 bg-primary"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Revenue</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 bg-error"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Expenses</span>
+</div>
+</div>
+</div>
+<!-- CSS-based Chart Mockup for styling -->
+<div class="flex-1 border-b border-l border-outline-variant relative mt-4">
+<!-- Y Axis Lines -->
+<div class="absolute w-full border-b border-outline-variant/30 bottom-[25%]"></div>
+<div class="absolute w-full border-b border-outline-variant/30 bottom-[50%]"></div>
+<div class="absolute w-full border-b border-outline-variant/30 bottom-[75%]"></div>
+<!-- SVG Chart Path Simulation -->
+<svg class="absolute inset-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 100 100">
+<!-- Revenue (Primary/White in dark mode) -->
+<path class="text-primary" d="M0,80 L20,60 L40,65 L60,30 L80,45 L100,10" fill="none" stroke="currentColor" stroke-width="2"></path>
+<!-- Expenses (Red) -->
+<path d="M0,90 L20,85 L40,88 L60,70 L80,75 L100,60" fill="none" stroke="#ffb4ab" stroke-width="2"></path>
+</svg>
+</div>
+<div class="flex justify-between mt-2 font-data-mono text-data-mono text-[10px] text-on-surface-variant">
+<span>W1</span><span>W2</span><span>W3</span><span>W4</span>
+</div>
+</div>
+<!-- Row 3: Top 5 Products (Bar) & Expense Breakdown (Donut) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Bar Chart Container -->
+<div class="bg-surface-container-low border border-outline-variant p-6 flex flex-col">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-6">Top 5 Products</h3>
+<div class="flex flex-col gap-4 flex-1">
+<!-- Bar Item -->
+<div class="flex items-center gap-3">
+<span class="font-data-mono text-data-mono text-xs w-8 text-on-surface-variant">#1</span>
+<div class="flex-1 bg-surface h-6 relative border border-outline-variant/50">
+<div class="absolute left-0 top-0 h-full bg-primary" style="width: 85%;"></div>
+<span class="absolute left-2 top-1/2 -translate-y-1/2 font-label-sm text-[10px] text-surface mix-blend-difference z-10">Oversized Heavy Tee - Black</span>
+</div>
+<span class="font-data-mono text-data-mono text-xs text-on-surface w-16 text-right">85k</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-data-mono text-data-mono text-xs w-8 text-on-surface-variant">#2</span>
+<div class="flex-1 bg-surface h-6 relative border border-outline-variant/50">
+<div class="absolute left-0 top-0 h-full bg-primary" style="width: 65%;"></div>
+<span class="absolute left-2 top-1/2 -translate-y-1/2 font-label-sm text-[10px] text-surface mix-blend-difference z-10">Cargo Pants V2 - Olive</span>
+</div>
+<span class="font-data-mono text-data-mono text-xs text-on-surface w-16 text-right">65k</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-data-mono text-data-mono text-xs w-8 text-on-surface-variant">#3</span>
+<div class="flex-1 bg-surface h-6 relative border border-outline-variant/50">
+<div class="absolute left-0 top-0 h-full bg-primary" style="width: 50%;"></div>
+<span class="absolute left-2 top-1/2 -translate-y-1/2 font-label-sm text-[10px] text-surface mix-blend-difference z-10">Essential Hoodie - Ash</span>
+</div>
+<span class="font-data-mono text-data-mono text-xs text-on-surface w-16 text-right">50k</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-data-mono text-data-mono text-xs w-8 text-on-surface-variant">#4</span>
+<div class="flex-1 bg-surface h-6 relative border border-outline-variant/50">
+<div class="absolute left-0 top-0 h-full bg-primary" style="width: 40%;"></div>
+<span class="absolute left-2 top-1/2 -translate-y-1/2 font-label-sm text-[10px] text-surface mix-blend-difference z-10">Logo Cap - Cream</span>
+</div>
+<span class="font-data-mono text-data-mono text-xs text-on-surface w-16 text-right">40k</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-data-mono text-data-mono text-xs w-8 text-on-surface-variant">#5</span>
+<div class="flex-1 bg-surface h-6 relative border border-outline-variant/50">
+<div class="absolute left-0 top-0 h-full bg-primary" style="width: 25%;"></div>
+<span class="absolute left-2 top-1/2 -translate-y-1/2 font-label-sm text-[10px] text-surface mix-blend-difference z-10">Tech Vest - Black</span>
+</div>
+<span class="font-data-mono text-data-mono text-xs text-on-surface w-16 text-right">25k</span>
+</div>
+</div>
+</div>
+<!-- Donut Chart Container -->
+<div class="bg-surface-container-low border border-outline-variant p-6 flex flex-col items-center justify-center relative">
+<h3 class="font-headline-md text-headline-md text-on-surface absolute top-6 left-6">Expense Breakdown</h3>
+<!-- CSS Donut Mockup -->
+<div class="w-48 h-48 rounded-full border-[16px] border-surface mt-10 relative flex items-center justify-center" style="border-top-color: #e2e2e2; border-right-color: #ffb4ab; border-bottom-color: #cfc4c5; border-left-color: #474747;">
+<div class="text-center">
+<span class="block font-label-sm text-label-sm text-on-surface-variant">TOTAL</span>
+<span class="block font-data-mono text-data-mono text-on-surface">82.3k</span>
+</div>
+</div>
+<div class="flex gap-4 mt-6 font-label-sm text-[10px] text-on-surface-variant w-full justify-center">
+<span class="flex items-center gap-1"><div class="w-2 h-2 bg-primary"></div> COGS</span>
+<span class="flex items-center gap-1"><div class="w-2 h-2 bg-error"></div> Marketing</span>
+<span class="flex items-center gap-1"><div class="w-2 h-2 bg-on-surface-variant"></div> Shipping</span>
+<span class="flex items-center gap-1"><div class="w-2 h-2 bg-on-tertiary-fixed-variant"></div> Ops</span>
+</div>
+</div>
+</div>
+<!-- Row 4: Recent Orders Table -->
+<div class="bg-surface-container-low border border-outline-variant overflow-x-auto">
+<div class="p-4 border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-headline-md text-headline-md text-on-surface">Recent Orders</h3>
+<a class="font-label-sm text-label-sm text-primary hover:underline uppercase" href="#">View All</a>
+</div>
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant bg-surface-container-highest/30">
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant uppercase font-normal">Order ID</th>
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant uppercase font-normal">Customer</th>
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant uppercase font-normal text-center">Items</th>
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant uppercase font-normal text-right">Total</th>
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant uppercase font-normal">Status</th>
+</tr>
+</thead>
+<tbody id="recent-orders-body" class="font-data-mono text-data-mono text-on-surface">
+<!-- Will be populated dynamically -->
+</tbody>
+</table>
+</div>
+</div>
+</main>
+<script src="../auth-client.js"></script>
+<script>
+    // Validate role
+    Auth.checkAuth(['ceo', 'admin']);
+
+    async function loadDashboardData() {
+        try {
+            // 1. Fetch Summary Stats
+            const summary = await Auth.apiRequest('/api/analytics/summary');
+            document.getElementById('total-revenue').textContent = `EGP ${summary.revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('gross-profit').textContent = `EGP ${summary.grossProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('net-profit').textContent = `EGP ${summary.netProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('total-expenses').textContent = `EGP ${summary.expenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('total-outstanding').textContent = `EGP ${summary.outstanding.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // 2. Fetch Recent Orders & Trends
+            const trends = await Auth.apiRequest('/api/analytics/trends');
+            const tbody = document.getElementById('recent-orders-body');
+            tbody.innerHTML = '';
+
+            trends.recentOrders.forEach(order => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-outline-variant/50 hover:bg-surface-container-high transition-colors';
+                
+                const isShopify = order.customer_name === 'Shopify Customer';
+                const shopifyBadge = isShopify ? '<span class="font-bold text-[#96BF48] text-[10px] bg-[#96BF48]/10 px-1 border border-[#96BF48]/30">S</span>' : '';
+                
+                const statusColor = order.payment_status === 'paid' ? 'bg-[#00FF66] text-black' : (order.payment_status === 'pending' ? 'bg-surface-variant text-on-surface-variant border border-outline-variant' : 'bg-error text-on-error');
+
+                tr.innerHTML = `
+                    <td class="p-4 flex items-center gap-2">
+                        ${shopifyBadge}
+                        #${order.id}
+                    </td>
+                    <td class="p-4 font-body-md text-sm">${order.customer_name}</td>
+                    <td class="p-4 text-center">-</td>
+                    <td class="p-4 text-right">EGP ${order.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td class="p-4">
+                        <span class="inline-block ${statusColor} font-label-sm text-[10px] px-2 py-1 uppercase tracking-wider">${order.payment_status}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (err) {
+            console.error('Error loading dashboard stats:', err);
+        }
+    }
+
+    // Sync Shopify Button
+    document.getElementById('sync-shopify-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('sync-shopify-btn');
+        btn.disabled = true;
+        btn.textContent = 'Syncing...';
+        try {
+            await Auth.apiRequest('/api/inventory/sync-shopify', { method: 'POST' });
+            alert('Shopify store synced successfully!');
+            await loadDashboardData();
+        } catch (err) {
+            alert('Sync failed: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = `
+                <span class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">sync</span>
+                    Sync Shopify
+                </span>
+            `;
+        }
+    });
+
+    // Load initial data
+    loadDashboardData();
+</script>
+</body></html>

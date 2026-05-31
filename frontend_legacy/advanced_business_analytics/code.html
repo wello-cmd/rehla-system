@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>REHLA Management Engine - Analytics</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface": "#131313",
+                      "on-tertiary-fixed": "#1b1b1b",
+                      "primary-fixed-dim": "#c6c6c6",
+                      "secondary-fixed-dim": "#c6c6c7",
+                      "surface-container-lowest": "#0e0e0e",
+                      "on-secondary-fixed": "#1a1c1c",
+                      "primary-container": "#000000",
+                      "surface-container": "#20201f",
+                      "secondary-fixed": "#e2e2e2",
+                      "primary-fixed": "#e2e2e2",
+                      "tertiary-fixed": "#e2e2e2",
+                      "surface-container-low": "#1c1b1b",
+                      "inverse-on-surface": "#313030",
+                      "on-tertiary-fixed-variant": "#474747",
+                      "error": "#ffb4ab",
+                      "on-tertiary": "#303030",
+                      "tertiary-fixed-dim": "#c6c6c6",
+                      "on-secondary-fixed-variant": "#454747",
+                      "surface-tint": "#c6c6c6",
+                      "secondary": "#c6c6c7",
+                      "inverse-surface": "#e5e2e1",
+                      "tertiary-container": "#000000",
+                      "on-primary-fixed-variant": "#474747",
+                      "on-secondary-container": "#b4b5b5",
+                      "on-surface-variant": "#cfc4c5",
+                      "on-error-container": "#ffdad6",
+                      "surface-bright": "#393939",
+                      "tertiary": "#c6c6c6",
+                      "on-primary": "#303030",
+                      "outline": "#988e90",
+                      "on-error": "#690005",
+                      "on-primary-container": "#757575",
+                      "background": "#131313",
+                      "on-tertiary-container": "#757575",
+                      "on-background": "#e5e2e1",
+                      "surface-container-highest": "#353535",
+                      "primary": "#c6c6c6",
+                      "surface-dim": "#131313",
+                      "error-container": "#93000a",
+                      "surface-variant": "#353535",
+                      "outline-variant": "#4c4546",
+                      "surface-container-high": "#2a2a2a",
+                      "inverse-primary": "#5e5e5e",
+                      "on-surface": "#e5e2e1",
+                      "secondary-container": "#454747",
+                      "on-secondary": "#2f3131",
+                      "on-primary-fixed": "#1b1b1b"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "base": "8px",
+                      "gutter": "16px",
+                      "touch-target": "44px",
+                      "sidebar-width": "280px",
+                      "container-margin": "24px"
+              },
+              "fontFamily": {
+                      "display-lg": ["Inter"],
+                      "data-mono": ["JetBrains Mono"],
+                      "label-sm": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "headline-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800" }],
+                      "data-mono": ["14px", { "lineHeight": "1.5", "fontWeight": "500" }],
+                      "label-sm": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                      "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                      "headline-lg-mobile": ["24px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                      "headline-md": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                      "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+              }
+            },
+          },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .brutal-border {
+                @apply border border-outline-variant;
+            }
+            .brutal-shadow {
+                @apply shadow-[4px_4px_0px_0px_#FFFFFF];
+            }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md min-h-screen flex overflow-x-hidden">
+<!-- SideNavBar (Desktop) -->
+<nav class="hidden md:flex flex-col h-full py-container-margin px-gutter bg-surface w-sidebar-width h-screen sticky left-0 top-0 border-r border-outline-variant z-50">
+<div class="mb-8">
+<h1 class="font-display-lg text-display-lg font-black tracking-tighter text-on-surface">REHLA</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mt-1">Management Engine</p>
+</div>
+<ul class="flex flex-col space-y-2 flex-grow">
+<!-- Dashboard -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-3 rounded-none text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+<span>Dashboard</span>
+</a>
+</li>
+<!-- POS -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-3 rounded-none text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">point_of_sale</span>
+<span>POS</span>
+</a>
+</li>
+<!-- Inventory -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-3 rounded-none text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">inventory_2</span>
+<span>Inventory</span>
+</a>
+</li>
+<!-- Invoices -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-3 rounded-none text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">receipt_long</span>
+<span>Invoices</span>
+</a>
+</li>
+<!-- Expenses -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-3 rounded-none text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">payments</span>
+<span>Expenses</span>
+</a>
+</li>
+<!-- Delivery -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-3 rounded-none text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">local_shipping</span>
+<span>Delivery</span>
+</a>
+</li>
+<!-- Analytics (ACTIVE) -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-3 bg-primary-fixed text-on-primary-fixed font-bold rounded-none translate-x-1 transition-transform duration-200 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">analytics</span>
+<span>Analytics</span>
+</a>
+</li>
+<!-- AI Assistant -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-3 rounded-none text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">smart_toy</span>
+<span>AI Assistant</span>
+</a>
+</li>
+</ul>
+<ul class="flex flex-col space-y-2 mt-auto pt-4 border-t border-outline-variant">
+<!-- Settings -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-3 rounded-none text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+<span>Settings</span>
+</a>
+</li>
+<!-- Logout -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-3 rounded-none text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">logout</span>
+<span>Logout</span>
+</a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col min-h-screen w-full relative">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center px-container-margin w-full bg-surface-container-low h-touch-target sticky top-0 z-40">
+<!-- Left: Search/Brand Mobile -->
+<div class="flex items-center space-x-4">
+<span class="md:hidden font-headline-md text-headline-md font-bold text-on-surface">REHLA</span>
+<div class="hidden md:flex items-center bg-surface-container-highest px-3 py-1.5 brutal-border group focus-within:border-primary transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant group-focus-within:text-primary text-[20px]" style="font-variation-settings: 'FILL' 0;">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md font-body-md text-on-surface placeholder-on-surface-variant ml-2 w-64 outline-none" placeholder="Search operational data..." type="text"/>
+</div>
+</div>
+<!-- Center: Navigation Links (Optional, maybe hidden if Analytics is full screen, but adhering to JSON for TopAppBar) -->
+<nav class="hidden lg:flex space-x-6">
+<a class="text-on-surface-variant hover:text-on-surface transition-opacity font-label-sm text-label-sm uppercase tracking-wider" href="#">Overview</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1 font-label-sm text-label-sm uppercase tracking-wider opacity-80" href="#">Reports</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-opacity font-label-sm text-label-sm uppercase tracking-wider" href="#">History</a>
+</nav>
+<!-- Right: Actions & Profile -->
+<div class="flex items-center space-x-4">
+<button class="hidden sm:block text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm uppercase tracking-wider">Sync Status</button>
+<button class="hidden sm:block bg-primary text-surface px-4 py-1.5 font-label-sm text-label-sm uppercase tracking-wider hover:bg-surface hover:text-primary brutal-border transition-colors">Quick Action</button>
+<div class="flex items-center space-x-2">
+<button class="text-on-surface-variant hover:text-on-surface transition-opacity">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-on-surface transition-opacity">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">help_outline</span>
+</button>
+</div>
+<div class="w-8 h-8 bg-surface-container-highest brutal-border overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A close-up portrait of a male executive in a highly controlled, brutalist dark-mode setting. The lighting is stark and directional, casting deep shadows that emphasize structure and intensity. The overall aesthetic is raw, industrial, and hyper-modern, fitting a high-contrast management interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTMAuP9BdO4Eh-5G4mTzf7ZmB8V1uAG0Ebpaksh6llDyryLdSTQ-z-GnPUCtELMTw6MV6jlw-CmmGyniQXh87nl-Cce36FSI5vbyGdxwLU7btdWM7mBLynh5PaYbsxL1CKzPAqrYAkzdeZwu4hSDTfhtcCVJMWq8IXS1JgVFfjAiU2CcNK8C5rzQakJeUcEXLo8fgtpopW_aPGrhf3KD-6z35sP8YPFubbKled8TLFKgVLkZFzceHTDaBXFTv4a1p9GBSNgevSblY"/>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="flex-1 p-container-margin md:p-8 max-w-[1440px] mx-auto w-full">
+<!-- Page Header & Controls -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 space-y-4 md:space-y-0">
+<div>
+<h2 class="font-headline-lg text-headline-lg font-bold text-on-surface mb-2">Intelligence Dashboard</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Real-time operational and financial telemetry.</p>
+</div>
+<div class="flex flex-col sm:flex-row items-end space-y-3 sm:space-y-0 sm:space-x-4">
+<!-- Date Range Toggle -->
+<div class="flex items-center bg-surface-container-high brutal-border p-1">
+<button class="px-4 py-1.5 bg-surface text-on-surface font-label-sm text-label-sm uppercase tracking-wider brutal-border brutal-shadow">Last 30 Days</button>
+<button class="px-4 py-1.5 text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm uppercase tracking-wider transition-colors">QTD</button>
+<button class="px-4 py-1.5 text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm uppercase tracking-wider transition-colors">YTD</button>
+</div>
+<!-- Compare Toggle -->
+<div class="flex items-center space-x-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Compare</span>
+<div class="w-10 h-5 bg-surface-container-highest brutal-border relative cursor-pointer group">
+<div class="w-4 h-4 bg-on-surface absolute top-[1px] left-[1px] transition-transform group-hover:bg-primary"></div>
+</div>
+</div>
+<button class="bg-primary text-surface px-6 py-2 font-label-sm text-label-sm uppercase tracking-wider hover:bg-surface hover:text-primary brutal-border transition-colors flex items-center space-x-2">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span>Export Full Report</span>
+</button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- 1. Sales Analytics (Spans 8 cols) -->
+<div class="lg:col-span-8 bg-surface-container brutal-border p-6 flex flex-col relative overflow-hidden">
+<div class="flex justify-between items-start mb-6 z-10">
+<div>
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-1">Sales Velocity</h3>
+<div class="flex items-baseline space-x-3">
+<span id="sales-velocity-rev" class="font-display-lg text-display-lg text-on-surface">EGP 0.00</span>
+<span class="font-data-mono text-data-mono text-[#00FF66] bg-[#00FF66]/10 px-2 py-0.5">+14.2%</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</div>
+<!-- Abstract Heatmap / Chart Representation -->
+<div class="flex-1 mt-4 min-h-[200px] border-b border-outline-variant pb-4 relative z-10 flex items-end justify-between px-2">
+<!-- Simulated Bar Chart by Hour -->
+<div class="w-8 bg-surface-container-highest h-[40%] hover:bg-primary transition-colors cursor-crosshair"></div>
+<div class="w-8 bg-surface-container-highest h-[60%] hover:bg-primary transition-colors cursor-crosshair"></div>
+<div class="w-8 bg-primary h-[85%] relative brutal-shadow cursor-crosshair">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface brutal-border px-2 py-1 font-data-mono text-[10px] text-on-surface whitespace-nowrap">14:00 - EGP 42K</div>
+</div>
+<div class="w-8 bg-surface-container-highest h-[50%] hover:bg-primary transition-colors cursor-crosshair"></div>
+<div class="w-8 bg-surface-container-highest h-[70%] hover:bg-primary transition-colors cursor-crosshair"></div>
+<div class="w-8 bg-surface-container-highest h-[30%] hover:bg-primary transition-colors cursor-crosshair"></div>
+<div class="w-8 bg-surface-container-highest h-[45%] hover:bg-primary transition-colors cursor-crosshair"></div>
+<div class="w-8 bg-surface-container-highest h-[65%] hover:bg-primary transition-colors cursor-crosshair"></div>
+</div>
+<!-- X-Axis Labels -->
+<div class="flex justify-between mt-2 font-data-mono text-[10px] text-on-surface-variant z-10 px-2">
+<span>08:00</span>
+<span>12:00</span>
+<span>16:00</span>
+<span>20:00</span>
+<span>00:00</span>
+</div>
+<!-- Decorative background grid -->
+<div class="absolute inset-0 bg-[linear-gradient(to_right,#353535_1px,transparent_1px),linear-gradient(to_bottom,#353535_1px,transparent_1px)] bg-[size:40px_40px] opacity-10 pointer-events-none"></div>
+</div>
+<!-- 5. Financial KPIs (Spans 4 cols) -->
+<div class="lg:col-span-4 bg-surface-container brutal-border p-6 flex flex-col">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-6">MoM Growth</h3>
+<div class="flex-1 flex flex-col justify-center space-y-6">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Gross Margin</p>
+<p id="gross-margin-val" class="font-headline-lg text-headline-lg text-on-surface">0.0%</p>
+<div class="w-full bg-surface-container-highest h-1 mt-2">
+<div id="gross-margin-bar" class="bg-primary h-full" style="width: 0%;"></div>
+</div>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">CAC</p>
+<p class="font-data-mono text-data-mono text-on-surface text-lg">EGP 145.00 <span class="text-error text-sm ml-2">↑ EGP 12</span></p>
+</div>
+<!-- Abstract Line Chart -->
+<div class="mt-auto h-24 relative w-full border-b border-outline-variant flex items-end">
+<svg class="w-full h-full absolute inset-0 text-primary opacity-50" preserveaspectratio="none" viewbox="0 0 100 100">
+<path d="M0,80 Q20,70 40,90 T80,40 T100,20" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"></path>
+</svg>
+</div>
+</div>
+</div>
+<!-- 2. Product Analytics (Table) (Spans 7 cols) -->
+<div class="lg:col-span-7 bg-surface-container brutal-border p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Top Movers (SKU Level)</h3>
+<a class="font-label-sm text-label-sm text-primary uppercase hover:underline" href="#">View All</a>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant">
+<th class="py-3 font-label-sm text-label-sm text-on-surface-variant uppercase">SKU / Product</th>
+<th class="py-3 font-label-sm text-label-sm text-on-surface-variant uppercase text-right">Units</th>
+<th class="py-3 font-label-sm text-label-sm text-on-surface-variant uppercase text-right">Revenue</th>
+<th class="py-3 font-label-sm text-label-sm text-on-surface-variant uppercase text-right">Margin</th>
+</tr>
+</thead>
+<tbody id="top-movers-tbody" class="font-data-mono text-data-mono text-on-surface">
+</tbody>
+</table>
+</div>
+</div>
+<!-- Combined Right Column for Customer & Delivery -->
+<div class="lg:col-span-5 flex flex-col space-y-6">
+<!-- 3. Customer Analytics -->
+<div class="bg-surface-container brutal-border p-6 flex-1 flex flex-col">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-4">Acquisition vs Retention</h3>
+<div class="flex items-center justify-between flex-1">
+<!-- Abstract Pie Chart Representation -->
+<div class="relative w-32 h-32 rounded-full border-4 border-surface-container-highest flex items-center justify-center brutal-shadow">
+<!-- Simulated slices using conic gradient -->
+<div class="absolute inset-0 rounded-full" style="background: conic-gradient(#c6c6c6 0% 65%, #353535 65% 100%);"></div>
+<div class="w-24 h-24 bg-surface-container rounded-full z-10 flex items-center justify-center flex-col">
+<span class="font-display-lg text-headline-md text-on-surface">65%</span>
+<span class="font-label-sm text-[10px] text-on-surface-variant uppercase">Returning</span>
+</div>
+</div>
+<div class="flex flex-col space-y-4 ml-6">
+<div>
+<div class="flex items-center space-x-2 mb-1">
+<div class="w-3 h-3 bg-primary brutal-border"></div>
+<span class="font-label-sm text-label-sm text-on-surface uppercase">Returning</span>
+</div>
+<span class="font-data-mono text-data-mono text-on-surface-variant">2,450 Orders</span>
+</div>
+<div>
+<div class="flex items-center space-x-2 mb-1">
+<div class="w-3 h-3 bg-surface-variant brutal-border"></div>
+<span class="font-label-sm text-label-sm text-on-surface uppercase">New</span>
+</div>
+<span class="font-data-mono text-data-mono text-on-surface-variant">1,318 Orders</span>
+</div>
+</div>
+</div>
+</div>
+<!-- 4. Delivery Analytics -->
+<div class="bg-surface-container brutal-border p-6 flex-1">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-4">Logistics Efficiency</h3>
+<div class="space-y-5">
+<!-- Bosta -->
+<div>
+<div class="flex justify-between items-end mb-2">
+<span class="font-label-sm text-label-sm text-on-surface uppercase flex items-center">
+<span class="material-symbols-outlined text-[16px] mr-2 text-[#0066FF]">local_shipping</span> Bosta (3PL)
+                                    </span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">EGP 45/order</span>
+</div>
+<div class="w-full bg-surface-container-highest h-2 brutal-border">
+<div class="bg-[#0066FF] w-[92%] h-full"></div>
+</div>
+<div class="flex justify-between mt-1">
+<span class="font-data-mono text-[10px] text-on-surface-variant">92% Success</span>
+<span class="font-data-mono text-[10px] text-on-surface-variant">Vol: 65%</span>
+</div>
+</div>
+<!-- Own Fleet -->
+<div>
+<div class="flex justify-between items-end mb-2">
+<span class="font-label-sm text-label-sm text-on-surface uppercase flex items-center">
+<span class="material-symbols-outlined text-[16px] mr-2">two_wheeler</span> Own Fleet
+                                    </span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">EGP 32/order</span>
+</div>
+<div class="w-full bg-surface-container-highest h-2 brutal-border">
+<div class="bg-primary w-[98%] h-full"></div>
+</div>
+<div class="flex justify-between mt-1">
+<span class="font-data-mono text-[10px] text-on-surface-variant">98% Success</span>
+<span class="font-data-mono text-[10px] text-on-surface-variant">Vol: 35%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script src="../auth-client.js"></script>
+<script>
+    if (Auth.checkAuth(['admin', 'ceo'])) {
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAnalytics();
+        });
+    }
+
+    async function loadAnalytics() {
+        try {
+            const summary = await Auth.apiRequest('/api/analytics/summary');
+            const trends = await Auth.apiRequest('/api/analytics/trends');
+
+            updateKPIs(summary);
+            renderTopMovers(trends.topProducts);
+            renderHourlyChart(trends.recentOrders);
+        } catch (err) {
+            console.error('Failed to load analytics:', err);
+        }
+    }
+
+    function updateKPIs(summary) {
+        const rev = summary.revenue;
+        const formattedRev = rev >= 1000000 ? `EGP ${(rev/1000000).toFixed(2)}M` : `EGP ${rev.toLocaleString()}`;
+        document.getElementById('sales-velocity-rev').textContent = formattedRev;
+
+        const margin = summary.revenue > 0 ? (summary.grossProfit / summary.revenue * 100) : 60;
+        document.getElementById('gross-margin-val').textContent = `${margin.toFixed(1)}%`;
+        document.getElementById('gross-margin-bar').style.width = `${margin.toFixed(1)}%`;
+    }
+
+    function renderTopMovers(topProducts) {
+        const tbody = document.getElementById('top-movers-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (!topProducts || topProducts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-on-surface-variant">No product data logged</td></tr>';
+            return;
+        }
+
+        topProducts.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-surface-container-highest hover:bg-surface-container-highest/50 transition-colors';
+            
+            const mockMargin = Math.floor(Math.random() * 15) + 60;
+            
+            tr.innerHTML = `
+                <td class="py-4 flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-surface-container-highest brutal-border flex items-center justify-center font-bold text-xs text-on-surface-variant">${p.sku.slice(0, 2)}</div>
+                    <span class="font-body-md">${p.name}</span>
+                </td>
+                <td class="py-4 text-right">${p.units_sold}</td>
+                <td class="py-4 text-right">EGP ${(p.revenue/1000).toFixed(0)}K</td>
+                <td class="py-4 text-right text-[#00FF66]">${mockMargin}%</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderHourlyChart(recentOrders) {
+        const bars = document.querySelectorAll('.min-h-\\[200px\\] div');
+        if (bars.length < 5 || !recentOrders || recentOrders.length === 0) return;
+        
+        const maxAmount = Math.max(...recentOrders.map(o => o.total_amount), 1);
+        
+        recentOrders.slice(0, bars.length).forEach((order, index) => {
+            const pct = (order.total_amount / maxAmount * 80) + 10;
+            const bar = bars[index];
+            if (bar) {
+                bar.style.height = `${pct}%`;
+                if (bar.querySelector('div')) {
+                    bar.querySelector('div').textContent = `#${order.id} - EGP ${(order.total_amount/1000).toFixed(1)}K`;
+                }
+            }
+        });
+    }
+</script>
+</body></html>

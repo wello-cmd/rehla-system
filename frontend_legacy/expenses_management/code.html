@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>REHLA Management Engine - Expenses</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#131313",
+                        "on-tertiary-fixed": "#1b1b1b",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "primary-container": "#000000",
+                        "surface-container": "#20201f",
+                        "secondary-fixed": "#e2e2e2",
+                        "primary-fixed": "#e2e2e2",
+                        "tertiary-fixed": "#e2e2e2",
+                        "surface-container-low": "#1c1b1b",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-fixed-variant": "#474747",
+                        "error": "#ffb4ab",
+                        "on-tertiary": "#303030",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "on-secondary-fixed-variant": "#454747",
+                        "surface-tint": "#c6c6c6",
+                        "secondary": "#c6c6c7",
+                        "inverse-surface": "#e5e2e1",
+                        "tertiary-container": "#000000",
+                        "on-primary-fixed-variant": "#474747",
+                        "on-secondary-container": "#b4b5b5",
+                        "on-surface-variant": "#cfc4c5",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#393939",
+                        "tertiary": "#c6c6c6",
+                        "on-primary": "#303030",
+                        "outline": "#988e90",
+                        "on-error": "#690005",
+                        "on-primary-container": "#757575",
+                        "background": "#131313",
+                        "on-tertiary-container": "#757575",
+                        "on-background": "#e5e2e1",
+                        "surface-container-highest": "#353535",
+                        "primary": "#c6c6c6",
+                        "surface-dim": "#131313",
+                        "error-container": "#93000a",
+                        "surface-variant": "#353535",
+                        "outline-variant": "#4c4546",
+                        "surface-container-high": "#2a2a2a",
+                        "inverse-primary": "#5e5e5e",
+                        "on-surface": "#e5e2e1",
+                        "secondary-container": "#454747",
+                        "on-secondary": "#2f3131",
+                        "on-primary-fixed": "#1b1b1b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "8px",
+                        "gutter": "16px",
+                        "touch-target": "44px",
+                        "sidebar-width": "280px",
+                        "container-margin": "24px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800" }],
+                        "data-mono": ["14px", { "lineHeight": "1.5", "fontWeight": "500" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Light mode overrides for forced light theme request while respecting dark mode structure */
+        html.dark { color-scheme: dark; }
+        .data-table-row { border-bottom: 1px solid theme('colors.outline-variant'); }
+        .data-table-row:last-child { border-bottom: none; }
+        .hover-bg-shift:hover { background-color: theme('colors.surface-container-high'); }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex antialiased">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-full py-container-margin px-gutter bg-surface w-sidebar-width h-screen sticky left-0 top-0 border-r border-outline-variant z-50">
+<div class="mb-8 px-4">
+<h1 class="font-display-lg text-display-lg font-black tracking-tighter text-on-surface">REHLA</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mt-1 tracking-widest">Management Engine</p>
+</div>
+<div class="flex-1 overflow-y-auto space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm uppercase" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm uppercase" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">point_of_sale</span>
+                POS
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm uppercase" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">inventory_2</span>
+                Inventory
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm uppercase" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">receipt_long</span>
+                Invoices
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 bg-primary-fixed text-on-primary-fixed font-bold rounded-none translate-x-1 transition-transform duration-200 font-label-sm text-label-sm uppercase" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">payments</span>
+                Expenses
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm uppercase" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">local_shipping</span>
+                Delivery
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm uppercase" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">analytics</span>
+                Analytics
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm uppercase" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">smart_toy</span>
+                AI Assistant
+            </a>
+</div>
+<div class="mt-auto pt-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm uppercase" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+                Settings
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-DEFAULT text-error hover:bg-error-container/10 transition-colors font-label-sm text-label-sm uppercase" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">logout</span>
+                Logout
+            </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 bg-background">
+<!-- TopNavBar (Mobile) -->
+<header class="md:hidden flex justify-between items-center px-container-margin w-full bg-surface-container-low h-touch-target sticky top-0 z-40 border-b border-outline-variant">
+<div class="font-headline-md text-headline-md font-bold text-on-surface">REHLA</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-on-surface transition-opacity">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<img alt="User Avatar" class="w-8 h-8 rounded-full border border-outline-variant" data-alt="A close-up portrait of a user profile picture, high contrast streetwear aesthetic, sharp features." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4gQIFcozoMVODp4CK6Ob6DeE5WEgf5iXOM0eQW6xz4GOU1-JcWYzs4YqCFaenVndMTTMEY5k6YN-w36bpcPd3SHkaTdHP34dqJY4V1rsYKKRYWH36QmGoj1E_5Gf-nK1CZBHxEDPtq3nwbnYhIrfIPlXVIQAfVpVz0_csmyo-1r1idVmFHfYqikOEkt_jck8tqxXA8bnzfY3CFcBPJQN_R88hS3qttF1GZutTvxFu0fNsRFWrwg77VTU8czRVTxMi9gv0jUuEo4o"/>
+</div>
+</header>
+<div class="flex-1 p-container-margin max-w-[1440px] mx-auto w-full space-y-8">
+<!-- Header & Actions -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-2">Expenses</h2>
+<p class="text-on-surface-variant">Manage and track operational outflows.</p>
+</div>
+<button id="add-expense-btn" class="bg-primary text-surface px-6 py-3 font-label-sm text-label-sm uppercase tracking-wider hover:bg-white transition-colors flex items-center gap-2 rounded-none border border-transparent hover:border-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add</span>
+                    Add Expense
+                </button>
+</div>
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Total Card -->
+<div class="bg-surface-container border border-outline-variant p-6 relative">
+<div class="absolute top-0 left-0 w-full h-1 bg-primary"></div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-4">Total This Month</p>
+<p id="total-expenses-month" class="font-data-mono text-[32px] text-on-surface mb-2">EGP 0.00</p>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-sm">trending_up</span>
+<span class="font-data-mono text-sm">+4.2% vs last month</span>
+</div>
+</div>
+<!-- Highest Category -->
+<div class="bg-surface-container border border-outline-variant p-6">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-4">Highest Category</p>
+<div class="flex items-center justify-between">
+<p id="highest-category-val" class="font-headline-md text-headline-md text-on-surface">Ops</p>
+<span class="bg-[#000000] text-[#00FF66] px-2 py-1 font-data-mono text-xs border border-[#00FF66]/30">ACTIVE</span>
+</div>
+<p id="highest-category-amount" class="font-data-mono text-on-surface-variant mt-4">EGP 0.00</p>
+</div>
+<!-- Last Month Comparison -->
+<div class="bg-surface-container border border-outline-variant p-6">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-4">Net Change</p>
+<p class="font-data-mono text-[32px] text-primary mb-2">-2.4%</p>
+<p class="text-on-surface-variant font-label-sm text-label-sm">Total operational decrease</p>
+</div>
+</div>
+<!-- Main Content Split -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+<!-- Left Column: Filter & Table -->
+<div class="xl:col-span-8 space-y-4">
+<!-- Filter Bar -->
+<div class="flex-1 relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input id="search-input" class="w-full bg-surface border-b border-outline-variant px-10 py-2 text-on-surface focus:outline-none focus:border-primary placeholder-on-surface-variant/50 font-body-md rounded-none" placeholder="Search expenses..." type="text"/>
+</div>
+<div class="flex gap-4">
+<select id="category-filter" class="bg-surface border-b border-outline-variant px-4 py-2 text-on-surface focus:outline-none focus:border-primary font-label-sm text-label-sm uppercase appearance-none rounded-none pr-8 relative">
+<option value="ALL CATEGORIES">All Categories</option>
+<option value="COGS">COGS</option>
+<option value="SHIPPING">Shipping</option>
+<option value="MARKETING">Marketing</option>
+<option value="OPS">Ops</option>
+</select>
+<select id="time-filter" class="bg-surface border-b border-outline-variant px-4 py-2 text-on-surface focus:outline-none focus:border-primary font-label-sm text-label-sm uppercase appearance-none rounded-none pr-8 relative">
+<option value="THIS MONTH">This Month</option>
+<option value="LAST MONTH">Last Month</option>
+</select>
+</div>
+</div>
+<!-- Expenses Table Container -->
+<div class="bg-surface-container border border-outline-variant overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant bg-surface">
+<th class="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Date</th>
+<th class="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Category</th>
+<th class="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Description</th>
+<th class="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest text-right">Amount</th>
+<th class="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest text-center">Action</th>
+</tr>
+</thead>
+<tbody id="expenses-tbody" class="font-body-md">
+</tbody>
+</table>
+<!-- Pagination Minimal -->
+<div class="px-4 py-3 border-t border-outline-variant flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm">
+<span>Showing 1-5 of 42</span>
+<div class="flex gap-2">
+<button class="hover:text-primary disabled:opacity-50"><span class="material-symbols-outlined">chevron_left</span></button>
+<button class="hover:text-primary"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Analytics Split -->
+<div class="xl:col-span-4 space-y-6">
+<div class="bg-surface-container border border-outline-variant p-6 h-full flex flex-col">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-6">Expense Distribution</h3>
+<!-- Fake Donut Chart via CSS Conic Gradient -->
+<div class="relative w-48 h-48 mx-auto my-8">
+<div id="donut-chart-segment" class="absolute inset-0 rounded-full"></div>
+<div class="absolute inset-4 bg-surface-container rounded-full flex items-center justify-center border border-surface-container">
+<div class="text-center">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Total</p>
+<p id="donut-total" class="font-data-mono text-on-surface">0</p>
+</div>
+</div>
+</div>
+<!-- Legend -->
+<div id="legend-container" class="space-y-4 mt-auto">
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden flex justify-around items-center h-16 px-4 pb-safe bg-surface/80 dark:bg-surface-container/80 backdrop-blur-md fixed bottom-0 w-full z-50 rounded-t-xl border-t border-outline-variant shadow-lg dark:shadow-none">
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:opacity-100 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined mb-1">home</span>
+            Home
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:opacity-100 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined mb-1">barcode_scanner</span>
+            POS
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:opacity-100 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined mb-1">warehouse</span>
+            Stock
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:opacity-100 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined mb-1">local_shipping</span>
+            Orders
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:opacity-100 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined mb-1">account_circle</span>
+            Profile
+        </a>
+</nav>
+<!-- Add Expense Modal -->
+<div id="add-expense-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 hidden backdrop-blur-sm">
+    <div class="bg-surface-container border border-outline-variant p-6 max-w-md w-full mx-4 shadow-xl">
+        <h3 class="font-headline-md text-headline-md text-on-surface mb-6 uppercase tracking-wider">Add New Expense</h3>
+        <form id="add-expense-form" class="space-y-4">
+            <div class="flex flex-col gap-2">
+                <label class="font-label-sm text-label-sm text-on-surface-variant uppercase">Title / Description</label>
+                <input id="expense-title" class="w-full bg-surface border border-outline-variant px-3 py-2 text-on-surface focus:outline-none focus:border-primary text-sm font-body-md" placeholder="e.g. Meta Ads campaigns" type="text" required/>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant uppercase">Category</label>
+                    <select id="expense-category" class="w-full bg-surface border border-outline-variant px-3 py-2 text-on-surface focus:outline-none focus:border-primary text-sm font-label-sm uppercase">
+                        <option value="COGS">COGS</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Shipping">Shipping</option>
+                        <option value="Ops">Ops</option>
+                    </select>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="font-label-sm text-label-sm text-on-surface-variant uppercase">Amount (EGP)</label>
+                    <input id="expense-amount" class="w-full bg-surface border border-outline-variant px-3 py-2 text-on-surface focus:outline-none focus:border-primary text-sm font-data-mono" type="number" step="0.01" required/>
+                </div>
+            </div>
+            <div class="flex flex-col gap-2">
+                <label class="font-label-sm text-label-sm text-on-surface-variant uppercase">Date</label>
+                <input id="expense-date" class="w-full bg-surface border border-outline-variant px-3 py-2 text-on-surface focus:outline-none focus:border-primary text-sm font-data-mono" type="date" required/>
+            </div>
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-outline-variant mt-6">
+                <button id="cancel-expense-btn" type="button" class="px-4 py-2 border border-outline-variant text-on-surface font-label-sm text-label-sm uppercase hover:bg-surface-container transition-colors">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-primary text-surface font-label-sm text-label-sm uppercase font-bold hover:bg-white transition-colors">Save Expense</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="../auth-client.js"></script>
+<script>
+    let allExpenses = [];
+    const currentUser = Auth.getUser();
+
+    if (Auth.checkAuth(['admin', 'ceo'])) {
+        document.addEventListener('DOMContentLoaded', () => {
+            loadExpenses();
+
+            // Wire Add Expense button
+            const addBtnEl = document.getElementById('add-expense-btn');
+            const modal = document.getElementById('add-expense-modal');
+            const cancelBtn = document.getElementById('cancel-expense-btn');
+            const form = document.getElementById('add-expense-form');
+            
+            if (addBtnEl && modal) {
+                addBtnEl.onclick = () => {
+                    document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+                    modal.classList.remove('hidden');
+                };
+            }
+            if (cancelBtn && modal) {
+                cancelBtn.onclick = () => {
+                    modal.classList.add('hidden');
+                };
+            }
+
+            if (form) {
+                form.onsubmit = async (e) => {
+                    e.preventDefault();
+                    const title = document.getElementById('expense-title').value;
+                    const category = document.getElementById('expense-category').value;
+                    const amount = parseFloat(document.getElementById('expense-amount').value);
+                    const date = document.getElementById('expense-date').value;
+
+                    try {
+                        const response = await Auth.apiRequest('/api/expenses', {
+                            method: 'POST',
+                            body: JSON.stringify({ title, category, amount, date })
+                        });
+                        alert('Expense added: ' + response.status.toUpperCase());
+                        modal.classList.add('hidden');
+                        form.reset();
+                        loadExpenses();
+                    } catch (err) {
+                        alert('Failed to save expense: ' + err.message);
+                    }
+                };
+            }
+
+            // Wire filter search and selects
+            const searchInput = document.getElementById('search-input');
+            const categorySelect = document.getElementById('category-filter');
+            const timeSelect = document.getElementById('time-filter');
+
+            if (searchInput) searchInput.addEventListener('input', filterExpenses);
+            if (categorySelect) categorySelect.addEventListener('change', filterExpenses);
+            if (timeSelect) timeSelect.addEventListener('change', filterExpenses);
+        });
+    }
+
+    async function loadExpenses() {
+        try {
+            allExpenses = await Auth.apiRequest('/api/expenses');
+            updateKPIs();
+            renderExpenses(allExpenses);
+            renderDistribution();
+        } catch (err) {
+            console.error('Failed to load expenses:', err);
+        }
+    }
+
+    function updateKPIs() {
+        const now = new Date();
+        const thisMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        const approvedExpenses = allExpenses.filter(e => e.status === 'approved');
+        const totalThisMonth = approvedExpenses
+            .filter(e => e.date && e.date.startsWith(thisMonthStr))
+            .reduce((sum, e) => sum + e.amount, 0);
+
+        document.getElementById('total-expenses-month').textContent = `EGP ${totalThisMonth.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+        const catTotals = {};
+        approvedExpenses.forEach(e => {
+            const cat = e.category === 'Inventory' ? 'COGS' : e.category;
+            catTotals[cat] = (catTotals[cat] || 0) + e.amount;
+        });
+
+        let highestCat = 'N/A';
+        let highestAmt = 0;
+        Object.keys(catTotals).forEach(cat => {
+            if (catTotals[cat] > highestAmt) {
+                highestAmt = catTotals[cat];
+                highestCat = cat;
+            }
+        });
+
+        document.getElementById('highest-category-val').textContent = highestCat;
+        document.getElementById('highest-category-amount').textContent = `EGP ${highestAmt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+
+    function renderExpenses(expenses) {
+        const tbody = document.getElementById('expenses-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (expenses.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-on-surface-variant font-label-sm">No expenses logged</td></tr>';
+            return;
+        }
+
+        expenses.forEach(e => {
+            const tr = document.createElement('tr');
+            tr.className = 'data-table-row hover-bg-shift transition-colors';
+            
+            const dateStr = e.date ? new Date(e.date).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: '2-digit' }) : '-';
+            
+            let catColor = '#BF9648';
+            if (e.category === 'COGS' || e.category === 'Inventory') catColor = '#96BF48';
+            else if (e.category === 'Shipping') catColor = '#48A0BF';
+            else if (e.category === 'Marketing') catColor = '#BF48B1';
+
+            let actionHtml = '';
+            if (e.status === 'pending') {
+                actionHtml = `
+                    <div class="flex gap-2 justify-center">
+                        <button onclick="approveExpense(${e.id}, true)" class="bg-[#00FF66] text-black px-2 py-0.5 font-label-sm text-[10px] uppercase hover:opacity-80">Approve</button>
+                        <button onclick="approveExpense(${e.id}, false)" class="bg-error text-on-error px-2 py-0.5 font-label-sm text-[10px] uppercase hover:opacity-80">Reject</button>
+                    </div>
+                `;
+            } else {
+                const statusColor = e.status === 'approved' ? 'text-[#00FF66]' : 'text-error';
+                actionHtml = `<span class="font-label-sm text-[10px] uppercase tracking-wider ${statusColor}">${e.status}</span>`;
+            }
+
+            tr.innerHTML = `
+                <td class="px-4 py-4 font-data-mono text-on-surface">${dateStr}</td>
+                <td class="px-4 py-4">
+                    <span class="inline-block px-2 py-1 bg-[#1A1A1A] font-label-sm text-[10px] uppercase tracking-wider" style="color: ${catColor}; border: 1px solid ${catColor}4c">${e.category}</span>
+                </td>
+                <td class="px-4 py-4 text-on-surface">
+                    ${e.title}
+                    ${e.approved_by ? `<span class="text-[10px] text-on-surface-variant ml-2 italic">Approved by ${e.approved_by}</span>` : ''}
+                </td>
+                <td class="px-4 py-4 font-data-mono text-right text-on-surface">EGP ${e.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="px-4 py-4 text-center">
+                    ${actionHtml}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        const showingCount = document.querySelector('.px-4.py-3.border-t.border-outline-variant span');
+        if (showingCount) {
+            showingCount.textContent = `Showing 1-${expenses.length} of ${expenses.length}`;
+        }
+    }
+
+    async function approveExpense(id, approve) {
+        try {
+            await Auth.apiRequest(`/api/expenses/${id}/approve`, {
+                method: 'PUT',
+                body: JSON.stringify({ approve })
+            });
+            loadExpenses();
+        } catch (err) {
+            alert('Error updating expense: ' + err.message);
+        }
+    }
+
+    function renderDistribution() {
+        const approvedExpenses = allExpenses.filter(e => e.status === 'approved');
+        const catTotals = { COGS: 0, Marketing: 0, Shipping: 0, Ops: 0 };
+        let total = 0;
+
+        approvedExpenses.forEach(e => {
+            const cat = e.category === 'Inventory' ? 'COGS' : e.category;
+            if (catTotals[cat] !== undefined) {
+                catTotals[cat] += e.amount;
+                total += e.amount;
+            }
+        });
+
+        document.getElementById('donut-total').textContent = total >= 1000 ? `${(total/1000).toFixed(1)}k` : total.toFixed(0);
+
+        const slices = [];
+        const colors = {
+            Shipping: '#48A0BF',
+            COGS: '#96BF48',
+            Marketing: '#BF48B1',
+            Ops: '#BF9648'
+        };
+
+        const keys = Object.keys(catTotals);
+        keys.forEach(k => {
+            const amount = catTotals[k];
+            const pct = total > 0 ? (amount / total * 100) : 0;
+            slices.push({
+                category: k,
+                pct: pct,
+                color: colors[k]
+            });
+        });
+
+        let conicParts = [];
+        let currentAngle = 0;
+        slices.forEach(s => {
+            const nextAngle = currentAngle + s.pct;
+            conicParts.push(`${s.color} ${currentAngle.toFixed(1)}% ${nextAngle.toFixed(1)}%`);
+            currentAngle = nextAngle;
+        });
+
+        const segmentEl = document.getElementById('donut-chart-segment');
+        if (segmentEl) {
+            segmentEl.style.background = conicParts.length > 0 ? `conic-gradient(${conicParts.join(', ')})` : '#353535';
+        }
+
+        const legendContainer = document.getElementById('legend-container');
+        if (legendContainer) {
+            legendContainer.innerHTML = '';
+            slices.forEach(s => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between';
+                row.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded-full" style="background-color: ${s.color}"></div>
+                        <span class="font-label-sm text-label-sm text-on-surface uppercase tracking-wider">${s.category === 'COGS' ? 'COGS / INVENTORY' : s.category}</span>
+                    </div>
+                    <span class="font-data-mono text-sm text-on-surface-variant">${s.pct.toFixed(0)}%</span>
+                `;
+                legendContainer.appendChild(row);
+            });
+        }
+    }
+
+    function filterExpenses() {
+        const searchInput = document.getElementById('search-input');
+        const searchVal = searchInput ? searchInput.value.toLowerCase() : '';
+        const categoryVal = document.getElementById('category-filter').value;
+        const timeVal = document.getElementById('time-filter').value;
+
+        let filtered = allExpenses;
+        if (searchVal) {
+            filtered = filtered.filter(e => 
+                e.title.toLowerCase().includes(searchVal) || 
+                e.category.toLowerCase().includes(searchVal)
+            );
+        }
+        if (categoryVal && categoryVal !== 'ALL CATEGORIES') {
+            filtered = filtered.filter(e => {
+                const cat = categoryVal.toUpperCase();
+                if (cat === 'INVENTORY' && e.category === 'COGS') return true;
+                return e.category.toUpperCase() === cat;
+            });
+        }
+        if (timeVal) {
+            const now = new Date();
+            const thisMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            
+            const prevMonth = new Date();
+            prevMonth.setMonth(prevMonth.getMonth() - 1);
+            const prevMonthStr = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`;
+
+            if (timeVal === 'THIS MONTH') {
+                filtered = filtered.filter(e => e.date && e.date.startsWith(thisMonthStr));
+            } else if (timeVal === 'LAST MONTH') {
+                filtered = filtered.filter(e => e.date && e.date.startsWith(prevMonthStr));
+            }
+        }
+
+        renderExpenses(filtered);
+    }
+</script>
+</body></html>

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Delivery Dispatcher - REHLA</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface": "#131313",
+                        "on-tertiary-fixed": "#1b1b1b",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "primary-container": "#000000",
+                        "surface-container": "#20201f",
+                        "secondary-fixed": "#e2e2e2",
+                        "primary-fixed": "#e2e2e2",
+                        "tertiary-fixed": "#e2e2e2",
+                        "surface-container-low": "#1c1b1b",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-fixed-variant": "#474747",
+                        "error": "#ffb4ab",
+                        "on-tertiary": "#303030",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "on-secondary-fixed-variant": "#454747",
+                        "surface-tint": "#c6c6c6",
+                        "secondary": "#c6c6c7",
+                        "inverse-surface": "#e5e2e1",
+                        "tertiary-container": "#000000",
+                        "on-primary-fixed-variant": "#474747",
+                        "on-secondary-container": "#b4b5b5",
+                        "on-surface-variant": "#cfc4c5",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#393939",
+                        "tertiary": "#c6c6c6",
+                        "on-primary": "#303030",
+                        "outline": "#988e90",
+                        "on-error": "#690005",
+                        "on-primary-container": "#757575",
+                        "background": "#131313",
+                        "on-tertiary-container": "#757575",
+                        "on-background": "#e5e2e1",
+                        "surface-container-highest": "#353535",
+                        "primary": "#c6c6c6",
+                        "surface-dim": "#131313",
+                        "error-container": "#93000a",
+                        "surface-variant": "#353535",
+                        "outline-variant": "#4c4546",
+                        "surface-container-high": "#2a2a2a",
+                        "inverse-primary": "#5e5e5e",
+                        "on-surface": "#e5e2e1",
+                        "secondary-container": "#454747",
+                        "on-secondary": "#2f3131",
+                        "on-primary-fixed": "#1b1b1b"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "base": "8px",
+                        "gutter": "16px",
+                        "touch-target": "44px",
+                        "sidebar-width": "280px",
+                        "container-margin": "24px"
+                    },
+                    fontFamily: {
+                        "display-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    fontSize: {
+                        "display-lg": ["48px", { lineHeight: "1.1", letterSpacing: "-0.04em", fontWeight: "800" }],
+                        "data-mono": ["14px", { lineHeight: "1.5", fontWeight: "500" }],
+                        "label-sm": ["12px", { lineHeight: "1", letterSpacing: "0.05em", fontWeight: "600" }],
+                        "body-md": ["16px", { lineHeight: "1.6", fontWeight: "400" }],
+                        "headline-lg-mobile": ["24px", { lineHeight: "1.2", fontWeight: "700" }],
+                        "headline-md": ["20px", { lineHeight: "1.4", fontWeight: "600" }],
+                        "headline-lg": ["32px", { lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .kanban-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
+        .kanban-scroll::-webkit-scrollbar-track { background: transparent; }
+        .kanban-scroll::-webkit-scrollbar-thumb { background: #4c4546; border-radius: 0; }
+        .brutalist-shadow { box-shadow: 4px 4px 0px 0px #ffffff; }
+    </style>
+</head>
+<body class="bg-background text-on-background flex h-screen w-full overflow-hidden font-body-md text-body-md">
+<!-- SideNavBar (Shared Component) -->
+<nav class="w-sidebar-width h-screen sticky left-0 top-0 bg-surface dark:bg-surface flex flex-col py-container-margin px-gutter border-r border-outline-variant dark:border-outline-variant shrink-0 z-50">
+<div class="mb-8 flex items-center gap-3">
+<div class="w-10 h-10 bg-primary flex items-center justify-center text-on-primary font-bold text-xl">R</div>
+<div>
+<h1 class="font-display-lg text-[24px] font-black tracking-tighter text-on-surface dark:text-on-surface leading-none uppercase">REHLA</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mt-1">Management Engine</p>
+</div>
+</div>
+<div class="flex flex-col gap-1 flex-1">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-sm text-label-sm uppercase">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined">point_of_sale</span>
+<span class="font-label-sm text-label-sm uppercase">POS</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-sm text-label-sm uppercase">Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-sm text-label-sm uppercase">Invoices</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-sm text-label-sm uppercase">Expenses</span>
+</a>
+<!-- Active State -->
+<a class="flex items-center gap-3 px-3 py-2 bg-on-surface text-surface dark:bg-primary-fixed dark:text-on-primary-fixed font-bold rounded-none translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">local_shipping</span>
+<span class="font-label-sm text-label-sm uppercase">Delivery</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-sm text-label-sm uppercase">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors mt-auto" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="font-label-sm text-label-sm uppercase">AI Assistant</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-sm text-label-sm uppercase">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-sm text-label-sm uppercase">Logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-screen overflow-hidden bg-background">
+<!-- TopNavBar (Shared Component) -->
+<header class="w-full h-touch-target sticky top-0 z-40 flex justify-between items-center px-container-margin bg-surface dark:bg-surface border-b border-outline-variant dark:border-outline-variant shrink-0">
+<div class="flex items-center gap-6 h-full">
+<div class="font-headline-md text-headline-md font-bold text-on-surface dark:text-on-surface uppercase tracking-tight">Delivery Dispatch</div>
+<nav class="hidden md:flex h-full items-end gap-6 ml-4">
+<a class="font-label-sm text-label-sm uppercase text-on-surface-variant hover:text-on-surface transition-opacity pb-3" href="#">Overview</a>
+<a class="font-label-sm text-label-sm uppercase text-primary font-bold border-b-2 border-primary pb-3 opacity-80" href="#">Dispatch</a>
+<a class="font-label-sm text-label-sm uppercase text-on-surface-variant hover:text-on-surface transition-opacity pb-3" href="#">History</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="font-label-sm text-label-sm uppercase flex items-center gap-2 text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-[18px]">sync</span>
+                    Sync Status
+                </button>
+<div class="w-px h-4 bg-outline-variant"></div>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-on-surface">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-on-surface">help_outline</button>
+<div class="w-8 h-8 rounded-full bg-surface-variant border border-outline-variant flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">person</span>
+</div>
+</div>
+</header>
+<!-- Canvas Workspace -->
+<div class="flex-1 flex flex-col p-container-margin gap-gutter overflow-hidden relative">
+<!-- Top Stats Row -->
+<div class="flex gap-4 shrink-0">
+<div class="flex-1 bg-surface border border-outline-variant p-4 flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant">Pending Orders</span>
+<span class="material-symbols-outlined text-outline">pending_actions</span>
+</div>
+<div id="stat-pending-deliveries" class="font-display-lg text-[32px] font-black text-on-surface leading-none">0</div>
+</div>
+<div class="flex-1 bg-surface border border-outline-variant p-4 flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant">Out for Delivery</span>
+<span class="material-symbols-outlined text-outline">local_shipping</span>
+</div>
+<div id="stat-out-deliveries" class="font-display-lg text-[32px] font-black text-on-surface leading-none">0</div>
+</div>
+<div class="flex-1 bg-surface border border-outline-variant p-4 flex flex-col gap-2 bg-surface-container-low">
+<div class="flex justify-between items-start">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant">COD to Collect</span>
+<span class="material-symbols-outlined text-outline">payments</span>
+</div>
+<div id="stat-cod-amount" class="font-data-mono text-data-mono text-[24px] font-bold text-on-surface leading-none">EGP 0.00</div>
+</div>
+</div>
+<!-- Kanban & Detail Split -->
+<div class="flex-1 flex gap-gutter overflow-hidden mt-2">
+<!-- Kanban Board -->
+<div class="flex-1 flex gap-4 overflow-x-auto kanban-scroll pb-2">
+<!-- Column: Pending -->
+<div class="w-[300px] shrink-0 flex flex-col bg-surface-container-lowest border border-outline-variant">
+<div class="p-3 border-b border-outline-variant bg-surface flex justify-between items-center">
+<span class="font-label-sm text-label-sm uppercase text-on-surface font-bold">Pending</span>
+<span id="col-pending-count" class="bg-surface-variant text-on-surface-variant px-2 py-0.5 font-data-mono text-[10px]">0</span>
+</div>
+<div id="col-pending-body" class="flex-1 p-2 space-y-2 overflow-y-auto kanban-scroll">
+<!-- Cards populated dynamically -->
+</div>
+</div>
+<!-- Column: Assigned -->
+<div class="w-[300px] shrink-0 flex flex-col bg-surface-container-lowest border border-outline-variant">
+<div class="p-3 border-b border-outline-variant bg-surface flex justify-between items-center">
+<span class="font-label-sm text-label-sm uppercase text-on-surface font-bold">Assigned / En Route</span>
+<span id="col-assigned-count" class="bg-surface-variant text-on-surface-variant px-2 py-0.5 font-data-mono text-[10px]">0</span>
+</div>
+<div id="col-assigned-body" class="flex-1 p-2 space-y-2 overflow-y-auto kanban-scroll">
+<!-- Cards populated dynamically -->
+</div>
+</div>
+<!-- Column: Completed -->
+<div class="w-[300px] shrink-0 flex flex-col bg-surface-container-lowest border border-outline-variant">
+<div class="p-3 border-b border-outline-variant bg-surface flex justify-between items-center">
+<span class="font-label-sm text-label-sm uppercase text-on-surface font-bold">Completed / Failed</span>
+<span id="col-out-count" class="bg-surface-variant text-on-surface-variant px-2 py-0.5 font-data-mono text-[10px]">0</span>
+</div>
+<div id="col-out-body" class="flex-1 p-2 space-y-2 overflow-y-auto kanban-scroll">
+<!-- Cards populated dynamically -->
+</div>
+</div>
+</div>
+<!-- Detail Panel (Fixed Width Right Sidebar) -->
+<div class="w-[380px] shrink-0 border border-outline-variant bg-surface flex flex-col h-full overflow-hidden">
+<!-- Header -->
+<div class="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<div>
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Dispatch Details</div>
+<div id="detail-order-id" class="font-data-mono text-[20px] font-bold text-on-surface">Select a delivery</div>
+</div>
+</div>
+<!-- Scrollable Body -->
+<div class="flex-1 overflow-y-auto p-4 space-y-6">
+<!-- Customer Info -->
+<div>
+<h3 class="font-label-sm text-label-sm text-on-surface uppercase border-b border-outline-variant pb-2 mb-3">Customer</h3>
+<div class="space-y-2">
+<div id="detail-customer-name" class="font-body-md text-on-surface font-bold">---</div>
+<div id="detail-customer-phone" class="font-data-mono text-data-mono text-on-surface-variant">---</div>
+<div id="detail-customer-address" class="text-on-surface-variant text-[14px] leading-tight">---</div>
+</div>
+</div>
+<!-- Financials -->
+<div>
+<h3 class="font-label-sm text-label-sm text-on-surface uppercase border-b border-outline-variant pb-2 mb-3">Financials</h3>
+<div class="flex justify-between items-center mb-1">
+<span class="text-on-surface-variant text-[14px]">COD Cash</span>
+<span id="detail-cash-collect" class="font-data-mono text-[14px]">EGP 0.00</span>
+</div>
+<div class="mt-2 flex">
+<div id="detail-payment-badge" class="bg-surface-variant text-on-surface-variant px-2 py-1 font-label-sm text-[12px] uppercase font-bold inline-block border border-outline-variant">UNPAID</div>
+</div>
+</div>
+<!-- Dispatch Actions -->
+<div class="pt-4">
+<h3 class="font-label-sm text-label-sm text-on-surface uppercase border-b border-outline-variant pb-2 mb-4">Assignment</h3>
+<label class="block font-label-sm text-[10px] uppercase text-on-surface-variant mb-1">Internal Fleet</label>
+<div class="relative mb-4">
+<select id="driver-select" class="w-full appearance-none bg-surface border border-outline-variant text-on-surface p-3 font-body-md rounded-none focus:outline-none focus:border-primary">
+<option value="">Select Driver...</option>
+<!-- Drivers loaded dynamically -->
+</select>
+<span class="material-symbols-outlined absolute right-3 top-3 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+<button id="confirm-assign-btn" class="w-full bg-on-surface text-surface font-label-sm uppercase font-bold py-3 hover:invert transition-colors border border-on-surface mb-6">
+                                Confirm Assignment
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script src="../auth-client.js"></script>
+<script>
+    // Validate role
+    Auth.checkAuth(['admin', 'ceo']);
+
+    let deliveries = [];
+    let selectedDelivery = null;
+
+    async function loadDispatcher() {
+        try {
+            deliveries = await Auth.apiRequest('/api/deliveries');
+            
+            // Render Stats
+            const pending = deliveries.filter(d => d.status === 'pending');
+            const out = deliveries.filter(d => d.status === 'out_for_delivery' || d.status === 'journey_started' || d.status === 'assigned');
+            const codToCollect = deliveries
+                .filter(d => d.status !== 'delivered' && d.payment_method === 'cash')
+                .reduce((sum, d) => sum + (d.cash_to_collect || d.total_amount || 0), 0);
+
+            document.getElementById('stat-pending-deliveries').textContent = pending.length;
+            document.getElementById('stat-out-deliveries').textContent = out.length;
+            document.getElementById('stat-cod-amount').textContent = `EGP ${codToCollect.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+            // Load drivers list dynamically
+            await loadDrivers();
+
+            // Render columns
+            renderColumn('pending', 'col-pending-body', 'col-pending-count');
+            renderColumn(['assigned', 'journey_started', 'out_for_delivery'], 'col-assigned-body', 'col-assigned-count');
+            renderColumn(['delivered', 'failed'], 'col-out-body', 'col-out-count');
+
+            if (selectedDelivery) {
+                const refreshed = deliveries.find(d => d.id === selectedDelivery.id);
+                if (refreshed) populateDetails(refreshed);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function loadDrivers() {
+        try {
+            // Retrieve drivers from the DB
+            // In a real app we'd have a specific /api/drivers, we can list users or use a standard response
+            // For now, let's hardcode driver select choices or load them from user accounts
+            const select = document.getElementById('driver-select');
+            // If already loaded, don't recreate
+            if (select.children.length > 1) return;
+
+            // Our seeds:
+            const fleet = [
+                { id: 4, name: 'Ahmed Hassan (Fleet #1)' },
+                { id: 5, name: 'Karim Mostafa (Fleet #2)' },
+                { id: 6, name: 'Omar Sayed (Fleet #3)' }
+            ];
+
+            fleet.forEach(driver => {
+                const opt = document.createElement('option');
+                opt.value = driver.id;
+                opt.textContent = driver.name;
+                select.appendChild(opt);
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function renderColumn(statusVal, containerId, countId) {
+        const body = document.getElementById(containerId);
+        body.innerHTML = '';
+        
+        const statuses = Array.isArray(statusVal) ? statusVal : [statusVal];
+        const filtered = deliveries.filter(d => statuses.includes(d.status));
+        document.getElementById(countId).textContent = filtered.length;
+
+        filtered.forEach(d => {
+            const card = document.createElement('div');
+            
+            const isSelected = selectedDelivery && selectedDelivery.id === d.id;
+            card.className = `bg-surface border p-3 cursor-pointer transition-colors ${isSelected ? 'border-primary border-2' : 'border-outline-variant hover:border-primary'}`;
+            
+            const isPaid = d.payment_method !== 'cash' || d.status === 'delivered';
+            const badgeClass = isPaid ? 'bg-[#00FF66] text-black' : 'bg-surface-variant text-on-surface-variant border border-outline-variant';
+            const badgeText = isPaid ? 'PAID' : 'COD';
+
+            card.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-data-mono text-data-mono text-on-surface font-bold">#ORD-${d.order_id}</span>
+                    <div class="${badgeClass} px-1.5 py-0.5 font-label-sm text-[10px] uppercase font-bold">${badgeText}</div>
+                </div>
+                <div class="mb-3">
+                    <div class="font-body-md text-on-surface font-semibold truncate">${d.customer_name || 'Walk-in'}</div>
+                    <div class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1 mt-1">
+                        <span class="material-symbols-outlined text-[14px]">location_on</span> 
+                        <span class="truncate">${d.customer_address}</span>
+                    </div>
+                </div>
+                <div class="flex justify-between items-end border-t border-outline-variant pt-2">
+                    <span class="font-data-mono text-[12px] text-on-surface">EGP ${(d.cash_to_collect || d.total_amount || 0).toLocaleString('en-US')}</span>
+                    <span class="text-[10px] uppercase font-bold text-on-surface-variant truncate">
+                        ${d.driver_name ? d.driver_name : 'UNASSIGNED'}
+                    </span>
+                </div>
+            `;
+
+            card.addEventListener('click', () => {
+                populateDetails(d);
+                // remove highlight from other cards
+                document.querySelectorAll('.kanban-scroll div').forEach(c => c.classList.remove('border-primary', 'border-2'));
+                card.classList.add('border-primary', 'border-2');
+            });
+
+            body.appendChild(card);
+        });
+    }
+
+    function populateDetails(d) {
+        selectedDelivery = d;
+        document.getElementById('detail-order-id').textContent = `#ORD-${d.order_id}`;
+        document.getElementById('detail-customer-name').textContent = d.customer_name || 'Walk-in';
+        document.getElementById('detail-customer-phone').textContent = d.customer_phone || 'N/A';
+        document.getElementById('detail-customer-address').textContent = d.customer_address;
+
+        const codVal = d.payment_method === 'cash' ? d.cash_to_collect || d.total_amount : 0;
+        document.getElementById('detail-cash-collect').textContent = `EGP ${codVal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+        const badge = document.getElementById('detail-payment-badge');
+        const isPaid = d.payment_method !== 'cash' || d.status === 'delivered';
+        
+        if (isPaid) {
+            badge.textContent = 'PAID';
+            badge.className = 'bg-[#00FF66] text-black px-2 py-1 font-label-sm text-[12px] uppercase font-bold inline-block border border-black';
+        } else {
+            badge.textContent = 'UNPAID COD';
+            badge.className = 'bg-error text-on-error px-2 py-1 font-label-sm text-[12px] uppercase font-bold inline-block border border-black';
+        }
+
+        // Set driver select
+        const select = document.getElementById('driver-select');
+        select.value = d.driver_id || '';
+    }
+
+    // Confirm Assignment API call
+    document.getElementById('confirm-assign-btn').addEventListener('click', async () => {
+        if (!selectedDelivery) {
+            alert('Please select a delivery first.');
+            return;
+        }
+
+        const driverId = document.getElementById('driver-select').value;
+        if (!driverId) {
+            alert('Please select a driver to assign.');
+            return;
+        }
+
+        try {
+            await Auth.apiRequest('/api/deliveries/assign', {
+                method: 'POST',
+                body: JSON.stringify({
+                    delivery_id: selectedDelivery.id,
+                    driver_id: parseInt(driverId)
+                })
+            });
+
+            alert('Driver assigned successfully!');
+            await loadDispatcher();
+        } catch (err) {
+            alert('Assignment failed: ' + err.message);
+        }
+    });
+
+    // Load initial dispatcher
+    loadDispatcher();
+</script>
+</body></html>

@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Inventory - REHLA Management Engine</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for brutalist feel */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #4c4546; border-radius: 0px; }
+        ::-webkit-scrollbar-thumb:hover { background: #988e90; }
+    </style>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface": "#131313",
+                        "on-tertiary-fixed": "#1b1b1b",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "primary-container": "#000000",
+                        "surface-container": "#20201f",
+                        "secondary-fixed": "#e2e2e2",
+                        "primary-fixed": "#e2e2e2",
+                        "tertiary-fixed": "#e2e2e2",
+                        "surface-container-low": "#1c1b1b",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-fixed-variant": "#474747",
+                        "error": "#ffb4ab",
+                        "on-tertiary": "#303030",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "on-secondary-fixed-variant": "#454747",
+                        "surface-tint": "#c6c6c6",
+                        "secondary": "#c6c6c7",
+                        "inverse-surface": "#e5e2e1",
+                        "tertiary-container": "#000000",
+                        "on-primary-fixed-variant": "#474747",
+                        "on-secondary-container": "#b4b5b5",
+                        "on-surface-variant": "#cfc4c5",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#393939",
+                        "tertiary": "#c6c6c6",
+                        "on-primary": "#303030",
+                        "outline": "#988e90",
+                        "on-error": "#690005",
+                        "on-primary-container": "#757575",
+                        "background": "#131313",
+                        "on-tertiary-container": "#757575",
+                        "on-background": "#e5e2e1",
+                        "surface-container-highest": "#353535",
+                        "primary": "#c6c6c6",
+                        "surface-dim": "#131313",
+                        "error-container": "#93000a",
+                        "surface-variant": "#353535",
+                        "outline-variant": "#4c4546",
+                        "surface-container-high": "#2a2a2a",
+                        "inverse-primary": "#5e5e5e",
+                        "on-surface": "#e5e2e1",
+                        "secondary-container": "#454747",
+                        "on-secondary": "#2f3131",
+                        "on-primary-fixed": "#1b1b1b"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "base": "8px",
+                        "gutter": "16px",
+                        "touch-target": "44px",
+                        "sidebar-width": "280px",
+                        "container-margin": "24px"
+                    },
+                    fontFamily: {
+                        "display-lg": ["Inter", "sans-serif"],
+                        "data-mono": ["JetBrains Mono", "monospace"],
+                        "label-sm": ["Inter", "sans-serif"],
+                        "body-md": ["Inter", "sans-serif"],
+                        "headline-lg-mobile": ["Inter", "sans-serif"],
+                        "headline-md": ["Inter", "sans-serif"],
+                        "headline-lg": ["Inter", "sans-serif"]
+                    },
+                    fontSize: {
+                        "display-lg": ["48px", { lineHeight: "1.1", letterSpacing: "-0.04em", fontWeight: "800" }],
+                        "data-mono": ["14px", { lineHeight: "1.5", fontWeight: "500" }],
+                        "label-sm": ["12px", { lineHeight: "1", letterSpacing: "0.05em", fontWeight: "600" }],
+                        "body-md": ["16px", { lineHeight: "1.6", fontWeight: "400" }],
+                        "headline-lg-mobile": ["24px", { lineHeight: "1.2", fontWeight: "700" }],
+                        "headline-md": ["20px", { lineHeight: "1.4", fontWeight: "600" }],
+                        "headline-lg": ["32px", { lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background flex h-screen overflow-hidden font-body-md selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- JSON Component: SideNavBar -->
+<nav class="hidden md:flex flex-col w-sidebar-width h-screen sticky left-0 top-0 bg-surface border-r border-outline-variant py-container-margin px-gutter z-30 shrink-0">
+<!-- Brand / Header -->
+<div class="flex items-center gap-base mb-container-margin px-base">
+<div class="w-8 h-8 bg-on-surface rounded flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-surface !text-[20px]">api</span>
+</div>
+<div class="flex flex-col">
+<span class="font-display-lg text-[24px] font-black tracking-tighter text-on-surface leading-none uppercase">REHLA</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mt-1">Management Engine</span>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<div class="flex flex-col gap-1 mt-4">
+<a class="flex items-center gap-base px-3 h-touch-target rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-highest transition-colors hover:text-on-surface" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-sm text-label-sm uppercase">Dashboard</span>
+</a>
+<a class="flex items-center gap-base px-3 h-touch-target rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-highest transition-colors hover:text-on-surface" href="#">
+<span class="material-symbols-outlined">point_of_sale</span>
+<span class="font-label-sm text-label-sm uppercase">POS</span>
+</a>
+<!-- ACTIVE TAB -->
+<a class="flex items-center gap-base px-3 h-touch-target rounded-none bg-primary-fixed text-on-primary-fixed font-bold translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="font-label-sm text-label-sm uppercase">Inventory</span>
+</a>
+<a class="flex items-center gap-base px-3 h-touch-target rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-highest transition-colors hover:text-on-surface" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-sm text-label-sm uppercase">Invoices</span>
+</a>
+<a class="flex items-center gap-base px-3 h-touch-target rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-highest transition-colors hover:text-on-surface" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-sm text-label-sm uppercase">Expenses</span>
+</a>
+<a class="flex items-center gap-base px-3 h-touch-target rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-highest transition-colors hover:text-on-surface" href="#">
+<span class="material-symbols-outlined">local_shipping</span>
+<span class="font-label-sm text-label-sm uppercase">Delivery</span>
+</a>
+<a class="flex items-center gap-base px-3 h-touch-target rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-highest transition-colors hover:text-on-surface" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-sm text-label-sm uppercase">Analytics</span>
+</a>
+<a class="flex items-center gap-base px-3 h-touch-target rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-highest transition-colors hover:text-on-surface" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="font-label-sm text-label-sm uppercase">AI Assistant</span>
+</a>
+<div class="flex-1"></div>
+<a class="flex items-center gap-base px-3 h-touch-target rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-highest transition-colors hover:text-on-surface" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-sm text-label-sm uppercase">Settings</span>
+</a>
+<a class="flex items-center gap-base px-3 h-touch-target rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-highest transition-colors hover:text-on-surface" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-sm text-label-sm uppercase">Logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col h-full overflow-hidden bg-background">
+<!-- JSON Component: TopNavBar -->
+<header class="w-full h-touch-target sticky top-0 z-40 border-b border-outline-variant flex justify-between items-center px-container-margin bg-surface-container-low shrink-0">
+<!-- Search Bar (on_left) -->
+<div class="flex items-center flex-1">
+<div class="relative w-[320px] flex items-center border border-outline-variant bg-surface group focus-within:border-primary-fixed">
+<span class="material-symbols-outlined absolute left-2 text-on-surface-variant group-focus-within:text-primary">search</span>
+<input class="w-full bg-transparent border-none focus:ring-0 text-on-surface font-body-md pl-10 py-1.5 placeholder-on-surface-variant/50 outline-none" placeholder="Search inventory..." type="text"/>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="flex items-center gap-gutter h-full hidden lg:flex">
+<a class="h-full flex items-center px-2 text-on-surface-variant hover:text-on-surface transition-opacity font-label-sm text-label-sm uppercase" href="#">Overview</a>
+<a class="h-full flex items-center px-2 text-on-surface-variant hover:text-on-surface transition-opacity font-label-sm text-label-sm uppercase" href="#">Reports</a>
+<a class="h-full flex items-center px-2 text-on-surface-variant hover:text-on-surface transition-opacity font-label-sm text-label-sm uppercase" href="#">History</a>
+</nav>
+<!-- Actions -->
+<div class="flex items-center gap-base flex-1 justify-end">
+<button class="h-8 px-4 border border-outline-variant text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm uppercase flex items-center gap-2">
+                    Sync Status
+                </button>
+<button class="h-8 px-4 bg-on-surface text-surface hover:opacity-90 transition-opacity font-label-sm text-label-sm uppercase font-bold flex items-center gap-2">
+                    Quick Action
+                </button>
+<div class="w-px h-6 bg-outline-variant mx-2"></div>
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="w-8 h-8 bg-surface-container-highest rounded ml-2 overflow-hidden border border-outline-variant">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A close-up studio portrait of a young professional wearing stark minimalist dark clothing, set against a solid dark gray backdrop with dramatic, high-contrast lighting emphasizing sharp facial features. The aesthetic is modern, gritty, and matches a streetwear operational dashboard theme." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlGJtJ0_C9ds0CL3mFxH8bryY6XkSDipnmP2QqsOsefwLAqO37w1rfsBCFvMHpeh1IAzGDJO94xx4fYWR2UnVXCWFDmNeOfyr-Uv4sIKmXCkXkfBGJPM9ruxmr-PnHTMcs2yO5upSqTgYgdB7D4sRmUlkyRSVb6JVRfnQxkQcdn-JTO4Y5o7e79US6WzzAifRf8O8-xBGqupOxOMSHcf5zkxIGUvpoqgNbiTCO57fDsmXY7xZFg9atmFa9GJQOymhvhU2_RlkQzU4"/>
+</div>
+</div>
+</header>
+<!-- Scrollable Body -->
+<div class="flex-1 overflow-auto p-container-margin flex flex-col xl:flex-row gap-container-margin">
+<!<!-- Left Side: Stats & Table Grid -->
+<div class="flex-grow flex flex-col gap-container-margin min-w-0" id="section-left-panel">
+  
+  <!-- PRODUCTS SECTION -->
+  <div id="section-products" class="flex flex-col gap-container-margin flex-grow">
+    <!-- Bento Stats Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-base">
+      <!-- Stat 1 -->
+      <div class="border border-outline-variant bg-surface-container-lowest p-4 flex flex-col justify-between hover:border-primary-fixed transition-colors">
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-4">Total SKUs</span>
+        <span id="stat-total-skus" class="font-data-mono text-headline-lg font-bold text-on-surface">0</span>
+      </div>
+      <!-- Stat 2 -->
+      <div class="border border-outline-variant bg-surface-container-lowest p-4 flex flex-col justify-between hover:border-primary-fixed transition-colors">
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-4">Inventory Value</span>
+        <span id="stat-total-value" class="font-data-mono text-[24px] font-bold text-primary-fixed">EGP 0.00</span>
+      </div>
+      <!-- Stat 3 -->
+      <div class="border border-outline-variant bg-surface-container-lowest p-4 flex flex-col justify-between hover:border-error transition-colors relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-8 h-8 bg-error/10 flex items-center justify-center border-l border-b border-outline-variant">
+          <span class="material-symbols-outlined text-error !text-[16px]">warning</span>
+        </div>
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-4">Low Stock</span>
+        <span id="stat-low-stock" class="font-data-mono text-headline-lg font-bold text-error">0</span>
+      </div>
+      <!-- Stat 4 -->
+      <div class="border border-outline-variant bg-surface-container-lowest p-4 flex flex-col justify-between hover:border-outline-variant transition-colors">
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-4">Out of Stock</span>
+        <span id="stat-out-of-stock" class="font-data-mono text-headline-lg font-bold text-on-surface-variant">0</span>
+      </div>
+    </div>
+    <!-- Products Table -->
+    <div class="border border-outline-variant bg-surface overflow-x-auto flex-1 min-h-[400px]">
+      <table class="w-full text-left border-collapse min-w-[800px]">
+        <thead class="bg-surface-container-lowest border-b border-outline-variant sticky top-0 z-10">
+          <tr>
+            <th class="p-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold w-12">Img</th>
+            <th class="p-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Product Name</th>
+            <th class="p-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">SKU</th>
+            <th class="p-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold text-right">Price (EGP)</th>
+            <th class="p-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold text-right">Cost (EGP)</th>
+            <th class="p-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold text-center">In WH</th>
+            <th class="p-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold text-center">Sold</th>
+            <th class="p-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold text-center">Current</th>
+          </tr>
+        </thead>
+        <tbody id="inventory-tbody" class="font-body-md text-on-surface">
+          <!-- Loaded dynamically -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- WAREHOUSES SECTION -->
+  <div id="section-warehouses" class="flex flex-col gap-container-margin flex-grow hidden">
+    <!-- Bento Stats Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-base">
+      <!-- Stat 1 -->
+      <div class="border border-outline-variant bg-surface-container-lowest p-4 flex flex-col justify-between hover:border-primary-fixed transition-colors">
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-4">Total Warehouses</span>
+        <span id="stat-wh-total" class="font-data-mono text-headline-lg font-bold text-on-surface">0</span>
+      </div>
+      <!-- Stat 2 -->
+      <div class="border border-outline-variant bg-surface-container-lowest p-4 flex flex-col justify-between hover:border-primary-fixed transition-colors">
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-4">Total Capacity (Units)</span>
+        <span id="stat-wh-units" class="font-data-mono text-[24px] font-bold text-primary-fixed">0</span>
+      </div>
+      <!-- Stat 3 -->
+      <div class="border border-outline-variant bg-surface-container-lowest p-4 flex flex-col justify-between hover:border-primary-fixed transition-colors">
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-4">Unique Brands</span>
+        <span id="stat-wh-brands" class="font-data-mono text-headline-lg font-bold text-on-surface">0</span>
+      </div>
+      <!-- Stat 4 -->
+      <div class="border border-outline-variant bg-surface-container-lowest p-4 flex flex-col justify-between hover:border-outline-variant transition-colors">
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-4">Active Fleet Links</span>
+        <span class="font-data-mono text-headline-lg font-bold text-on-surface-variant">3</span>
+      </div>
+    </div>
+    <!-- Warehouses Table -->
+    <div class="border border-outline-variant bg-surface overflow-x-auto flex-1 min-h-[400px]">
+      <table class="w-full text-left border-collapse min-w-[800px]">
+        <thead class="bg-surface-container-lowest border-b border-outline-variant sticky top-0 z-10">
+          <tr>
+            <th class="p-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold w-24">Code</th>
+            <th class="p-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Warehouse Name</th>
+            <th class="p-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Location / Address</th>
+            <th class="p-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Stored Brands</th>
+            <th class="p-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold text-center">SKU Count</th>
+            <th class="p-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold text-center">Total Stock</th>
+          </tr>
+        </thead>
+        <tbody id="warehouses-tbody" class="font-body-md text-on-surface">
+          <!-- Loaded dynamically -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Right Side: Sidebar Detail Panel (Fixed Width) -->
+<aside class="w-full xl:w-[380px] shrink-0 border border-outline-variant bg-surface-container flex flex-col h-full shadow-[4px_4px_0_0_#e5e2e1]">
+  
+  <!-- PANEL: PRODUCT DETAILS -->
+  <div id="panel-product-details" class="flex flex-col h-full">
+    <!-- Detail Header -->
+    <div class="p-4 border-b border-outline-variant flex gap-4 bg-surface-container-low">
+      <div class="w-16 h-16 bg-surface border border-outline-variant shrink-0">
+        <img id="detail-image" alt="Product Detail" class="w-full h-full object-cover" src=""/>
+      </div>
+      <div class="flex flex-col justify-center overflow-hidden">
+        <div class="flex items-center gap-2 mb-1">
+          <span id="detail-status" class="px-1.5 py-0.5 bg-primary-fixed text-on-primary-fixed font-label-sm text-[10px] uppercase font-black tracking-widest leading-none">SELECT ITEM</span>
+        </div>
+        <h2 id="detail-title" class="font-headline-md text-headline-md font-bold text-on-surface truncate">Select a product</h2>
+        <span id="detail-sku" class="font-data-mono text-data-mono text-on-surface-variant">---</span>
+      </div>
+    </div>
+    <!-- Scrollable Detail Body -->
+    <div class="flex-grow overflow-auto p-4 flex flex-col gap-6">
+      <!-- Quick Stats -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <span class="block font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Current Stock</span>
+          <span class="font-data-mono text-[24px] font-bold text-on-surface"><span id="detail-stock-count">0</span> <span class="text-data-mono text-on-surface-variant font-normal">units</span></span>
+        </div>
+        <div>
+          <span class="block font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Retail Price</span>
+          <span id="detail-price" class="font-data-mono text-[20px] font-bold text-on-surface">EGP 0.00</span>
+        </div>
+      </div>
+      
+      <div class="w-full h-px bg-outline-variant/50"></div>
+      
+      <!-- Brand & Warehouse metadata -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <span class="block font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Brand</span>
+          <span id="detail-brand" class="font-data-mono text-sm font-bold text-on-surface">---</span>
+        </div>
+        <div>
+          <span class="block font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Warehouse</span>
+          <span id="detail-warehouse" class="font-data-mono text-sm font-bold text-on-surface">---</span>
+        </div>
+      </div>
+
+      <div class="w-full h-px bg-outline-variant/50"></div>
+
+      <!-- Stock History Chart (CSS Mockup) -->
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <span class="font-label-sm text-label-sm text-on-surface uppercase tracking-widest font-bold">Velocity (30 Days)</span>
+          <span class="font-data-mono text-[10px] text-primary flex items-center gap-1">
+            <span class="material-symbols-outlined !text-[12px]">trending_up</span> +8%
+          </span>
+        </div>
+        <div class="h-32 border-b border-l border-outline-variant relative flex items-end justify-between px-1 pb-1 gap-1">
+          <!-- Bars -->
+          <div class="w-full bg-surface-variant hover:bg-primary-fixed/50 transition-colors h-[40%]"></div>
+          <div class="w-full bg-surface-variant hover:bg-primary-fixed/50 transition-colors h-[50%]"></div>
+          <div class="w-full bg-surface-variant hover:bg-primary-fixed/50 transition-colors h-[55%]"></div>
+          <div class="w-full bg-surface-variant hover:bg-primary-fixed/50 transition-colors h-[60%]"></div>
+          <div class="w-full bg-surface-variant hover:bg-primary-fixed/50 transition-colors h-[70%]"></div>
+          <div class="w-full bg-surface-variant hover:bg-primary-fixed/50 transition-colors h-[80%]"></div>
+          <div class="w-full bg-primary-fixed border border-on-surface h-[85%] relative group cursor-crosshair">
+            <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-surface font-data-mono text-[10px] px-1 py-0.5 opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">Active</div>
+          </div>
+          <!-- Grid lines -->
+          <div class="absolute inset-0 flex flex-col justify-between pointer-events-none">
+            <div class="w-full h-px bg-outline-variant/20 border-dashed border-t border-outline-variant/30"></div>
+            <div class="w-full h-px bg-outline-variant/20 border-dashed border-t border-outline-variant/30"></div>
+            <div class="w-full h-px bg-outline-variant/20 border-dashed border-t border-outline-variant/30"></div>
+          </div>
+        </div>
+        <div class="flex justify-between font-data-mono text-[10px] text-on-surface-variant">
+          <span>01 Oct</span>
+          <span>Today</span>
+        </div>
+      </div>
+      
+      <div class="w-full h-px bg-outline-variant/50"></div>
+      
+      <!-- Adjustment Form -->
+      <div class="flex flex-col gap-4">
+        <span class="font-label-sm text-label-sm text-on-surface uppercase tracking-widest font-bold">Manual Adjustment</span>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1.5">
+            <label class="font-label-sm text-[10px] text-on-surface-variant uppercase">Type</label>
+            <select id="adj-type" class="w-full h-10 bg-surface border border-outline-variant text-on-surface font-label-sm text-label-sm uppercase px-3 py-0 focus:border-primary-fixed focus:ring-0 outline-none rounded-none cursor-pointer">
+              <option value="add">Add (+)</option>
+              <option value="sub">Subtract (-)</option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="font-label-sm text-[10px] text-on-surface-variant uppercase">Quantity</label>
+            <input id="adj-qty" class="w-full h-10 bg-surface border border-outline-variant text-on-surface font-data-mono px-3 py-0 focus:border-primary-fixed focus:ring-0 outline-none rounded-none text-right" min="1" type="number" value="1"/>
+          </div>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="font-label-sm text-[10px] text-on-surface-variant uppercase">Reason code</label>
+          <input id="adj-reason" class="w-full h-10 bg-surface border border-outline-variant text-on-surface font-body-md px-3 py-0 focus:border-primary-fixed focus:ring-0 outline-none rounded-none placeholder-on-surface-variant/50" placeholder="e.g. Returned item, audit..." type="text"/>
+        </div>
+        <button id="adj-btn" class="w-full h-12 bg-on-surface text-surface hover:opacity-90 transition-opacity font-label-sm text-label-sm uppercase font-bold tracking-widest mt-2 flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined !text-[18px]">rule</span>
+          Execute Adjustment
+        </button>
+      </div>
+
+      <div class="w-full h-px bg-outline-variant/50"></div>
+
+      <!-- Relocation & Metadata Form -->
+      <div class="flex flex-col gap-4">
+        <span class="font-label-sm text-label-sm text-on-surface uppercase tracking-widest font-bold">Relocation & Brand</span>
+        <div class="flex flex-col gap-1.5">
+          <label class="font-label-sm text-[10px] text-on-surface-variant uppercase">Target Warehouse</label>
+          <select id="edit-product-wh" class="w-full h-10 bg-surface border border-outline-variant text-on-surface font-label-sm text-label-sm uppercase px-3 py-0 focus:border-primary-fixed focus:ring-0 outline-none rounded-none cursor-pointer">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="font-label-sm text-[10px] text-on-surface-variant uppercase">Brand Name</label>
+          <input id="edit-product-brand" class="w-full h-10 bg-surface border border-outline-variant text-on-surface font-body-md px-3 py-0 focus:border-primary-fixed focus:ring-0 outline-none rounded-none" type="text" />
+        </div>
+        <button id="update-meta-btn" class="w-full h-10 bg-surface-variant border border-outline-variant text-on-surface hover:bg-surface-container-highest transition-colors font-label-sm text-label-sm uppercase font-bold tracking-widest mt-1 flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined !text-[18px]">save</span>
+          Save Metadata
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL: WAREHOUSE REGISTRATION -->
+  <div id="panel-warehouse-registration" class="flex flex-col h-full hidden">
+    <!-- Detail Header -->
+    <div class="p-4 border-b border-outline-variant flex gap-4 bg-surface-container-low">
+      <div class="w-16 h-16 bg-surface border border-outline-variant shrink-0 flex items-center justify-center">
+        <span class="material-symbols-outlined text-primary text-[32px]">warehouse</span>
+      </div>
+      <div class="flex flex-col justify-center overflow-hidden">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="px-1.5 py-0.5 bg-primary-fixed text-on-primary-fixed font-label-sm text-[10px] uppercase font-black tracking-widest leading-none">REGISTRATION</span>
+        </div>
+        <h2 class="font-headline-md text-headline-md font-bold text-on-surface truncate">Register Hub</h2>
+        <span class="font-data-mono text-data-mono text-on-surface-variant">Fulfillment Node Setup</span>
+      </div>
+    </div>
+    <!-- Scrollable Detail Body -->
+    <div class="flex-grow overflow-auto p-4 flex flex-col gap-6">
+      <p class="font-body-md text-on-surface-variant text-sm">
+        Define a new physical warehouse in the distribution network. Existing and new brands can allocate their items to this location.
+      </p>
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1.5">
+          <label class="font-label-sm text-[10px] text-on-surface-variant uppercase">Warehouse Code</label>
+          <input id="new-wh-code" class="w-full h-10 bg-surface border border-outline-variant text-on-surface font-data-mono px-3 py-0 focus:border-primary-fixed focus:ring-0 outline-none rounded-none placeholder-on-surface-variant/50" placeholder="e.g. WH-ALX" type="text" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="font-label-sm text-[10px] text-on-surface-variant uppercase">Warehouse Name</label>
+          <input id="new-wh-name" class="w-full h-10 bg-surface border border-outline-variant text-on-surface font-body-md px-3 py-0 focus:border-primary-fixed focus:ring-0 outline-none rounded-none placeholder-on-surface-variant/50" placeholder="e.g. Alexandria Hub" type="text" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="font-label-sm text-[10px] text-on-surface-variant uppercase">Location / Address</label>
+          <input id="new-wh-location" class="w-full h-10 bg-surface border border-outline-variant text-on-surface font-body-md px-3 py-0 focus:border-primary-fixed focus:ring-0 outline-none rounded-none placeholder-on-surface-variant/50" placeholder="e.g. Alexandria Port, Gate 4" type="text" />
+        </div>
+        <button id="new-wh-btn" class="w-full h-12 bg-on-surface text-surface hover:opacity-90 transition-opacity font-label-sm text-label-sm uppercase font-bold tracking-widest mt-4 flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined !text-[18px]">add_business</span>
+          Register Node
+        </button>
+      </div>
+    </div>
+  </div>
+
+</aside>
+</div>
+</main>
+<script src="../auth-client.js"></script>
+<script>
+    // Validate role: Admin, Worker, CEO can view
+    Auth.checkAuth(['worker', 'admin', 'ceo']);
+
+    let products = [];
+    let warehouses = [];
+    let selectedProduct = null;
+
+    // Tabs navigation
+    const btnTabProducts = document.getElementById('btn-tab-products');
+    const btnTabWarehouses = document.getElementById('btn-tab-warehouses');
+    const sectionProducts = document.getElementById('section-products');
+    const sectionWarehouses = document.getElementById('section-warehouses');
+    const panelProductDetails = document.getElementById('panel-product-details');
+    const panelWarehouseRegistration = document.getElementById('panel-warehouse-registration');
+    const productActionsBar = document.getElementById('product-actions-bar');
+
+    btnTabProducts.addEventListener('click', () => {
+        btnTabProducts.className = "font-headline-md text-headline-md text-on-surface font-bold tracking-tight border-b-2 border-primary pb-1 focus:outline-none";
+        btnTabWarehouses.className = "font-headline-md text-headline-md text-on-surface-variant hover:text-on-surface font-bold tracking-tight border-b-2 border-transparent pb-1 focus:outline-none transition-colors";
+        
+        sectionProducts.classList.remove('hidden');
+        sectionWarehouses.classList.add('hidden');
+        panelProductDetails.classList.remove('hidden');
+        panelWarehouseRegistration.classList.add('hidden');
+        if (productActionsBar) productActionsBar.classList.remove('hidden');
+    });
+
+    btnTabWarehouses.addEventListener('click', () => {
+        btnTabWarehouses.className = "font-headline-md text-headline-md text-on-surface font-bold tracking-tight border-b-2 border-primary pb-1 focus:outline-none";
+        btnTabProducts.className = "font-headline-md text-headline-md text-on-surface-variant hover:text-on-surface font-bold tracking-tight border-b-2 border-transparent pb-1 focus:outline-none transition-colors";
+        
+        sectionWarehouses.classList.remove('hidden');
+        sectionProducts.classList.add('hidden');
+        panelWarehouseRegistration.classList.remove('hidden');
+        panelProductDetails.classList.add('hidden');
+        if (productActionsBar) productActionsBar.classList.add('hidden');
+        
+        loadWarehouses();
+    });
+
+    async function loadInventory() {
+        try {
+            products = await Auth.apiRequest('/api/inventory');
+            await loadWarehousesListOnly(); // get warehouses for dropdowns
+            renderStats();
+            renderTable();
+            
+            // Auto-select first product if none selected
+            if (products.length > 0 && !selectedProduct) {
+                selectProduct(products[0]);
+            } else if (selectedProduct) {
+                // Refresh selected product
+                const refreshed = products.find(p => p.id === selectedProduct.id);
+                if (refreshed) selectProduct(refreshed);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function loadWarehousesListOnly() {
+        try {
+            warehouses = await Auth.apiRequest('/api/warehouses');
+            
+            // Populate Target Warehouse dropdown
+            const whSelect = document.getElementById('edit-product-wh');
+            whSelect.innerHTML = warehouses.map(w => `<option value="${w.id}">${w.name} (${w.code})</option>`).join('');
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function loadWarehouses() {
+        try {
+            warehouses = await Auth.apiRequest('/api/warehouses');
+            renderWarehouseStats();
+            renderWarehousesTable();
+            
+            // Populate Target Warehouse dropdown
+            const whSelect = document.getElementById('edit-product-wh');
+            whSelect.innerHTML = warehouses.map(w => `<option value="${w.id}">${w.name} (${w.code})</option>`).join('');
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function renderWarehouseStats() {
+        const totalWh = warehouses.length;
+        const totalUnits = warehouses.reduce((sum, w) => sum + w.total_stock, 0);
+        
+        // Count unique brands across all warehouses
+        const allBrands = new Set();
+        warehouses.forEach(w => w.brands.forEach(b => { if (b) allBrands.add(b.trim()); }));
+        
+        document.getElementById('stat-wh-total').textContent = totalWh;
+        document.getElementById('stat-wh-units').textContent = totalUnits.toLocaleString();
+        document.getElementById('stat-wh-brands').textContent = allBrands.size;
+    }
+
+    function renderWarehousesTable() {
+        const tbody = document.getElementById('warehouses-tbody');
+        tbody.innerHTML = '';
+
+        warehouses.forEach(w => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-outline-variant/50 hover:bg-surface-container-highest transition-colors';
+            
+            const brandBadges = w.brands.length > 0 
+                ? w.brands.map(b => `<span class="px-2 py-0.5 bg-surface-container border border-outline-variant text-on-surface-variant font-data-mono text-xs uppercase rounded-sm mr-1.5">${b}</span>`).join('')
+                : '<span class="text-on-surface-variant/40 italic text-xs">No Brands</span>';
+
+            tr.innerHTML = `
+                <td class="p-3 font-data-mono text-data-mono font-bold text-primary-fixed">${w.code}</td>
+                <td class="p-3 font-semibold">${w.name}</td>
+                <td class="p-3 text-on-surface-variant text-sm">${w.location}</td>
+                <td class="p-3 flex flex-wrap gap-y-1">${brandBadges}</td>
+                <td class="p-3 font-data-mono text-data-mono text-center">${w.sku_count}</td>
+                <td class="p-3 font-data-mono text-data-mono text-center font-bold">${w.total_stock.toLocaleString()}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderStats() {
+        const totalSkus = products.length;
+        const totalValue = products.reduce((sum, p) => sum + (p.price * p.stock_quantity), 0);
+        const lowStock = products.filter(p => p.stock_quantity > 0 && p.stock_quantity <= 15).length;
+        const outOfStock = products.filter(p => p.stock_quantity === 0).length;
+
+        document.getElementById('stat-total-skus').textContent = totalSkus;
+        document.getElementById('stat-total-value').textContent = `EGP ${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+        document.getElementById('stat-low-stock').textContent = lowStock;
+        document.getElementById('stat-out-of-stock').textContent = outOfStock;
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('inventory-tbody');
+        tbody.innerHTML = '';
+
+        products.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.className = `border-b border-outline-variant/50 hover:bg-surface-container-highest transition-colors cursor-pointer group ${selectedProduct && selectedProduct.id === p.id ? 'bg-surface-container-highest/40' : ''}`;
+            
+            const isLow = p.stock_quantity > 0 && p.stock_quantity <= 15;
+            const isOut = p.stock_quantity === 0;
+
+            let stockBadge = `<span class="font-bold text-primary-fixed">${p.stock_quantity}</span>`;
+            if (isLow) {
+                stockBadge = `<span class="font-bold text-error bg-error/10 border border-error/20 rounded-sm inline-block px-2 py-0.5">${p.stock_quantity}</span>`;
+            } else if (isOut) {
+                stockBadge = `<span class="font-bold text-on-surface-variant line-through">0</span>`;
+            }
+
+            const whDisplay = p.warehouse_code ? `${p.warehouse_code}` : 'Unassigned';
+
+            tr.innerHTML = `
+                <td class="p-3">
+                    <div class="w-10 h-10 bg-surface-variant border border-outline-variant">
+                        <img class="w-full h-full object-cover mix-blend-luminosity opacity-80 group-hover:opacity-100 group-hover:mix-blend-normal transition-all" src="${p.image_url}" alt="${p.name}" />
+                    </div>
+                </td>
+                <td class="p-3 font-semibold truncate max-w-[200px] ${isOut ? 'line-through text-on-surface-variant' : ''}">
+                  ${p.name}
+                  <span class="block text-xs font-normal text-on-surface-variant/70 mt-0.5">${p.brand || 'REHLA'}</span>
+                </td>
+                <td class="p-3 font-data-mono text-data-mono text-on-surface-variant ${isOut ? 'line-through' : ''}">${p.sku}</td>
+                <td class="p-3 font-data-mono text-data-mono text-right ${isOut ? 'line-through' : ''}">${p.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td class="p-3 font-data-mono text-data-mono text-right text-on-surface-variant ${isOut ? 'line-through' : ''}">${(p.price * 0.4).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td class="p-3 font-data-mono text-data-mono text-center text-on-surface-variant">${whDisplay}</td>
+                <td class="p-3 font-data-mono text-data-mono text-center">12</td>
+                <td class="p-3 font-data-mono text-data-mono text-center">${stockBadge}</td>
+            `;
+
+            tr.addEventListener('click', () => {
+                selectProduct(p);
+                // Highlight active row
+                document.querySelectorAll('#inventory-tbody tr').forEach(row => row.classList.remove('bg-surface-container-highest/40'));
+                tr.classList.add('bg-surface-container-highest/40');
+            });
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    function selectProduct(p) {
+        selectedProduct = p;
+        document.getElementById('detail-image').src = p.image_url;
+        document.getElementById('detail-title').textContent = p.name;
+        document.getElementById('detail-sku').textContent = p.sku;
+        document.getElementById('detail-stock-count').textContent = p.stock_quantity;
+        document.getElementById('detail-price').textContent = `EGP ${p.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+        document.getElementById('detail-brand').textContent = p.brand || 'REHLA';
+        document.getElementById('detail-warehouse').textContent = p.warehouse_name || 'Unassigned';
+
+        // Select correct warehouse in dropdown
+        const whSelect = document.getElementById('edit-product-wh');
+        if (p.warehouse_id) whSelect.value = p.warehouse_id;
+        document.getElementById('edit-product-brand').value = p.brand || 'REHLA';
+
+        const statusEl = document.getElementById('detail-status');
+        if (p.stock_quantity === 0) {
+            statusEl.textContent = 'OUT OF STOCK';
+            statusEl.className = 'px-1.5 py-0.5 bg-error text-on-error font-label-sm text-[10px] uppercase font-black tracking-widest leading-none';
+        } else if (p.stock_quantity <= 15) {
+            statusEl.textContent = 'LOW STOCK';
+            statusEl.className = 'px-1.5 py-0.5 bg-error-container text-on-error-container font-label-sm text-[10px] uppercase font-black tracking-widest leading-none';
+        } else {
+            statusEl.textContent = 'IN STOCK';
+            statusEl.className = 'px-1.5 py-0.5 bg-primary-fixed text-on-primary-fixed font-label-sm text-[10px] uppercase font-black tracking-widest leading-none';
+        }
+    }
+
+    // Adjust Stock Form
+    document.getElementById('adj-btn').addEventListener('click', async () => {
+        if (!selectedProduct) return;
+        const type = document.getElementById('adj-type').value;
+        const qtyVal = parseInt(document.getElementById('adj-qty').value) || 0;
+        
+        let newStock = selectedProduct.stock_quantity;
+        if (type === 'add') {
+            newStock += qtyVal;
+        } else {
+            newStock = Math.max(0, newStock - qtyVal);
+        }
+
+        try {
+            await Auth.apiRequest(`/api/inventory/${selectedProduct.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ stock_quantity: newStock })
+            });
+            alert('Stock adjusted successfully!');
+            document.getElementById('adj-reason').value = '';
+            await loadInventory();
+        } catch (err) {
+            alert('Failed to adjust stock: ' + err.message);
+        }
+    });
+
+    // Save Metadata (Warehouse & Brand) Form
+    document.getElementById('update-meta-btn').addEventListener('click', async () => {
+        if (!selectedProduct) return;
+        const warehouse_id = parseInt(document.getElementById('edit-product-wh').value) || null;
+        const brand = document.getElementById('edit-product-brand').value.trim();
+
+        try {
+            await Auth.apiRequest(`/api/inventory/${selectedProduct.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ warehouse_id, brand })
+            });
+            alert('Product metadata updated successfully!');
+            await loadInventory();
+        } catch (err) {
+            alert('Failed to update product metadata: ' + err.message);
+        }
+    });
+
+    // Execute Warehouse Registration Form
+    document.getElementById('new-wh-btn').addEventListener('click', async () => {
+        const code = document.getElementById('new-wh-code').value.trim();
+        const name = document.getElementById('new-wh-name').value.trim();
+        const location = document.getElementById('new-wh-location').value.trim();
+
+        if (!code || !name || !location) {
+            alert('Please fill out all warehouse fields.');
+            return;
+        }
+
+        try {
+            await Auth.apiRequest('/api/warehouses', {
+                method: 'POST',
+                body: JSON.stringify({ code, name, location })
+            });
+            alert('Warehouse registered successfully!');
+            document.getElementById('new-wh-code').value = '';
+            document.getElementById('new-wh-name').value = '';
+            document.getElementById('new-wh-location').value = '';
+            
+            // Reload warehouses table
+            await loadWarehouses();
+        } catch (err) {
+            alert('Failed to register warehouse: ' + err.message);
+        }
+    });
+
+    // Category filtering
+    const catSelect = document.getElementById('category-filter');
+    if (catSelect) {
+        catSelect.addEventListener('change', () => {
+            const val = catSelect.value;
+            if (val === 'All') {
+                loadInventory();
+            } else {
+                tbodyFiltered(val);
+            }
+        });
+    }
+
+    function tbodyFiltered(cat) {
+        const tbody = document.getElementById('inventory-tbody');
+        tbody.innerHTML = '';
+        const filtered = products.filter(p => p.category === cat);
+        
+        filtered.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.className = `border-b border-outline-variant/50 hover:bg-surface-container-highest transition-colors cursor-pointer group ${selectedProduct && selectedProduct.id === p.id ? 'bg-surface-container-highest/40' : ''}`;
+            const isLow = p.stock_quantity > 0 && p.stock_quantity <= 15;
+            const isOut = p.stock_quantity === 0;
+            let stockBadge = `<span class="font-bold text-primary-fixed">${p.stock_quantity}</span>`;
+            if (isLow) stockBadge = `<span class="font-bold text-error bg-error/10 border border-error/20 rounded-sm inline-block px-2 py-0.5">${p.stock_quantity}</span>`;
+            else if (isOut) stockBadge = `<span class="font-bold text-on-surface-variant line-through">0</span>`;
+            
+            const whDisplay = p.warehouse_code ? `${p.warehouse_code}` : 'Unassigned';
+
+            tr.innerHTML = `
+                <td class="p-3">
+                    <div class="w-10 h-10 bg-surface-variant border border-outline-variant">
+                        <img class="w-full h-full object-cover mix-blend-luminosity opacity-80 group-hover:opacity-100 group-hover:mix-blend-normal transition-all" src="${p.image_url}" alt="${p.name}" />
+                    </div>
+                </td>
+                <td class="p-3 font-semibold truncate max-w-[200px] ${isOut ? 'line-through text-on-surface-variant' : ''}">
+                  ${p.name}
+                  <span class="block text-xs font-normal text-on-surface-variant/70 mt-0.5">${p.brand || 'REHLA'}</span>
+                </td>
+                <td class="p-3 font-data-mono text-data-mono text-on-surface-variant ${isOut ? 'line-through' : ''}">${p.sku}</td>
+                <td class="p-3 font-data-mono text-data-mono text-right ${isOut ? 'line-through' : ''}">${p.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td class="p-3 font-data-mono text-data-mono text-right text-on-surface-variant ${isOut ? 'line-through' : ''}">${(p.price * 0.4).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td class="p-3 font-data-mono text-data-mono text-center text-on-surface-variant">${whDisplay}</td>
+                <td class="p-3 font-data-mono text-data-mono text-center">12</td>
+                <td class="p-3 font-data-mono text-data-mono text-center">${stockBadge}</td>
+            `;
+            tr.addEventListener('click', () => {
+                selectProduct(p);
+                document.querySelectorAll('#inventory-tbody tr').forEach(row => row.classList.remove('bg-surface-container-highest/40'));
+                tr.classList.add('bg-surface-container-highest/40');
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Sync Shopify Button (header link / sync icon)
+    const syncShopifyButtons = document.querySelectorAll('button');
+    syncShopifyButtons.forEach(btn => {
+        if (btn.textContent.includes('Sync Shopify')) {
+            btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                btn.textContent = 'Syncing...';
+                try {
+                    await Auth.apiRequest('/api/inventory/sync-shopify', { method: 'POST' });
+                    alert('Shopify store synced successfully!');
+                    await loadInventory();
+                } catch (err) {
+                    alert('Sync failed: ' + err.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = `<span class="material-symbols-outlined !text-[16px]">sync</span> Sync Shopify`;
+                }
+            });
+        }
+    });
+
+    // Load initially
+    loadInventory();
+</script>
+</body></html>

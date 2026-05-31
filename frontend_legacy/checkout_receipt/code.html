@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>REHLA - Checkout &amp; Receipt</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#131313",
+                        "on-tertiary-fixed": "#1b1b1b",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "primary-container": "#000000",
+                        "surface-container": "#20201f",
+                        "secondary-fixed": "#e2e2e2",
+                        "primary-fixed": "#e2e2e2",
+                        "tertiary-fixed": "#e2e2e2",
+                        "surface-container-low": "#1c1b1b",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-fixed-variant": "#474747",
+                        "error": "#ffb4ab",
+                        "on-tertiary": "#303030",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "on-secondary-fixed-variant": "#454747",
+                        "surface-tint": "#c6c6c6",
+                        "secondary": "#c6c6c7",
+                        "inverse-surface": "#e5e2e1",
+                        "tertiary-container": "#000000",
+                        "on-primary-fixed-variant": "#474747",
+                        "on-secondary-container": "#b4b5b5",
+                        "on-surface-variant": "#cfc4c5",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#393939",
+                        "tertiary": "#c6c6c6",
+                        "on-primary": "#303030",
+                        "outline": "#988e90",
+                        "on-error": "#690005",
+                        "on-primary-container": "#757575",
+                        "background": "#131313",
+                        "on-tertiary-container": "#757575",
+                        "on-background": "#e5e2e1",
+                        "surface-container-highest": "#353535",
+                        "primary": "#c6c6c6",
+                        "surface-dim": "#131313",
+                        "error-container": "#93000a",
+                        "surface-variant": "#353535",
+                        "outline-variant": "#4c4546",
+                        "surface-container-high": "#2a2a2a",
+                        "inverse-primary": "#5e5e5e",
+                        "on-surface": "#e5e2e1",
+                        "secondary-container": "#454747",
+                        "on-secondary": "#2f3131",
+                        "on-primary-fixed": "#1b1b1b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "8px",
+                        "gutter": "16px",
+                        "touch-target": "44px",
+                        "sidebar-width": "280px",
+                        "container-margin": "24px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800" }],
+                        "data-mono": ["14px", { "lineHeight": "1.5", "fontWeight": "500" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .fill-icon { font-variation-settings: 'FILL' 1; }
+        /* Minimalist-Brutalist utility classes */
+        .brutal-border { border: 1px solid #1A1A1A; }
+        .dark .brutal-border { border-color: #4c4546; } /* Using outline-variant */
+        .brutal-shadow { box-shadow: 4px 4px 0px 0px #000000; }
+        .dark .brutal-shadow { box-shadow: 4px 4px 0px 0px #e5e2e1; } /* using on-background */
+        
+        /* Modal Overlay Fade */
+        #receipt-modal { display: none; }
+        .fade-in { animation: fadeIn 0.2s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md text-body-md antialiased overflow-hidden selection:bg-primary selection:text-surface">
+<!-- POS Background (Simulated) -->
+<div class="fixed inset-0 flex flex-col md:flex-row opacity-30 pointer-events-none blur-sm grayscale z-0">
+<!-- SideNav Shell -->
+<nav class="hidden md:flex flex-col h-full py-container-margin px-gutter bg-surface dark:bg-surface text-primary dark:text-primary w-sidebar-width h-screen sticky left-0 top-0 border-r border-outline-variant dark:border-outline-variant">
+<div class="mb-12">
+<h1 class="font-display-lg text-display-lg font-black tracking-tighter text-on-surface dark:text-on-surface">REHLA</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Management Engine</p>
+</div>
+<ul class="space-y-2 flex-grow">
+<li><a class="flex items-center gap-3 px-4 py-3 rounded-none text-on-surface-variant hover:bg-surface-container-highest transition-colors" href="#"><span class="material-symbols-outlined" data-icon="dashboard">dashboard</span> <span class="font-label-sm text-label-sm">Dashboard</span></a></li>
+<li><a class="flex items-center gap-3 px-4 py-3 rounded-none bg-primary-fixed text-on-primary-fixed font-bold translate-x-1 transition-transform duration-200" href="#"><span class="material-symbols-outlined fill-icon" data-icon="point_of_sale" data-weight="fill">point_of_sale</span> <span class="font-label-sm text-label-sm">POS</span></a></li>
+</ul>
+</nav>
+<div class="flex-grow p-8 flex flex-col gap-4">
+<div class="h-24 bg-surface-container-high rounded brutal-border w-full"></div>
+<div class="flex-grow bg-surface-container-low rounded brutal-border w-full"></div>
+</div>
+</div>
+<!-- MAIN OVERLAY / MODAL SYSTEM -->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8">
+<!-- CHECKOUT MODAL (Active by default) -->
+<div class="bg-surface brutal-border brutal-shadow w-full max-w-[900px] h-full max-h-[700px] flex flex-col md:flex-row relative" id="checkout-modal">
+<!-- Close Button -->
+<button class="absolute top-4 right-4 p-2 text-on-surface-variant hover:text-on-surface z-10 transition-colors">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<!-- LEFT COLUMN: Order Summary -->
+<div class="w-full md:w-5/12 bg-surface-container-low p-6 md:p-8 flex flex-col border-b md:border-b-0 md:border-r border-outline-variant">
+<div class="mb-8">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-1">Order Summary</h2>
+<p class="font-label-sm text-label-sm text-on-surface-variant">2 Items</p>
+</div>
+<!-- Items List -->
+<div class="flex-grow overflow-y-auto pr-2 space-y-4 mb-6">
+<!-- Item 1 -->
+<div class="flex justify-between items-start pb-4 border-b border-outline-variant">
+<div>
+<p class="font-body-md text-body-md text-on-surface font-semibold">Heavyweight Hoodie - Black</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-1">Size: L • SKU: HW-BLK-L</p>
+</div>
+<p class="font-data-mono text-data-mono text-on-surface">EGP 1,200.00</p>
+</div>
+<!-- Item 2 -->
+<div class="flex justify-between items-start pb-4 border-b border-outline-variant">
+<div>
+<p class="font-body-md text-body-md text-on-surface font-semibold">Cargo Pants - Olive</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-1">Size: 32 • SKU: CG-OLV-32</p>
+</div>
+<p class="font-data-mono text-data-mono text-on-surface">EGP 650.00</p>
+</div>
+</div>
+<!-- Totals -->
+<div class="pt-4 mt-auto">
+<div class="flex justify-between items-center mb-2">
+<span class="font-body-md text-body-md text-on-surface-variant">Subtotal</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">EGP 1,850.00</span>
+</div>
+<div class="flex justify-between items-center mb-4">
+<span class="font-body-md text-body-md text-on-surface-variant">Tax (14%)</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">EGP 259.00</span>
+</div>
+<div class="flex justify-between items-center pt-4 border-t border-outline-variant">
+<span class="font-headline-md text-headline-md font-bold text-on-surface">Total Due</span>
+<span class="font-display-lg text-display-lg font-black text-on-surface">EGP 2,109.00</span>
+</div>
+</div>
+</div>
+<!-- RIGHT COLUMN: Payment Processing -->
+<div class="w-full md:w-7/12 p-6 md:p-8 flex flex-col bg-surface">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-6">Payment Method</h2>
+<!-- Payment Tabs -->
+<div class="grid grid-cols-3 gap-4 mb-8">
+<!-- Cash (Active) -->
+<button class="h-touch-target flex flex-col items-center justify-center gap-1 border border-primary bg-primary text-surface transition-colors p-4 brutal-shadow group">
+<span class="material-symbols-outlined fill-icon" data-icon="payments" data-weight="fill">payments</span>
+<span class="font-label-sm text-label-sm uppercase font-bold">Cash</span>
+</button>
+<!-- Card (Inactive) -->
+<button class="h-touch-target flex flex-col items-center justify-center gap-1 brutal-border bg-surface text-on-surface hover:bg-surface-container-high transition-colors p-4">
+<span class="material-symbols-outlined" data-icon="credit_card">credit_card</span>
+<span class="font-label-sm text-label-sm uppercase">Card</span>
+</button>
+<!-- Instalment (Inactive) -->
+<button class="h-touch-target flex flex-col items-center justify-center gap-1 brutal-border bg-surface text-on-surface hover:bg-surface-container-high transition-colors p-4">
+<span class="material-symbols-outlined" data-icon="handshake">handshake</span>
+<span class="font-label-sm text-label-sm uppercase">Instalment</span>
+</button>
+</div>
+<!-- Cash Entry View -->
+<div class="flex-grow flex flex-col justify-center">
+<div class="mb-8">
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-2 uppercase tracking-widest">Amount Received (EGP)</label>
+<input class="w-full bg-surface border-0 border-b border-outline-variant text-display-lg font-data-mono font-black text-on-surface focus:ring-0 focus:border-primary px-0 py-2 placeholder-on-surface-variant/30" placeholder="0.00" type="text" value="2,500.00"/>
+</div>
+<!-- Change Calculation -->
+<div class="bg-surface-container-high p-6 brutal-border flex justify-between items-center">
+<span class="font-headline-md text-headline-md text-on-surface font-bold uppercase tracking-wide">Change Due</span>
+<span class="font-data-mono text-[32px] leading-tight font-black text-[#00FF66] bg-black px-3 py-1 brutal-border">EGP 391.00</span>
+</div>
+</div>
+<!-- Action -->
+<div class="mt-8 pt-6 border-t border-outline-variant flex justify-end">
+<button class="h-touch-target px-8 bg-primary text-surface font-label-sm text-label-sm uppercase font-bold tracking-widest hover:bg-on-surface transition-colors brutal-shadow flex items-center gap-2" onclick="showReceipt()">
+                        Complete Sale
+                        <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- RECEIPT MODAL (Hidden by default) -->
+<div class="bg-surface-container-lowest brutal-border brutal-shadow w-full max-w-[500px] flex flex-col items-center p-8 relative" id="receipt-modal">
+<button class="absolute top-4 right-4 p-2 text-on-surface-variant hover:text-on-surface z-10 transition-colors" onclick="resetPOS()">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<!-- Receipt Content (Thermal Printer Aesthetic) -->
+<div class="w-full bg-white dark:bg-[#e2e2e2] text-black p-8 brutal-border mb-8 shadow-sm flex flex-col items-center">
+<!-- Logo -->
+<div class="mb-6 text-center">
+<h2 class="font-display-lg text-[40px] leading-none font-black tracking-tighter">REHLA</h2>
+<p class="font-label-sm text-label-sm uppercase tracking-widest mt-1">Store #001 - Zamalek</p>
+</div>
+<!-- Meta -->
+<div class="w-full flex justify-between items-center border-b border-black/20 pb-4 mb-4 font-data-mono text-[12px] font-medium">
+<div>
+<p id="receipt-date">Date: 24.10.2023</p>
+<p id="receipt-time">Time: 14:32:05</p>
+</div>
+<div class="text-right">
+<p id="receipt-order-id">Order #RH-2041</p>
+<p id="receipt-cashier">Cashier: ADMIN</p>
+</div>
+</div>
+<!-- Items -->
+<div id="receipt-items-container" class="w-full space-y-3 border-b border-black/20 pb-4 mb-4 font-data-mono text-[12px]">
+<div class="flex justify-between">
+<span class="w-8">1x</span>
+<span class="flex-grow">Heavyweight Hoodie - BLK L</span>
+<span class="text-right">1,200.00</span>
+</div>
+<div class="flex justify-between">
+<span class="w-8">1x</span>
+<span class="flex-grow">Cargo Pants - OLV 32</span>
+<span class="text-right">650.00</span>
+</div>
+</div>
+<!-- Totals -->
+<div class="w-full space-y-1 font-data-mono text-[12px] mb-4">
+<div class="flex justify-between text-black/60">
+<span>Subtotal</span>
+<span id="receipt-subtotal">1,850.00</span>
+</div>
+<div class="flex justify-between text-black/60">
+<span>Tax (14%)</span>
+<span id="receipt-tax">259.00</span>
+</div>
+</div>
+<!-- Final -->
+<div class="w-full border-y border-black py-4 mb-6 font-data-mono">
+<div class="flex justify-between items-end mb-2">
+<span class="font-bold text-[16px]">TOTAL</span>
+<span id="receipt-total" class="font-black text-[20px]">EGP 2,109.00</span>
+</div>
+<div class="flex justify-between text-[12px] text-black/70">
+<span>Paid (CASH)</span>
+<span id="receipt-paid">2,500.00</span>
+</div>
+<div class="flex justify-between text-[12px] text-black/70 font-bold">
+<span>Change</span>
+<span id="receipt-change">391.00</span>
+</div>
+</div>
+<div class="text-center font-data-mono text-[10px] text-black/50 uppercase tracking-widest">
+<p>Thank you for shopping</p>
+<p class="mt-1">Returns within 14 days with receipt.</p>
+</div>
+</div>
+<!-- Receipt Actions -->
+<div class="w-full flex gap-4">
+<button class="flex-1 h-touch-target bg-surface brutal-border text-on-surface font-label-sm text-label-sm uppercase font-bold hover:bg-surface-container-high transition-colors flex justify-center items-center gap-2" onclick="window.print()">
+<span class="material-symbols-outlined" data-icon="print">print</span>
+                    Print Receipt
+                </button>
+<button class="flex-1 h-touch-target bg-primary text-surface font-label-sm text-label-sm uppercase font-bold hover:bg-on-surface transition-colors brutal-shadow flex justify-center items-center gap-2" onclick="resetPOS()">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                    New Sale
+                </button>
+</div>
+</div>
+</div>
+<script src="../auth-client.js"></script>
+<script>
+        // Check authentication for POS (Workers and Admins allowed)
+        Auth.checkAuth(['worker', 'admin', 'ceo']);
+
+        // Handle Change Calculation dynamically
+        const amountInput = document.querySelector('input[placeholder="0.00"]');
+        const changeDueEl = document.querySelector('.bg-black.px-3.py-1');
+        const totalDue = 2109.00; // Total from summary
+
+        if (amountInput) {
+            amountInput.addEventListener('input', () => {
+                const received = parseFloat(amountInput.value.replace(/,/g, '')) || 0;
+                const change = Math.max(0, received - totalDue);
+                changeDueEl.textContent = `EGP ${change.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+            });
+        }
+
+        // Intercept Complete Sale button
+        const completeBtn = document.querySelector('button[onclick="showReceipt()"]');
+        if (completeBtn) {
+            completeBtn.removeAttribute('onclick');
+            completeBtn.addEventListener('click', async () => {
+                const amountReceived = parseFloat(amountInput.value.replace(/,/g, '')) || 2500;
+                
+                // Construct standard cart items based on the hardcoded order summary
+                // Product IDs are derived from seed: HW-BLK-L (id 1) and CG-OLV-32 (id 2)
+                const payload = {
+                    items: [
+                        { id: 1, quantity: 1 },
+                        { id: 2, quantity: 1 }
+                    ],
+                    payment_method: 'cash',
+                    amount_received: amountReceived,
+                    customer_name: 'Walk-in Customer',
+                    customer_phone: 'N/A'
+                };
+
+                try {
+                    completeBtn.disabled = true;
+                    completeBtn.textContent = 'Processing...';
+
+                    const res = await Auth.apiRequest('/api/pos/checkout', {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+
+                    // Populate Receipt modal elements
+                    const now = new Date();
+                    document.getElementById('receipt-date').textContent = `Date: ${now.toLocaleDateString('en-GB').replace(/\//g, '.')}`;
+                    document.getElementById('receipt-time').textContent = `Time: ${now.toLocaleTimeString('en-GB')}`;
+                    document.getElementById('receipt-order-id').textContent = `Order #RH-${res.order_id}`;
+                    
+                    const user = Auth.getUser();
+                    document.getElementById('receipt-cashier').textContent = `Cashier: ${user.name.toUpperCase()}`;
+
+                    document.getElementById('receipt-subtotal').textContent = res.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                    document.getElementById('receipt-tax').textContent = res.tax.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                    document.getElementById('receipt-total').textContent = `EGP ${res.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                    document.getElementById('receipt-paid').textContent = amountReceived.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                    document.getElementById('receipt-change').textContent = res.change.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+                    // Open receipt modal
+                    document.getElementById('checkout-modal').style.display = 'none';
+                    const receipt = document.getElementById('receipt-modal');
+                    receipt.style.display = 'flex';
+                    receipt.classList.add('fade-in');
+
+                } catch (err) {
+                    alert('Checkout failed: ' + err.message);
+                } finally {
+                    completeBtn.disabled = false;
+                    completeBtn.innerHTML = `Complete Sale <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>`;
+                }
+            });
+        }
+
+        function resetPOS() {
+            document.getElementById('receipt-modal').style.display = 'none';
+            document.getElementById('checkout-modal').style.display = 'flex';
+            // Reload page to simulate reset
+            window.location.reload();
+        }
+    </script>
+</body></html>
