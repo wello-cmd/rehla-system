@@ -54,11 +54,7 @@ class ShopifySync {
         this.retryCount++;
         const backoffMs = Math.pow(2, this.retryCount) * 1000;
         console.warn(`[Shopify] Rate limited. Retrying in ${backoffMs}ms (attempt ${this.retryCount})`);
-        try {
-          await this.delay(backoffMs);
-        } catch (delayErr) {
-          console.debug('[Shopify] Retry delay interrupted:', delayErr.message || delayErr);
-        }
+        await this.delay(backoffMs);
         return this.shopifyRequest(endpoint, method, data);
       }
       throw err;
@@ -146,41 +142,50 @@ class ShopifySync {
             }
           }
         }
-        hasNextPage = false; // Link pagination limits
+        hasNextPage = false;
       }
-    } catch (err) {
-      syncStatus = 'failed';
-      errorDetails = err.response?.data ? JSON.stringify(err.response.data) : err.message;
-      console.error('[Shopify] Product sync failed:', errorDetails);
-      syncError = err;
-    }
 
-    const durationMs = Date.now() - startTime;
-    try {
-      await supabase.from('sync_log').insert({
+      const durationMs = Date.now() - startTime;
+      const { error: logErr } = await supabase.from('sync_log').insert({
         products_updated: productsUpdated,
         products_skipped: productsSkipped,
         products_created: productsCreated,
         triggered_by: triggeredBy,
-        status: syncStatus,
+        status: 'success',
+        error_details: '',
+        duration_ms: durationMs
+      });
+      if (logErr) {
+        console.error('[Shopify] Failed to write sync log:', logErr.message || logErr);
+      }
+
+      return {
+        success: true,
+        productsUpdated,
+        productsSkipped,
+        productsCreated,
+        durationMs
+      };
+    } catch (err) {
+      const durationMs = Date.now() - startTime;
+      const errorDetails = err.response?.data ? JSON.stringify(err.response.data) : err.message;
+      console.error('[Shopify] Product sync failed:', errorDetails);
+
+      const { error: logErr } = await supabase.from('sync_log').insert({
+        products_updated: productsUpdated,
+        products_skipped: productsSkipped,
+        products_created: productsCreated,
+        triggered_by: triggeredBy,
+        status: 'failed',
         error_details: errorDetails,
         duration_ms: durationMs
       });
-    } catch (logErr) {
-      console.error('[Shopify] Failed to write sync log:', logErr.message || logErr);
-    }
+      if (logErr) {
+        console.error('[Shopify] Failed to write sync log:', logErr.message || logErr);
+      }
 
-    if (syncError) {
-      throw syncError;
+      throw err;
     }
-
-    return {
-      success: syncStatus === 'success',
-      productsUpdated,
-      productsSkipped,
-      productsCreated,
-      durationMs
-    };
   }
 
   /**

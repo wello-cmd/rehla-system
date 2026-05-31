@@ -3,28 +3,24 @@
 
 const rateLimit = (limit = 100, windowMs = 15 * 60 * 1000) => {
   const ipRequests = new Map();
-
-  // Periodically clean up old IP entries to prevent memory leaks
-  const intervalId = setInterval(() => {
-    const now = Date.now();
-    for (const [ip, requests] of ipRequests.entries()) {
-      const active = requests.filter(time => now - time < windowMs);
-      if (active.length === 0) {
-        ipRequests.delete(ip);
-      } else {
-        ipRequests.set(ip, active);
-      }
-    }
-  }, windowMs);
-
-  // Allow Node.js process to exit cleanly if this timer is the only thing remaining
-  if (intervalId.unref) {
-    intervalId.unref();
-  }
+  let lastCleanupTime = Date.now();
 
   const middleware = (req, res, next) => {
     const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const now = Date.now();
+
+    // Lazy cleanup of the entire map periodically to prevent memory growth
+    if (now - lastCleanupTime > windowMs) {
+      for (const [key, requests] of ipRequests.entries()) {
+        const active = requests.filter(time => now - time < windowMs);
+        if (active.length === 0) {
+          ipRequests.delete(key);
+        } else {
+          ipRequests.set(key, active);
+        }
+      }
+      lastCleanupTime = now;
+    }
 
     if (!ipRequests.has(ip)) {
       ipRequests.set(ip, []);
@@ -44,8 +40,9 @@ const rateLimit = (limit = 100, windowMs = 15 * 60 * 1000) => {
     next();
   };
 
+  // Keep a dummy close method for compatibility with any callers
   middleware.close = () => {
-    clearInterval(intervalId);
+    ipRequests.clear();
   };
 
   return middleware;

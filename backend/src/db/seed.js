@@ -146,8 +146,10 @@ async function seed() {
     console.log('');
   } catch (err) {
     console.error('Fatal Seeding Error:', err.message || err);
-    process.exit(1);
+    throw err;
   }
 }
 
-seed();
+seed().catch(() => {
+  process.exit(1);
+});
