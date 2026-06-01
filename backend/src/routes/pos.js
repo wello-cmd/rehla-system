@@ -39,15 +39,14 @@ router.post('/checkout', authenticate, async (req, res) => {
 
     const total = subtotal; // No tax in v1 per SRS constraints
 
-    // Deduct stock
+    // Deduct stock after all items have been validated.
     for (const item of itemsWithDetails) {
-      await supabase.from('products')
-        .update({ stock_quantity: supabase.rpc ? item.quantity : 0 }) // Simplified
-        .eq('id', item.product_id);
-
-      // Actually deduct
       const { data: current } = await supabase.from('products').select('stock_quantity').eq('id', item.product_id).single();
-      await supabase.from('products').update({ stock_quantity: current.stock_quantity - item.quantity }).eq('id', item.product_id);
+      const newQuantity = Number(current.stock_quantity) - Number(item.quantity);
+      if (newQuantity < 0) {
+        return res.status(400).json({ error: `Insufficient stock for ${item.name}. Available: ${current.stock_quantity}` });
+      }
+      await supabase.from('products').update({ stock_quantity: newQuantity }).eq('id', item.product_id);
     }
 
     // Insert Order

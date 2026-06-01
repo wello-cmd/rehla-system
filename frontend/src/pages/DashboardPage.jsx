@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatNumber, formatDate } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
+import toast from 'react-hot-toast';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 
 const CHART_COLORS = ['#e5e2e1', '#988e90', '#6b6365', '#4c4546', '#353535'];
@@ -35,6 +36,7 @@ export default function DashboardPage() {
         setInventoryValue(invVal);
       } catch (err) {
         console.error('Dashboard fetch error:', err);
+        toast.error('Failed to load dashboard data');
       } finally {
         setLoading(false);
       }
@@ -112,7 +114,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px', marginBottom: '32px' }}>
         {/* P&L Trend Chart */}
         <div className="card">
           <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '16px' }}>Revenue vs Expenses Trend</p>
@@ -139,22 +141,25 @@ export default function DashboardPage() {
           <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '16px' }}>Top Products by Revenue</p>
           {loading ? renderSkeleton(260) : (
             <div>
-              {topProducts.map((p, i) => (
-                <div key={i} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '10px 0', borderBottom: i < topProducts.length - 1 ? '1px solid var(--color-border-light)' : 'none'
-                }}>
-                  <div>
-                    <span className="font-mono" style={{ fontSize: '11px', color: 'var(--color-text-dim)', marginRight: '8px' }}>
-                      {String(i + 1).padStart(2, '0')}
+              {topProducts.map((p) => {
+                const idx = topProducts.indexOf(p);
+                return (
+                  <div key={p.sku || p.name} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '10px 0', borderBottom: idx < topProducts.length - 1 ? '1px solid var(--color-border-light)' : 'none'
+                  }}>
+                    <div>
+                      <span className="font-mono" style={{ fontSize: '11px', color: 'var(--color-text-dim)', marginRight: '8px' }}>
+                        {String(idx + 1).padStart(2, '0')}
+                      </span>
+                      <span style={{ fontSize: '13px', fontWeight: 500 }}>{p.name}</span>
+                    </div>
+                    <span className="font-mono" style={{ fontSize: '13px', fontWeight: 600 }}>
+                      {formatEGP(p.revenue)}
                     </span>
-                    <span style={{ fontSize: '13px', fontWeight: 500 }}>{p.name}</span>
                   </div>
-                  <span className="font-mono" style={{ fontSize: '13px', fontWeight: 600 }}>
-                    {formatEGP(p.revenue)}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
               {topProducts.length === 0 && (
                 <p style={{ color: 'var(--color-text-dim)', fontSize: '13px', textAlign: 'center', padding: '40px 0' }}>
                   No sales data yet

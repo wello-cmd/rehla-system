@@ -6,6 +6,9 @@ const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const rateLimit = require('../middleware/rateLimiter');
 
+// Rate limit all auth endpoints
+router.use(rateLimit(100, 15 * 60 * 1000));
+
 // POST /api/auth/login — Supabase Auth sign-in with rate limiting
 router.post('/login', rateLimit(20, 15 * 60 * 1000), async (req, res) => {
   const { email, password } = req.body;

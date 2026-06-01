@@ -1,6 +1,6 @@
 // Login Page
 import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext'; // rateLimit
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -39,6 +39,7 @@ export default function LoginPage() {
         padding: '48px',
         background: 'var(--color-bg-elevated)',
         border: '1px solid var(--color-border-light)',
+        margin: '0 16px',
       }}>
         {/* Brand */}
         <div style={{ textAlign: 'center', marginBottom: '48px' }}>

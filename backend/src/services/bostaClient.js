@@ -33,7 +33,7 @@ class BostaClient {
     }
 
     try {
-      const response = await this.client.post('/deliveries', {
+      const response = await this.requestWithRetry(() => this.client.post('/deliveries', {
         type: codAmount > 0 ? 10 : 15,
         specs: {
           packageDetails: {
@@ -56,7 +56,7 @@ class BostaClient {
         },
         cod: codAmount || 0,
         notes: notes || ''
-      });
+      }));
 
       return {
         success: true,
@@ -65,7 +65,7 @@ class BostaClient {
         rawResponse: response.data
       };
     } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message;
+      const errorMsg = this.formatApiError(err);
       console.error('[Bosta] Create shipment failed:', errorMsg);
       throw new Error(`Bosta shipment creation failed: ${errorMsg}`);
     }
@@ -80,7 +80,7 @@ class BostaClient {
     }
 
     try {
-      const response = await this.client.get(`/deliveries/tracking/${trackingNumber}`);
+      const response = await this.requestWithRetry(() => this.client.get(`/deliveries/tracking/${trackingNumber}`));
       const data = response.data.data || response.data;
 
       return {
@@ -91,7 +91,7 @@ class BostaClient {
         lastUpdate: data.updatedAt || data.updated_at
       };
     } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message;
+      const errorMsg = this.formatApiError(err);
       console.error('[Bosta] Tracking failed:', errorMsg);
       throw new Error(`Bosta tracking failed: ${errorMsg}`);
     }
@@ -106,14 +106,15 @@ class BostaClient {
     }
 
     try {
-      const response = await this.client.get(`/deliveries/${shipmentId}/awb`);
+      const response = await this.requestWithRetry(() => this.client.get(`/deliveries/${shipmentId}/awb`));
       return {
         success: true,
         url: response.data.data?.url || response.data.url
       };
     } catch (err) {
-      console.error('[Bosta] AWB fetch failed:', err.message);
-      return { success: false, url: null };
+      const errorMsg = this.formatApiError(err);
+      console.error('[Bosta] AWB fetch failed:', errorMsg);
+      return { success: false, url: null, error: errorMsg };
     }
   }
 
@@ -129,6 +130,28 @@ class BostaClient {
       reason: payload.cancelReason || payload.failureReason || null,
       timestamp: payload.updatedAt || new Date().toISOString()
     };
+  }
+
+  async requestWithRetry(requestFn, attempt = 0) {
+    try {
+      return await requestFn();
+    } catch (err) {
+      const isRateLimited = err.response?.status === 429;
+      const isTimeout = err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT';
+      if ((isRateLimited || isTimeout) && attempt < 2) {
+        const retryAfter = Number(err.response?.headers?.['retry-after']);
+        const delayMs = retryAfter ? retryAfter * 1000 : (attempt + 1) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        return this.requestWithRetry(requestFn, attempt + 1);
+      }
+      throw err;
+    }
+  }
+
+  formatApiError(err) {
+    if (err.response?.status === 429) return 'Bosta rate limit reached. Please try again shortly.';
+    if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') return 'Bosta request timed out. Please try again.';
+    return err.response?.data?.message || err.response?.data?.error || err.message;
   }
 
   /**

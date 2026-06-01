@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS products (
   brand TEXT NOT NULL DEFAULT 'REHLA',
   warehouse_id UUID REFERENCES warehouses(id) ON DELETE SET NULL,
   shopify_variant_id TEXT,
+  shopify_inventory_item_id TEXT,
   last_synced_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -55,6 +56,7 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE INDEX idx_products_sku ON products(sku);
 CREATE INDEX idx_products_barcode ON products(barcode);
 CREATE INDEX idx_products_shopify ON products(shopify_variant_id);
+CREATE INDEX idx_products_shopify_inventory_item ON products(shopify_inventory_item_id);
 
 -- =============================================
 -- 4. ORDERS (SRS Table: orders)
@@ -144,6 +146,7 @@ CREATE TABLE IF NOT EXISTS drivers (
   phone TEXT NOT NULL,
   zone TEXT DEFAULT '',
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+  availability_status TEXT NOT NULL DEFAULT 'available' CHECK (availability_status IN ('available', 'busy')),
   uuid_link UUID DEFAULT uuid_generate_v4() UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -156,9 +159,10 @@ CREATE TABLE IF NOT EXISTS delivery_orders (
   order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   driver_id UUID REFERENCES drivers(id) ON DELETE SET NULL,
   delivery_type TEXT NOT NULL DEFAULT 'own_driver' CHECK (delivery_type IN ('own_driver', 'bosta')),
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'assigned', 'out_for_delivery', 'delivered', 'failed')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'assigned', 'out_for_delivery', 'delivered', 'failed', 'returned')),
   customer_address TEXT NOT NULL DEFAULT '',
   cod_amount NUMERIC(10,2) DEFAULT 0,
+  cod_collected BOOLEAN NOT NULL DEFAULT FALSE,
   failed_reason TEXT CHECK (failed_reason IS NULL OR failed_reason IN ('not_answered', 'wrong_address', 'refused', 'postponed')),
   tracking_number TEXT,
   bosta_shipment_id TEXT,

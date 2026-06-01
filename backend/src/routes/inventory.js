@@ -14,6 +14,7 @@ router.use(rateLimit(300, 15 * 60 * 1000)); // Max 300 requests per 15 mins per 
 // GET /api/inventory — List all products (FR-WH-01)
 router.get('/', async (req, res) => {
   try {
+    const { start_date, end_date } = req.query;
     const { data, error } = await supabase
       .from('products')
       .select('*, warehouses(name, code)')
@@ -23,22 +24,36 @@ router.get('/', async (req, res) => {
 
     // FR-WH-10: Calculate 4-state stock for each product
     for (const product of data) {
-      // Get warehouse exits count
-      const { data: exits } = await supabase
+      let exitsQuery = supabase
         .from('inventory_log')
         .select('quantity_changed')
         .eq('sku', product.sku)
         .eq('event_type', 'warehouse_exit');
 
-      const { data: sold } = await supabase
+      let soldQuery = supabase
         .from('inventory_log')
         .select('quantity_changed')
         .eq('sku', product.sku)
         .eq('event_type', 'sold');
 
+      if (start_date) {
+        exitsQuery = exitsQuery.gte('created_at', start_date);
+        soldQuery = soldQuery.gte('created_at', start_date);
+      }
+      if (end_date) {
+        exitsQuery = exitsQuery.lte('created_at', end_date);
+        soldQuery = soldQuery.lte('created_at', end_date);
+      }
+
+      const { data: exits } = await exitsQuery;
+      const { data: sold } = await soldQuery;
+
       product.left_warehouse = (exits || []).reduce((sum, e) => sum + Math.abs(e.quantity_changed), 0);
       product.total_sold = (sold || []).reduce((sum, e) => sum + Math.abs(e.quantity_changed), 0);
-      product.in_warehouse = product.stock_quantity;
+      
+      // In Warehouse = Starting Stock for the period = Current Stock + Exits + Sold
+      product.in_warehouse = product.stock_quantity + product.left_warehouse + product.total_sold;
+      product.current_stock = product.stock_quantity;
       product.low_stock = product.stock_quantity < 10; // FR-WH-11
     }
 
@@ -331,6 +346,21 @@ router.post('/warehouse/exit', authenticate, async (req, res) => {
         low_stock: newQty < 10
       }
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/inventory/logs — List inventory logs (audit trail)
+router.get('/logs', authenticate, authorize('admin', 'ceo', 'worker'), async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('inventory_log')
+      .select('*, products(name)')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

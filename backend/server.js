@@ -22,6 +22,7 @@ const invoiceRoutes = require('./src/routes/invoices');
 const clientRoutes = require('./src/routes/clients');
 const analyticsRoutes = require('./src/routes/analytics');
 const financialRoutes = require('./src/routes/financial');
+const financeRoutes = require('./src/routes/finance');
 const posRoutes = require('./src/routes/pos');
 const shopifyRoutes = require('./src/routes/shopify');
 const bostaRoutes = require('./src/routes/bosta');
@@ -44,20 +45,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// CSP Middleware
-app.use((req, res, next) => {
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'self' https://*.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com data:; " +
-    "script-src 'self' 'unsafe-eval' 'unsafe-inline'; " +
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-    "connect-src 'self' https://*.supabase.co https://app.bosta.co https://rehlaeg.online; " +
-    "font-src 'self' https://fonts.gstatic.com; " +
-    "img-src 'self' data: https://*.supabase.co https://images.unsplash.com;"
-  );
-  next();
-});
-
 // Raw body capture for webhook HMAC verification (NFR-SC-02, NFR-SC-03)
 app.use(express.json({
   verify: (req, res, buf) => {
@@ -77,12 +64,14 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/warehouses', warehouseRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/deliveries', deliveryRoutes);
+app.use('/api/delivery', deliveryRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/financial', financialRoutes);
+app.use('/api/finance', financeRoutes);
 app.use('/api/pos', posRoutes);
 app.use('/api/shopify', shopifyRoutes);
 app.use('/api/bosta', bostaRoutes);

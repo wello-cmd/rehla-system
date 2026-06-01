@@ -101,18 +101,28 @@ class ShopifySync {
             // Check if product exists by SKU
             const { data: existing } = await supabase
               .from('products')
-              .select('id, sku')
+              .select('id, sku, price, stock_quantity, name')
               .eq('sku', sku)
-              .single();
+              .maybeSingle();
+
+            const newName = `${shopifyProduct.title}${variant.title !== 'Default Title' ? ` - ${variant.title}` : ''}`;
+            const newPrice = parseFloat(variant.price) || 0;
+            const newQty = variant.inventory_quantity || 0;
 
             if (existing) {
+              if (existing.price === newPrice && existing.stock_quantity === newQty && existing.name === newName) {
+                productsSkipped++;
+                continue;
+              }
+
               const { error: updateErr } = await supabase
                 .from('products')
                 .update({
-                  name: `${shopifyProduct.title} - ${variant.title}`,
-                  price: parseFloat(variant.price) || 0,
-                  stock_quantity: variant.inventory_quantity || 0,
+                  name: newName,
+                  price: newPrice,
+                  stock_quantity: newQty,
                   shopify_variant_id: String(variant.id),
+                  shopify_inventory_item_id: variant.inventory_item_id ? String(variant.inventory_item_id) : null,
                   image_url: shopifyProduct.image?.src || '',
                   last_synced_at: new Date().toISOString()
                 })
@@ -126,15 +136,16 @@ class ShopifySync {
                 .from('products')
                 .insert({
                   sku: sku.toUpperCase(),
-                  name: `${shopifyProduct.title}${variant.title !== 'Default Title' ? ` - ${variant.title}` : ''}`,
+                  name: newName,
                   description: shopifyProduct.body_html?.replace(/<[^>]*>/g, '') || '',
                   barcode,
-                  price: parseFloat(variant.price) || 0,
+                  price: newPrice,
                   cost_per_unit: parseFloat(variant.cost) || 0,
                   stock_quantity: variant.inventory_quantity || 0,
                   category: shopifyProduct.product_type || 'Uncategorized',
                   image_url: shopifyProduct.image?.src || '',
                   shopify_variant_id: String(variant.id),
+                  shopify_inventory_item_id: variant.inventory_item_id ? String(variant.inventory_item_id) : null,
                   last_synced_at: new Date().toISOString()
                 });
 
@@ -203,51 +214,155 @@ class ShopifySync {
     try {
       const response = await this.shopifyRequest('/orders.json?status=any&limit=50');
       const orders = response.orders || [];
-      let orderssynced = 0;
+      let ordersSynced = 0;
 
       for (const shopifyOrder of orders) {
-        const shopifyId = String(shopifyOrder.id);
-
-        const { data: existing } = await supabase
-          .from('orders')
-          .select('id')
-          .eq('shopify_order_id', shopifyId)
-          .single();
-
-        if (existing) continue;
-
-        const items = shopifyOrder.line_items.map(li => ({
-          sku: li.sku || '',
-          name: li.name,
-          quantity: li.quantity,
-          price: parseFloat(li.price)
-        }));
-
-        const { error } = await supabase
-          .from('orders')
-          .insert({
-            shopify_order_id: shopifyId,
-            customer_name: `${shopifyOrder.customer?.first_name || ''} ${shopifyOrder.customer?.last_name || ''}`.trim() || 'Shopify Customer',
-            customer_phone: shopifyOrder.customer?.phone || shopifyOrder.shipping_address?.phone || '',
-            customer_email: shopifyOrder.customer?.email || '',
-            items: JSON.stringify(items),
-            subtotal: parseFloat(shopifyOrder.subtotal_price) || 0,
-            total: parseFloat(shopifyOrder.total_price) || 0,
-            status: mapShopifyStatus(shopifyOrder.fulfillment_status),
-            payment_status: shopifyOrder.financial_status === 'paid' ? 'paid' : 'pending',
-            payment_method: 'card',
-            source: 'shopify'
-          });
-
-        if (!error) orderssynced++;
+        const result = await this.upsertShopifyOrder(shopifyOrder, { ensureDelivery: true });
+        if (result.success) ordersSynced++;
       }
 
-      return { success: true, orderssynced };
+      await supabase.from('sync_log').insert({
+        orders_synced: ordersSynced,
+        triggered_by: triggeredBy,
+        status: 'success'
+      });
+
+      return { success: true, ordersSynced };
     } catch (err) {
       const errorMsg = err.response?.data ? JSON.stringify(err.response.data) : err.message;
       console.error('[Shopify] Order sync failed:', errorMsg);
       throw new Error(`Shopify order sync failed: ${errorMsg}`);
     }
+  }
+
+  /**
+   * Process a single Shopify order payload from sync or webhook.
+   */
+  async upsertShopifyOrder(shopifyOrder, options = {}) {
+    const { ensureDelivery = true } = options;
+    const shopifyId = String(shopifyOrder.id);
+    const items = normalizeShopifyItems(shopifyOrder.line_items || []);
+    const orderPayload = buildOrderPayload(shopifyOrder, items);
+
+    const { data: existing, error: existingErr } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('shopify_order_id', shopifyId)
+      .maybeSingle();
+
+    if (existingErr) throw existingErr;
+
+    let orderId = existing?.id;
+
+    if (orderId) {
+      const { error: updateErr } = await supabase
+        .from('orders')
+        .update(orderPayload)
+        .eq('id', orderId);
+      if (updateErr) throw updateErr;
+    } else {
+      const { data: inserted, error: insertErr } = await supabase
+        .from('orders')
+        .insert(orderPayload)
+        .select('id')
+        .single();
+      if (insertErr) throw insertErr;
+      orderId = inserted.id;
+    }
+
+    await this.replaceOrderItems(orderId, items);
+
+    if (ensureDelivery) {
+      await this.ensureDeliveryOrder(orderId, shopifyOrder);
+    }
+
+    return { success: true, orderId, created: !existing };
+  }
+
+  async replaceOrderItems(orderId, items) {
+    const { error: deleteErr } = await supabase
+      .from('order_items')
+      .delete()
+      .eq('order_id', orderId);
+
+    if (deleteErr) throw deleteErr;
+    if (items.length === 0) return;
+
+    const enrichedItems = [];
+    for (const item of items) {
+      const { data: product } = await supabase
+        .from('products')
+        .select('id, cost_per_unit')
+        .eq('sku', item.sku)
+        .maybeSingle();
+
+      enrichedItems.push({
+        order_id: orderId,
+        product_id: product?.id || null,
+        sku: item.sku,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        cost_per_unit: product?.cost_per_unit || 0
+      });
+    }
+
+    const { error: insertItemsErr } = await supabase
+      .from('order_items')
+      .insert(enrichedItems);
+
+    if (insertItemsErr) throw insertItemsErr;
+  }
+
+  async ensureDeliveryOrder(orderId, shopifyOrder) {
+    const { data: existingDelivery, error: deliveryFetchErr } = await supabase
+      .from('delivery_orders')
+      .select('id')
+      .eq('order_id', orderId)
+      .maybeSingle();
+
+    if (deliveryFetchErr) throw deliveryFetchErr;
+
+    const paymentStatus = mapShopifyPaymentStatus(shopifyOrder.financial_status);
+    const deliveryPayload = {
+      customer_address: formatShopifyAddress(shopifyOrder.shipping_address || shopifyOrder.billing_address),
+      cod_amount: paymentStatus === 'paid' ? 0 : parseFloat(shopifyOrder.total_price) || 0,
+      notes: shopifyOrder.note || '',
+      updated_at: new Date().toISOString()
+    };
+
+    if (existingDelivery) {
+      const { error: updateErr } = await supabase
+        .from('delivery_orders')
+        .update(deliveryPayload)
+        .eq('id', existingDelivery.id);
+      if (updateErr) throw updateErr;
+      return;
+    }
+
+    const { error: insertErr } = await supabase
+      .from('delivery_orders')
+      .insert({
+        order_id: orderId,
+        delivery_type: 'own_driver',
+        status: 'pending',
+        ...deliveryPayload
+      });
+
+    if (insertErr) throw insertErr;
+  }
+
+  async handleOrderWebhook(payload, topic = 'orders/create') {
+    const result = await this.upsertShopifyOrder(payload, { ensureDelivery: true });
+
+    await supabase.from('sync_log').insert({
+      orders_synced: 1,
+      triggered_by: 'webhook',
+      status: 'success',
+      error_details: topic
+    });
+
+    return result;
   }
 
   /**
@@ -261,7 +376,7 @@ class ShopifySync {
       const { data: product, error: fetchErr } = await supabase
         .from('products')
         .select('id, sku, stock_quantity')
-        .eq('shopify_variant_id', String(inventoryItemId))
+        .eq('shopify_inventory_item_id', String(inventoryItemId))
         .single();
 
       if (fetchErr) throw fetchErr;
@@ -293,6 +408,56 @@ class ShopifySync {
       throw err;
     }
   }
+
+  /**
+   * Handle product update webhook (Part 3)
+   */
+  async handleProductUpdate(shopifyProduct) {
+    if (!shopifyProduct || !shopifyProduct.variants) return;
+    
+    for (const variant of shopifyProduct.variants) {
+      const sku = variant.sku;
+      if (!sku) continue;
+
+      const newName = `${shopifyProduct.title}${variant.title !== 'Default Title' ? ` - ${variant.title}` : ''}`;
+      const newPrice = parseFloat(variant.price) || 0;
+      const newQty = variant.inventory_quantity || 0;
+
+      const { data: existing } = await supabase
+        .from('products')
+        .select('id')
+        .eq('sku', sku)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from('products').update({
+          name: newName,
+          price: newPrice,
+          stock_quantity: newQty,
+          shopify_variant_id: String(variant.id),
+          shopify_inventory_item_id: variant.inventory_item_id ? String(variant.inventory_item_id) : null,
+          image_url: shopifyProduct.image?.src || '',
+          last_synced_at: new Date().toISOString()
+        }).eq('id', existing.id);
+      } else {
+        const barcode = variant.barcode || generateBarcodeString();
+        await supabase.from('products').insert({
+          sku: sku.toUpperCase(),
+          name: newName,
+          description: shopifyProduct.body_html?.replace(/<[^>]*>/g, '') || '',
+          barcode,
+          price: newPrice,
+          cost_per_unit: parseFloat(variant.cost) || 0,
+          stock_quantity: newQty,
+          category: shopifyProduct.product_type || 'Uncategorized',
+          image_url: shopifyProduct.image?.src || '',
+          shopify_variant_id: String(variant.id),
+          shopify_inventory_item_id: variant.inventory_item_id ? String(variant.inventory_item_id) : null,
+          last_synced_at: new Date().toISOString()
+        });
+      }
+    }
+  }
 }
 
 function mapShopifyStatus(fulfillmentStatus) {
@@ -302,6 +467,77 @@ function mapShopifyStatus(fulfillmentStatus) {
     case null: return 'pending';
     default: return 'pending';
   }
+}
+
+function mapShopifyPaymentStatus(financialStatus) {
+  switch (financialStatus) {
+    case 'paid': return 'paid';
+    case 'refunded':
+    case 'partially_refunded':
+      return 'refunded';
+    case 'voided':
+      return 'failed';
+    default:
+      return 'pending';
+  }
+}
+
+function mapShopifyPaymentMethod(shopifyOrder) {
+  const gateways = [
+    shopifyOrder.gateway,
+    ...(shopifyOrder.payment_gateway_names || [])
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  if (gateways.includes('cash') || gateways.includes('cod')) return 'cash';
+  if (gateways.includes('bank')) return 'bank_transfer';
+  if (gateways.includes('install')) return 'installment';
+  return 'card';
+}
+
+function normalizeShopifyItems(lineItems) {
+  return lineItems.map(item => ({
+    sku: (item.sku || `SHOPIFY-${item.variant_id || item.id}`).toUpperCase(),
+    name: item.name || item.title || 'Shopify Item',
+    quantity: Number(item.quantity) || 0,
+    price: parseFloat(item.price) || 0
+  }));
+}
+
+function buildOrderPayload(shopifyOrder, items) {
+  return {
+    shopify_order_id: String(shopifyOrder.id),
+    customer_name: getShopifyCustomerName(shopifyOrder),
+    customer_phone: shopifyOrder.customer?.phone || shopifyOrder.shipping_address?.phone || shopifyOrder.billing_address?.phone || 'N/A',
+    customer_email: shopifyOrder.customer?.email || shopifyOrder.email || '',
+    items,
+    subtotal: parseFloat(shopifyOrder.subtotal_price) || 0,
+    total: parseFloat(shopifyOrder.total_price) || 0,
+    status: mapShopifyStatus(shopifyOrder.fulfillment_status),
+    payment_status: mapShopifyPaymentStatus(shopifyOrder.financial_status),
+    payment_method: mapShopifyPaymentMethod(shopifyOrder),
+    source: 'shopify',
+    created_at: shopifyOrder.created_at || new Date().toISOString()
+  };
+}
+
+function getShopifyCustomerName(shopifyOrder) {
+  const customer = shopifyOrder.customer;
+  const shipping = shopifyOrder.shipping_address;
+  return [
+    customer?.first_name || shipping?.first_name || '',
+    customer?.last_name || shipping?.last_name || ''
+  ].join(' ').trim() || shipping?.name || 'Shopify Customer';
+}
+
+function formatShopifyAddress(address = {}) {
+  return [
+    address.address1,
+    address.address2,
+    address.city,
+    address.province,
+    address.country,
+    address.zip
+  ].filter(Boolean).join(', ');
 }
 
 module.exports = new ShopifySync();

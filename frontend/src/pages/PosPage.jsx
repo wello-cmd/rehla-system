@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatNumber } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
@@ -9,6 +9,7 @@ export default function PosPage() {
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const searchInputRef = useRef(null);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -31,10 +32,38 @@ export default function PosPage() {
     fetchProducts();
   }, []);
 
+  useEffect(() => {
+    if (!loading && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [loading]);
+
   const filteredProducts = products.filter(p =>
     p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.sku?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  function handleBarcodeSubmit(e) {
+    e.preventDefault();
+    if (!searchTerm.trim()) return;
+
+    const term = searchTerm.trim().toUpperCase();
+    const exactMatch = products.find(p => 
+      p.sku?.toUpperCase() === term || 
+      p.barcode === term
+    );
+
+    if (exactMatch) {
+      addToCart(exactMatch);
+      setSearchTerm('');
+    } else {
+      toast.error('Product not found!');
+    }
+
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }
 
   function addToCart(product) {
     if (product.stock_quantity <= 0) {
@@ -111,7 +140,7 @@ export default function PosPage() {
   }
 
   const renderSkeleton = () => (
-    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
       <div className="skeleton" style={{ height: '350px' }}></div>
       <div className="skeleton" style={{ height: '350px' }}></div>
     </div>
@@ -120,17 +149,22 @@ export default function PosPage() {
   return (
     <DashboardShell title="POS Checkout (Register)">
       {loading ? renderSkeleton() : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', alignItems: 'start' }}>
           {/* Products Finder catalog */}
           <div className="card" style={{ padding: '20px' }}>
-            <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '12px' }}>Search Catalogue</p>
-            <input
-              className="input"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search product name or SKU..."
-              style={{ marginBottom: '20px' }}
-            />
+            <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '12px' }}>Scan Barcode or Search</p>
+            <form onSubmit={handleBarcodeSubmit} style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+              <input
+                ref={searchInputRef}
+                className="input"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Scan barcode or type SKU..."
+                style={{ flex: 1 }}
+                autoFocus
+              />
+              <button type="submit" className="btn btn-secondary">Enter</button>
+            </form>
 
             <div style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {filteredProducts.map(p => (
@@ -206,7 +240,7 @@ export default function PosPage() {
 
             {/* Checkout Form */}
             <form onSubmit={handleCheckout} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
                 <div>
                   <label className="text-label" style={{ fontSize: '9px', display: 'block', marginBottom: '4px' }}>Customer Name</label>
                   <input
@@ -237,7 +271,7 @@ export default function PosPage() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
                 <div>
                   <label className="text-label" style={{ fontSize: '9px', display: 'block', marginBottom: '4px' }}>Payment Method</label>
                   <select

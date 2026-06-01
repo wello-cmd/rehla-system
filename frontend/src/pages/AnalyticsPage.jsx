@@ -155,7 +155,7 @@ export default function AnalyticsPage() {
           {/* Tab 2: Products */}
           {activeTab === 'products' && topProducts && productData && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
                 {/* Top by revenue */}
                 <div className="card">
                   <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '16px' }}>Top 5 Products (By Revenue)</p>
@@ -186,7 +186,7 @@ export default function AnalyticsPage() {
               </div>
 
               {/* Dead stock and low performs */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
                 <div className="card">
                   <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '16px' }}>Worst Performing Products (Excl. Dead Stock)</p>
                   <table className="data-table" style={{ fontSize: '13px' }}>
@@ -249,7 +249,7 @@ export default function AnalyticsPage() {
           {activeTab === 'delivery' && deliveryData && costComparison && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
               {/* Delivery Cost Comparison (Internal vs Bosta) */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr', gap: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
                 <div className="card">
                   <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '16px' }}>Couriers Cost Comparison (Delivery Volume)</p>
                   <ResponsiveContainer width="100%" height={240}>

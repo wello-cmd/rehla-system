@@ -142,7 +142,7 @@ export default function ProfitLossPage() {
                 </div>
 
                 {/* Margins breakdown */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', borderTop: '1px solid var(--color-border-light)', paddingTop: '20px', marginTop: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', borderTop: '1px solid var(--color-border-light)', paddingTop: '20px', marginTop: '10px' }}>
                   <div className="card" style={{ background: 'var(--color-bg)' }}>
                     <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '6px' }}>Gross Margin</p>
                     <p className="font-mono" style={{ fontSize: '20px', fontWeight: 700 }}>{plData.grossMargin?.toFixed(1)}%</p>
@@ -157,7 +157,7 @@ export default function ProfitLossPage() {
           )}
 
           {/* Cashflow & Financial Trends */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
             {/* Cash Flow */}
             <div className="card">
               <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>Cash Flow Trend (Inflow vs Outflow)</p>

@@ -212,7 +212,7 @@ export default function ClientsPage() {
                   required
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                 <div>
                   <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Email</label>
                   <input

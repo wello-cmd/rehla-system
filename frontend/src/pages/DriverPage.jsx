@@ -18,7 +18,7 @@ export default function DriverPage() {
 
   async function fetchDriverJobs() {
     try {
-      const data = await api.get(`/deliveries/driver/${uuid}/orders`);
+      const data = await api.get(`/delivery/driver/${uuid}/orders`);
       setDriver(data.driver);
       setDeliveries(data.deliveries);
     } catch (err) {
@@ -38,7 +38,7 @@ export default function DriverPage() {
 
     setUpdating(true);
     try {
-      await api.put(`/deliveries/driver/${uuid}/orders/${selectedDelivery.id}/status`, {
+      await api.patch(`/delivery/driver/${uuid}/orders/${selectedDelivery.id}/status`, {
         status: newStatus,
         failed_reason: newStatus === 'failed' ? failedReason : null,
         notes: notes.trim() || null
@@ -53,6 +53,14 @@ export default function DriverPage() {
     } finally {
       setUpdating(false);
     }
+  }
+
+  function openStatusModal(delivery, status) {
+    setSelectedDelivery(delivery);
+    setNewStatus(status);
+    setFailedReason('not_answered');
+    setNotes('');
+    setShowStatusModal(true);
   }
 
   const renderSkeleton = () => (
@@ -90,7 +98,7 @@ export default function DriverPage() {
       </div>
 
       <h2 className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '12px' }}>
-        Assigned Shipments ({deliveries.length})
+        Today's Assigned Shipments ({deliveries.length})
       </h2>
 
       {/* Deliveries list cards */}
@@ -122,8 +130,18 @@ export default function DriverPage() {
               </p>
             </div>
 
+            <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '10px' }}>
+              <p className="text-label" style={{ fontSize: '9px', color: 'var(--color-text-dim)', marginBottom: 6 }}>Items</p>
+              {(Array.isArray(d.orders?.items) ? d.orders.items : JSON.parse(d.orders?.items || '[]')).map((item, index) => (
+                <div key={`${item.sku || item.name}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, gap: 8 }}>
+                  <span>{item.quantity}x {item.name}</span>
+                  <span className="font-mono">{item.sku}</span>
+                </div>
+              ))}
+            </div>
+
             <div style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
               borderTop: '1px solid var(--color-border-light)', paddingTop: '10px', marginTop: '4px'
             }}>
               <div>
@@ -131,18 +149,24 @@ export default function DriverPage() {
                 <p className="font-mono" style={{ fontSize: '16px', fontWeight: 700 }}>
                   {formatEGP(d.cod_amount)}
                 </p>
+                {Number(d.cod_amount || 0) > 0 && (
+                  <span className="badge badge-warning" style={{ marginTop: 6 }}>COD</span>
+                )}
               </div>
 
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={() => {
-                  setSelectedDelivery(d);
-                  setNewStatus(d.status === 'assigned' ? 'out_for_delivery' : 'delivered');
-                  setShowStatusModal(true);
-                }}
-              >
-                Update Status
-              </button>
+              <div style={{ display: 'grid', gap: 8, minWidth: 150 }}>
+                {d.status === 'assigned' && (
+                  <button className="btn btn-secondary btn-sm" onClick={() => openStatusModal(d, 'out_for_delivery')}>
+                    Out for Delivery
+                  </button>
+                )}
+                <button className="btn btn-primary btn-sm" onClick={() => openStatusModal(d, 'delivered')}>
+                  Delivered
+                </button>
+                <button className="btn btn-danger btn-sm" onClick={() => openStatusModal(d, 'failed')}>
+                  Failed
+                </button>
+              </div>
             </div>
           </div>
         ))}

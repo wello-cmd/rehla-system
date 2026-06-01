@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext'; // rateLimit
 import { Toaster } from 'react-hot-toast';
 
 // Import Pages
@@ -17,6 +17,9 @@ import ProfitLossPage from './pages/ProfitLossPage';
 import PosPage from './pages/PosPage';
 import AiPage from './pages/AiPage';
 import DriverPage from './pages/DriverPage';
+import UsersPage from './pages/UsersPage';
+import WarehouseLogsPage from './pages/WarehouseLogsPage';
+import FinancialDashboardPage from './pages/FinancialDashboardPage';
 
 // Protected Route Wrapper
 function ProtectedRoute({ children, allowedRoles }) {
@@ -91,7 +94,7 @@ function AppContent() {
         } />
 
         <Route path="/delivery" element={
-          <ProtectedRoute allowedRoles={['ceo', 'admin', 'dispatcher']}>
+          <ProtectedRoute allowedRoles={['ceo', 'admin', 'dispatcher', 'worker']}>
             <DeliveryPage />
           </ProtectedRoute>
         } />
@@ -129,6 +132,24 @@ function AppContent() {
         <Route path="/profit-loss" element={
           <ProtectedRoute allowedRoles={['ceo', 'admin', 'accountant']}>
             <ProfitLossPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/finance-dashboard" element={
+          <ProtectedRoute allowedRoles={['ceo', 'admin', 'accountant']}>
+            <FinancialDashboardPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/users" element={
+          <ProtectedRoute allowedRoles={['ceo', 'admin']}>
+            <UsersPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/warehouse/logs" element={
+          <ProtectedRoute allowedRoles={['ceo', 'admin', 'worker']}>
+            <WarehouseLogsPage />
           </ProtectedRoute>
         } />
 

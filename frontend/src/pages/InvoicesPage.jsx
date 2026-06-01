@@ -266,7 +266,7 @@ export default function InvoicesPage() {
             </div>
 
             {/* Client / Customer info */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '24px' }}>
               <div>
                 <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '4px' }}>Billed To</p>
                 <p style={{ fontWeight: 600 }}>{selectedInvoice.customer_name}</p>
@@ -330,7 +330,7 @@ export default function InvoicesPage() {
             {selectedInvoice.status !== 'Paid' && (
               <div className="card" style={{ background: 'var(--color-bg)' }}>
                 <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '12px' }}>Record New Payment</p>
-                <form onSubmit={handleRecordPayment} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+                <form onSubmit={handleRecordPayment} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', alignItems: 'end' }}>
                   <div style={{ flex: 1 }}>
                     <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Amount</label>
                     <input

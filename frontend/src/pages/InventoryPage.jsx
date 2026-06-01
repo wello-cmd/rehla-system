@@ -15,6 +15,9 @@ export default function InventoryPage() {
   const [syncing, setSyncing] = useState(false);
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
   const [selectedProductForBarcode, setSelectedProductForBarcode] = useState(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [selectedProducts, setSelectedProducts] = useState([]);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -99,11 +102,16 @@ export default function InventoryPage() {
     e.stopPropagation();
   }
 
-  useEffect(() => { fetchProducts(); }, []);
+  useEffect(() => { fetchProducts(); }, [startDate, endDate]);
 
   async function fetchProducts() {
     try {
-      const data = await api.get('/inventory');
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
+      
+      const data = await api.get(`/inventory?${params.toString()}`);
       setProducts(data);
     } catch (err) {
       toast.error('Failed to load inventory');
@@ -176,6 +184,44 @@ export default function InventoryPage() {
     setShowModal(true);
   }
 
+  function toggleSelection(id) {
+    setSelectedProducts(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
+  }
+
+  function toggleSelectAll(e) {
+    if (e.target.checked) {
+      setSelectedProducts(filtered.map(p => p.id));
+    } else {
+      setSelectedProducts([]);
+    }
+  }
+
+  async function handleBulkPrintBarcodes() {
+    if (selectedProducts.length === 0) {
+      toast.error('Please select products first.');
+      return;
+    }
+    try {
+      const result = await api.post('/inventory/barcode/bulk', { product_ids: selectedProducts });
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        let html = '<html><head><title>Print Barcodes</title><style>body { font-family: monospace; text-align: center; } .label { display: inline-block; margin: 20px; padding: 10px; border: 1px dashed #ccc; }</style></head><body>';
+        result.forEach(item => {
+           if (item.barcode_image) {
+             html += `<div class="label"><h3>${item.name}</h3><p>SKU: ${item.sku}</p><img src="data:image/png;base64,${item.barcode_image}" /></div>`;
+           }
+        });
+        html += '</body></html>';
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => printWindow.print(), 500);
+      }
+    } catch (err) {
+      toast.error('Failed to generate bulk barcodes: ' + err.message);
+    }
+  }
+
   const filtered = useMemo(() => {
     return products.filter(p =>
       p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -227,6 +273,11 @@ export default function InventoryPage() {
           value={searchTerm}
           onChange={handleSearchChange}
         />
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <input type="date" className="input" value={startDate} onChange={e => setStartDate(e.target.value)} title="Start Date" />
+          <span style={{ color: 'var(--color-text-dim)' }}>—</span>
+          <input type="date" className="input" value={endDate} onChange={e => setEndDate(e.target.value)} title="End Date" />
+        </div>
         <button className="btn btn-primary btn-sm" onClick={openAdd}>
           + Add Product
         </button>
@@ -236,6 +287,11 @@ export default function InventoryPage() {
         <button className="btn btn-secondary btn-sm" onClick={handleExportCSVClick}>
           ↓ Export CSV
         </button>
+        {selectedProducts.length > 0 && (
+          <button className="btn btn-primary btn-sm" onClick={handleBulkPrintBarcodes}>
+            Print {selectedProducts.length} Barcodes
+          </button>
+        )}
       </div>
 
       {/* Products Table */}
@@ -248,12 +304,16 @@ export default function InventoryPage() {
           <table className="data-table">
             <thead>
               <tr>
+                <th>
+                  <input type="checkbox" onChange={toggleSelectAll} checked={selectedProducts.length === filtered.length && filtered.length > 0} />
+                </th>
                 <th>SKU</th>
                 <th>Product</th>
-                <th>Category</th>
                 <th style={STYLES.textRight}>Price</th>
-                <th style={STYLES.textRight}>Cost</th>
-                <th style={STYLES.textRight}>Stock</th>
+                <th style={STYLES.textRight}>In Warehouse</th>
+                <th style={STYLES.textRight}>Left Warehouse</th>
+                <th style={STYLES.textRight}>Sold</th>
+                <th style={STYLES.textRight}>Current Stock</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -261,6 +321,9 @@ export default function InventoryPage() {
             <tbody>
               {filtered.map(product => (
                 <tr key={product.id}>
+                  <td>
+                    <input type="checkbox" checked={selectedProducts.includes(product.id)} onChange={() => toggleSelection(product.id)} />
+                  </td>
                   <td className="font-mono" style={STYLES.skuCol}>{product.sku}</td>
                   <td>
                     <div style={STYLES.productCol}>
@@ -270,9 +333,10 @@ export default function InventoryPage() {
                       <span style={STYLES.productName}>{product.name}</span>
                     </div>
                   </td>
-                  <td style={STYLES.categoryCol}>{product.category}</td>
                   <td className="font-mono" style={STYLES.priceCol}>{formatEGP(product.price)}</td>
-                  <td className="font-mono" style={STYLES.costCol}>{formatEGP(product.cost_per_unit)}</td>
+                  <td className="font-mono" style={STYLES.priceCol}>{formatNumber(product.in_warehouse)}</td>
+                  <td className="font-mono" style={STYLES.priceCol}>{formatNumber(product.left_warehouse)}</td>
+                  <td className="font-mono" style={STYLES.priceCol}>{formatNumber(product.total_sold)}</td>
                   <td className={`font-mono ${product.stock_quantity < 10 ? 'low-stock' : ''}`} style={STYLES.priceCol}>
                     {formatNumber(product.stock_quantity)}
                   </td>
@@ -291,7 +355,7 @@ export default function InventoryPage() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={8} style={STYLES.noProductsCell}>No products found</td></tr>
+                <tr><td colSpan={10} style={STYLES.noProductsCell}>No products found</td></tr>
               )}
             </tbody>
           </table>
@@ -416,7 +480,7 @@ const STYLES = {
   actionBtn: { padding: '4px 8px', fontSize: '11px' },
   noProductsCell: { textAlign: 'center', padding: '40px', color: 'var(--color-text-dim)' },
   modalTitle: { marginBottom: '24px' },
-  modalGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
+  modalGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' },
   modalLabel: { display: 'block', marginBottom: '6px', color: 'var(--color-text-dim)' },
   modalActions: { display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' },
   barcodeModalContent: { maxWidth: '400px', textAlign: 'center' },

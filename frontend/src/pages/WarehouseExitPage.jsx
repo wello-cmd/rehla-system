@@ -1,5 +1,4 @@
-// Warehouse Exit Page — FR-WH-06 through FR-WH-09 (Mobile-optimized)
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { api } from '../lib/api';
 import { formatNumber } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
@@ -10,6 +9,13 @@ export default function WarehouseExitPage() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, []);
 
   async function handleScan(e) {
     e.preventDefault();
@@ -30,6 +36,9 @@ export default function WarehouseExitPage() {
     } finally {
       setLoading(false);
       setScanInput('');
+      setTimeout(() => {
+        if (searchInputRef.current) searchInputRef.current.focus();
+      }, 0);
     }
   }
 
@@ -42,6 +51,7 @@ export default function WarehouseExitPage() {
         </p>
         <form onSubmit={handleScan} style={{ display: 'flex', gap: '12px' }}>
           <input
+            ref={searchInputRef}
             className="input"
             value={scanInput}
             onChange={(e) => setScanInput(e.target.value)}
@@ -72,7 +82,7 @@ export default function WarehouseExitPage() {
               {result.low_stock ? 'LOW STOCK' : 'OK'}
             </span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '16px' }}>
             <div>
               <p className="text-label" style={{ color: 'var(--color-text-dim)', fontSize: '10px' }}>Previous</p>
               <p className="font-mono" style={{ fontSize: '20px', fontWeight: 600 }}>{result.previous_stock}</p>

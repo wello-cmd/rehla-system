@@ -34,7 +34,7 @@ export default function InvoiceCreatePage() {
     const cid = e.target.value;
     setClientId(cid);
     if (cid) {
-      const selected = clients.find(c => c.id === parseInt(cid, 10));
+      const selected = clients.find(c => c.id === cid);
       if (selected) {
         setCustomerName(selected.contact_person || selected.company_name);
         setCustomerEmail(selected.email || '');
@@ -89,11 +89,11 @@ export default function InvoiceCreatePage() {
     setLoading(true);
     try {
       const payload = {
-        client_id: clientId ? parseInt(clientId, 10) : null,
+        client_id: clientId || null,
         customer_name: customerName.trim(),
         customer_email: customerEmail.trim(),
-        issue_date,
-        due_date,
+        issue_date: issueDate,
+        due_date: dueDate,
         notes: notes.trim(),
         items: items.map(item => ({
           description: item.description.trim(),
@@ -115,7 +115,7 @@ export default function InvoiceCreatePage() {
   return (
     <DashboardShell title="Create New Invoice">
       <form onSubmit={handleSubmit} style={{ maxWidth: '800px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '32px' }}>
           {/* Client Selection & Customer details */}
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>Client Information</p>
@@ -199,8 +199,8 @@ export default function InvoiceCreatePage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {items.map((item, index) => (
-              <div key={index} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <div style={{ flex: 3 }}>
+              <div key={index} className="invoice-item-row">
+                <div className="item-desc">
                   <input
                     className="input"
                     value={item.description}
@@ -209,35 +209,37 @@ export default function InvoiceCreatePage() {
                     required
                   />
                 </div>
-                <div style={{ flex: 1 }}>
-                  <input
-                    type="number"
-                    min="1"
-                    className="input"
-                    value={item.quantity}
-                    onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value, 10) || '')}
-                    placeholder="Qty"
-                    required
-                  />
+                <div className="invoice-item-row-mobile-inputs">
+                  <div className="item-qty">
+                    <input
+                      type="number"
+                      min="1"
+                      className="input"
+                      value={item.quantity}
+                      onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value, 10) || '')}
+                      placeholder="Qty"
+                      required
+                    />
+                  </div>
+                  <div className="item-price">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      className="input"
+                      value={item.unit_price}
+                      onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
+                      placeholder="Unit Price"
+                      required
+                    />
+                  </div>
                 </div>
-                <div style={{ flex: 1.5 }}>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    className="input"
-                    value={item.unit_price}
-                    onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
-                    placeholder="Unit Price"
-                    required
-                  />
-                </div>
-                <div className="font-mono" style={{ width: '120px', textAlign: 'right', fontSize: '14px', fontWeight: 600 }}>
+                <div className="font-mono item-total">
                   {formatEGP((parseInt(item.quantity, 10) || 0) * (parseFloat(item.unit_price) || 0))}
                 </div>
                 <button
                   type="button"
-                  className="btn btn-danger btn-sm"
+                  className="btn btn-danger btn-sm item-delete"
                   onClick={() => removeItem(index)}
                   disabled={items.length === 1}
                   style={{ padding: '12px' }}

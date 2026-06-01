@@ -1,35 +1,67 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
-import { formatEGP, formatNumber, formatDate, getStatusColor } from '../lib/formatters';
+import { formatEGP, formatDate, getStatusColor } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
 import toast from 'react-hot-toast';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from 'recharts';
+
+const STATUS_OPTIONS = ['pending', 'assigned', 'out_for_delivery', 'delivered', 'failed', 'returned'];
+const FAILURE_REASONS = [
+  ['not_answered', 'Not Answered'],
+  ['wrong_address', 'Wrong Address'],
+  ['refused', 'Refused'],
+  ['postponed', 'Postponed']
+];
+const CHART_COLORS = ['#e5e2e1', '#988e90', '#6b6365', '#4c4546', '#8b5cf6', '#ef4444'];
 
 export default function DeliveryPage() {
+  const [activeTab, setActiveTab] = useState('dispatcher');
   const [deliveries, setDeliveries] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDelivery, setSelectedDelivery] = useState(null);
-  const [trackingInfo, setTrackingInfo] = useState(null);
-  const [trackingLoading, setTrackingLoading] = useState(false);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [assigningDelivery, setAssigningDelivery] = useState(null);
+  const [filters, setFilters] = useState({ status: '', driver_id: '', delivery_type: '', start: '', end: '' });
+  const [assigning, setAssigning] = useState(null);
   const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [statusTarget, setStatusTarget] = useState(null);
+  const [newStatus, setNewStatus] = useState('out_for_delivery');
+  const [failedReason, setFailedReason] = useState('not_answered');
+  const [bostaTarget, setBostaTarget] = useState(null);
+  const [bostaForm, setBostaForm] = useState({ package_size: 'SMALL', city: 'Cairo', zone: '', cod_amount: '' });
+  const [tracking, setTracking] = useState({});
+  const [driverModalOpen, setDriverModalOpen] = useState(false);
+  const [editingDriver, setEditingDriver] = useState(null);
+  const [driverForm, setDriverForm] = useState({ name: '', phone: '', zone: '', status: 'active', availability_status: 'available' });
 
-  // Fetch all necessary data
   async function fetchData() {
+    setLoading(true);
     try {
-      const [delData, driverData, summaryData] = await Promise.all([
-        api.get('/deliveries'),
+      const params = new URLSearchParams(Object.entries(filters).filter(([, value]) => value));
+      const [ordersData, driversData, summaryData, analyticsData] = await Promise.all([
+        api.get(`/delivery/orders${params.toString() ? `?${params}` : ''}`),
         api.get('/drivers'),
-        api.get('/deliveries/summary')
+        api.get('/delivery/summary'),
+        api.get('/delivery/analytics')
       ]);
-      setDeliveries(delData);
-      setDrivers(driverData);
+      setDeliveries(ordersData);
+      setDrivers(driversData);
       setSummary(summaryData);
+      setAnalytics(analyticsData);
     } catch (err) {
-      toast.error('Failed to fetch delivery data');
-      console.error(err);
+      toast.error(err.message || 'Failed to load delivery module');
     } finally {
       setLoading(false);
     }
@@ -39,20 +71,29 @@ export default function DeliveryPage() {
     fetchData();
   }, []);
 
-  // Handle Driver Assignment
-  async function handleAssignDriver(e) {
+  useEffect(() => {
+    const activeBosta = deliveries.filter(
+      d => d.delivery_type === 'bosta' && d.tracking_number && !['delivered', 'failed', 'returned'].includes(d.status)
+    );
+    activeBosta.forEach(d => {
+      if (!tracking[d.id]) {
+        trackBosta(d);
+      }
+    });
+  }, [deliveries]);
+
+  async function applyFilters(e) {
     e.preventDefault();
-    if (!selectedDriverId) {
-      toast.error('Please select a driver');
-      return;
-    }
+    await fetchData();
+  }
+
+  async function assignDriver(e) {
+    e.preventDefault();
+    if (!assigning || !selectedDriverId) return toast.error('Select a driver first');
     try {
-      await api.post('/deliveries/assign', {
-        delivery_id: assigningDelivery.id,
-        driver_id: parseInt(selectedDriverId, 10)
-      });
-      toast.success('Driver assigned successfully');
-      setShowAssignModal(false);
+      await api.post('/delivery/assign', { delivery_id: assigning.id, driver_id: selectedDriverId });
+      toast.success('Driver assigned');
+      setAssigning(null);
       setSelectedDriverId('');
       fetchData();
     } catch (err) {
@@ -60,190 +101,244 @@ export default function DeliveryPage() {
     }
   }
 
-  // Create Bosta Shipment
-  async function handleCreateBosta(deliveryId) {
+  async function updateStatus(e) {
+    e.preventDefault();
+    if (!statusTarget) return;
+    try {
+      await api.patch(`/delivery/orders/${statusTarget.id}/status`, {
+        status: newStatus,
+        failed_reason: newStatus === 'failed' ? failedReason : null
+      });
+      toast.success('Delivery status updated');
+      setStatusTarget(null);
+      fetchData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to update delivery status');
+    }
+  }
+
+  async function createBostaShipment(e) {
+    e.preventDefault();
+    if (!bostaTarget) return;
     const loadingToast = toast.loading('Creating Bosta shipment...');
     try {
-      const res = await api.post(`/deliveries/${deliveryId}/bosta`);
-      toast.success(`Bosta shipment created! Tracking: ${res.trackingNumber}`, { id: loadingToast });
+      const result = await api.post('/delivery/bosta/create', {
+        delivery_order_id: bostaTarget.id,
+        receiver_name: bostaTarget.orders?.customer_name,
+        receiver_phone: bostaTarget.orders?.customer_phone,
+        receiver_address: bostaTarget.customer_address,
+        package_size: bostaForm.package_size,
+        city: bostaForm.city,
+        zone: bostaForm.zone,
+        cod_amount: Number(bostaForm.cod_amount || bostaTarget.cod_amount || 0)
+      });
+      toast.success(`Bosta shipment created: ${result.trackingNumber || 'tracking pending'}`, { id: loadingToast });
+      setBostaTarget(null);
       fetchData();
     } catch (err) {
       toast.error(err.message || 'Failed to create Bosta shipment', { id: loadingToast });
     }
   }
 
-  // Track Bosta Shipment
-  async function handleTrackBosta(delivery) {
-    setSelectedDelivery(delivery);
-    setTrackingLoading(true);
-    setTrackingInfo(null);
+  async function trackBosta(delivery) {
+    if (!delivery.tracking_number) return;
     try {
-      const tracking = await api.get(`/deliveries/${delivery.id}/track`);
-      setTrackingInfo(tracking);
+      const data = await api.get(`/delivery/bosta/track/${delivery.tracking_number}`);
+      setTracking(prev => ({ ...prev, [delivery.id]: data }));
     } catch (err) {
-      toast.error(err.message || 'Failed to fetch Bosta tracking info');
-      setSelectedDelivery(null);
-    } finally {
-      setTrackingLoading(false);
+      toast.error(err.message || 'Failed to fetch Bosta status');
     }
   }
 
-  // Download Waybill PDF
-  async function handleDownloadWaybill(deliveryId) {
+  async function downloadLabel(delivery) {
+    if (!delivery.bosta_shipment_id) return toast.error('No Bosta shipment ID for this order');
     try {
-      await api.downloadBlob(`/deliveries/${deliveryId}/waybill`, `waybill-${deliveryId.slice(0, 8)}.pdf`);
-      toast.success('Waybill downloaded successfully');
+      await api.downloadBlob(`/delivery/bosta/label/${delivery.bosta_shipment_id}`, `bosta-label-${delivery.bosta_shipment_id}.pdf`);
     } catch (err) {
-      toast.error('Failed to download waybill');
+      toast.error(err.message || 'Failed to download label');
     }
   }
 
-  const renderSkeleton = () => (
-    <div style={{ padding: '24px' }}>
-      <div className="skeleton" style={{ height: '40px', marginBottom: '16px' }}></div>
-      <div className="skeleton" style={{ height: '200px' }}></div>
-    </div>
-  );
+  function openDriverModal(driver = null) {
+    setEditingDriver(driver);
+    setDriverForm(driver ? {
+      name: driver.name || '',
+      phone: driver.phone || '',
+      zone: driver.zone || '',
+      status: driver.status || 'active',
+      availability_status: driver.availability_status || 'available'
+    } : { name: '', phone: '', zone: '', status: 'active', availability_status: 'available' });
+    setDriverModalOpen(true);
+  }
+
+  async function saveDriver(e) {
+    e.preventDefault();
+    try {
+      if (editingDriver) await api.put(`/drivers/${editingDriver.id}`, driverForm);
+      else await api.post('/drivers', driverForm);
+      toast.success(editingDriver ? 'Driver updated' : 'Driver added');
+      setDriverModalOpen(false);
+      fetchData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to save driver');
+    }
+  }
+
+  async function deleteDriver(driver) {
+    if (!window.confirm(`Delete ${driver.name}? Active assignments will be returned to pending.`)) return;
+    try {
+      await api.delete(`/drivers/${driver.id}`);
+      toast.success('Driver deleted');
+      fetchData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete driver');
+    }
+  }
+
+  async function toggleAvailability(driver) {
+    try {
+      await api.put(`/drivers/${driver.id}`, {
+        availability_status: driver.availability_status === 'busy' ? 'available' : 'busy'
+      });
+      fetchData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to update availability');
+    }
+  }
+
+  const failureChart = useMemo(() => Object.entries(analytics?.failedReasons || {}).map(([name, value]) => ({ name, value })), [analytics]);
+  const costComparison = useMemo(() => Object.entries(analytics?.costComparison || {}).map(([type, data]) => ({ type: type.replace('_', ' '), ...data })), [analytics]);
 
   return (
-    <DashboardShell title="Delivery Dispatcher">
-      {loading ? renderSkeleton() : (
+    <DashboardShell title="Delivery Management">
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
+        {['dispatcher', 'drivers', 'analytics'].map(tab => (
+          <button
+            key={tab}
+            className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+            onClick={() => setActiveTab(tab)}
+            style={{ textTransform: 'capitalize' }}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'dispatcher' && (
         <>
-          {/* KPI Summary Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
-            <div className="card">
-              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>Total Today</p>
-              <p style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{summary?.total_today}</p>
-            </div>
-            <div className="card">
-              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>Out for Delivery</p>
-              <p style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-warning)' }}>
-                {summary?.out_for_delivery}
-              </p>
-            </div>
-            <div className="card">
-              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>Delivered</p>
-              <p style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-success)' }}>
-                {summary?.delivered}
-              </p>
-            </div>
-            <div className="card">
-              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>Failed</p>
-              <p style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-error)' }}>
-                {summary?.failed}
-              </p>
-            </div>
-            <div className="card">
-              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>COD to Collect</p>
-              <p style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{formatEGP(summary?.cod_to_collect)}</p>
-            </div>
-          </div>
+          <SummaryCards summary={summary} />
 
-          {/* Deliveries Table */}
-          <div className="card" style={{ padding: '0px', overflow: 'hidden' }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <p className="text-title">Active Deliveries</p>
-            </div>
+          <form onSubmit={applyFilters} className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+            <select className="input select" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
+              <option value="">All statuses</option>
+              {STATUS_OPTIONS.map(status => <option key={status} value={status}>{status.replace(/_/g, ' ')}</option>)}
+            </select>
+            <select className="input select" value={filters.driver_id} onChange={(e) => setFilters({ ...filters, driver_id: e.target.value })}>
+              <option value="">All drivers</option>
+              {drivers.map(driver => <option key={driver.id} value={driver.id}>{driver.name}</option>)}
+            </select>
+            <select className="input select" value={filters.delivery_type} onChange={(e) => setFilters({ ...filters, delivery_type: e.target.value })}>
+              <option value="">All types</option>
+              <option value="own_driver">Own Driver</option>
+              <option value="bosta">Bosta Courier</option>
+            </select>
+            <input className="input" type="date" value={filters.start} onChange={(e) => setFilters({ ...filters, start: e.target.value })} />
+            <input className="input" type="date" value={filters.end} onChange={(e) => setFilters({ ...filters, end: e.target.value })} />
+            <button className="btn btn-primary" type="submit">Apply</button>
+          </form>
 
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <div className="table-container">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Order #</th>
+                    <th>Order</th>
                     <th>Customer</th>
-                    <th>Zone/Address</th>
+                    <th>Address</th>
                     <th>Type</th>
                     <th>Driver / Courier</th>
-                    <th>COD Amount</th>
+                    <th>COD</th>
                     <th>Status</th>
+                    <th>Tracking</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {deliveries.map((d) => (
-                    <tr key={d.id}>
-                      <td className="font-mono" style={{ fontWeight: 600 }}>
-                        {d.orders?.order_number || 'N/A'}
+                  {loading ? (
+                    <tr><td colSpan="9" style={{ padding: 32, textAlign: 'center' }}>Loading deliveries...</td></tr>
+                  ) : deliveries.length === 0 ? (
+                    <tr><td colSpan="9" style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-dim)' }}>No delivery orders found.</td></tr>
+                  ) : deliveries.map(delivery => (
+                    <tr key={delivery.id}>
+                      <td className="font-mono">#{delivery.orders?.order_number || delivery.id.slice(0, 8)}</td>
+                      <td>
+                        <strong>{delivery.orders?.customer_name}</strong>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{delivery.orders?.customer_phone}</div>
+                      </td>
+                      <td style={{ maxWidth: 260 }}>{delivery.customer_address || 'No address'}</td>
+                      <td>
+                        <select
+                          className="input select"
+                          style={{
+                            padding: '4px 24px 4px 8px',
+                            fontSize: '12px',
+                            width: 'auto',
+                            minHeight: '28px',
+                            backgroundPosition: 'right 8px center',
+                            fontFamily: 'var(--font-sans)',
+                            border: '1px solid var(--color-border-light)',
+                            borderRadius: '4px',
+                            backgroundColor: 'var(--color-bg-card)',
+                          }}
+                          value={delivery.delivery_type}
+                          onChange={async (e) => {
+                            try {
+                              await api.patch(`/delivery/orders/${delivery.id}/type`, { delivery_type: e.target.value });
+                              toast.success('Delivery type updated');
+                              fetchData();
+                            } catch (err) {
+                              toast.error(err.message || 'Failed to update delivery type');
+                            }
+                          }}
+                        >
+                          <option value="own_driver">Own Driver</option>
+                          <option value="bosta">Bosta Courier</option>
+                        </select>
                       </td>
                       <td>
-                        <p style={{ fontWeight: 500 }}>{d.orders?.customer_name}</p>
-                        <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{d.orders?.customer_phone}</p>
-                      </td>
-                      <td style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <span className="badge badge-neutral" style={{ marginRight: '6px' }}>{d.zone || 'No Zone'}</span>
-                        <span style={{ fontSize: '13px' }}>{d.customer_address}</span>
-                      </td>
-                      <td style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 600 }}>
-                        {d.delivery_type || 'Internal'}
-                      </td>
-                      <td>
-                        {d.drivers ? (
-                          <div>
-                            <p style={{ fontWeight: 500 }}>{d.drivers.name}</p>
-                            <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{d.drivers.phone}</p>
-                          </div>
-                        ) : d.tracking_number ? (
-                          <div>
-                            <p style={{ fontWeight: 500, color: 'var(--color-info)' }}>Bosta Courier</p>
-                            <p className="font-mono" style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Track: {d.tracking_number}</p>
-                          </div>
-                        ) : (
-                          <span style={{ color: 'var(--color-text-dim)', fontSize: '13px' }}>Unassigned</span>
+                        {delivery.drivers?.name || (delivery.delivery_type === 'bosta' ? 'Bosta' : 'Unassigned')}
+                        {delivery.drivers?.availability_status && (
+                          <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{delivery.drivers.availability_status}</div>
                         )}
                       </td>
-                      <td className="font-mono">{formatEGP(d.cod_amount)}</td>
                       <td>
-                        <span className={`badge badge-${getStatusColor(d.status)}`}>
-                          {d.status.replace(/_/g, ' ')}
-                        </span>
+                        {formatEGP(delivery.cod_amount)}
+                        <div style={{ fontSize: 11, color: delivery.cod_collected ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
+                          {delivery.cod_collected ? 'Collected' : 'Outstanding'}
+                        </div>
+                      </td>
+                      <td><span className={`badge badge-${getStatusColor(delivery.status)}`}>{delivery.status.replace(/_/g, ' ')}</span></td>
+                      <td>
+                        {delivery.tracking_number ? (
+                          <>
+                            <div className="font-mono" style={{ fontSize: 12 }}>{delivery.tracking_number}</div>
+                            <button className="btn btn-secondary btn-sm" onClick={() => trackBosta(delivery)}>Track</button>
+                            {tracking[delivery.id] && (
+                              <div style={{ fontSize: 12, marginTop: 4 }}>{tracking[delivery.id].statusName || tracking[delivery.id].status}</div>
+                            )}
+                          </>
+                        ) : '—'}
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '8px' }}>
-                          {!d.drivers && !d.tracking_number && (
-                            <>
-                              <button
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => {
-                                  setAssigningDelivery(d);
-                                  setShowAssignModal(true);
-                                }}
-                              >
-                                Assign
-                              </button>
-                              <button
-                                className="btn btn-primary btn-sm"
-                                onClick={() => handleCreateBosta(d.id)}
-                              >
-                                Bosta
-                              </button>
-                            </>
-                          )}
-                          {d.delivery_type === 'bosta' && d.tracking_number && (
-                            <button
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => handleTrackBosta(d)}
-                            >
-                              Track
-                            </button>
-                          )}
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            onClick={() => handleDownloadWaybill(d.id)}
-                            title="Download Waybill PDF"
-                          >
-                            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>download</span>
-                          </button>
+                        <div style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          <button className="btn btn-secondary btn-sm" onClick={() => { setAssigning(delivery); setSelectedDriverId(''); }}>Assign</button>
+                          <button className="btn btn-secondary btn-sm" onClick={() => { setStatusTarget(delivery); setNewStatus(delivery.status === 'assigned' ? 'out_for_delivery' : 'delivered'); }}>Status</button>
+                          <button className="btn btn-primary btn-sm" onClick={() => { setBostaTarget(delivery); setBostaForm({ package_size: 'SMALL', city: 'Cairo', zone: '', cod_amount: delivery.cod_amount || '' }); }}>Bosta</button>
+                          {delivery.bosta_shipment_id && <button className="btn btn-secondary btn-sm" onClick={() => downloadLabel(delivery)}>Label</button>}
                         </div>
                       </td>
                     </tr>
                   ))}
-                  {deliveries.length === 0 && (
-                    <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-dim)' }}>
-                        No delivery orders found.
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
@@ -251,107 +346,237 @@ export default function DeliveryPage() {
         </>
       )}
 
-      {/* Assign Driver Modal */}
-      {showAssignModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '400px' }}>
-            <p className="text-title" style={{ marginBottom: '20px' }}>Assign Internal Driver</p>
-            <form onSubmit={handleAssignDriver}>
-              <div style={{ marginBottom: '24px' }}>
-                <label className="text-label" style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>
-                  Select Driver
-                </label>
-                <select
-                  className="input select"
-                  value={selectedDriverId}
-                  onChange={(e) => setSelectedDriverId(e.target.value)}
-                  required
-                >
-                  <option value="">-- Choose Driver --</option>
-                  {drivers
-                    .filter(dr => dr.status === 'active')
-                    .map(dr => (
-                      <option key={dr.id} value={dr.id}>
-                        {dr.name} ({dr.zone || 'No zone'})
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowAssignModal(false);
-                    setAssigningDelivery(null);
-                    setSelectedDriverId('');
-                  }}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Confirm
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {activeTab === 'drivers' && (
+        <DriversPanel
+          drivers={drivers}
+          openDriverModal={openDriverModal}
+          deleteDriver={deleteDriver}
+          toggleAvailability={toggleAvailability}
+        />
       )}
 
-      {/* Bosta Tracking Modal */}
-      {selectedDelivery && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '500px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <p className="text-title">Bosta Tracking: {selectedDelivery.tracking_number}</p>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => setSelectedDelivery(null)}
-              >
-                Close
-              </button>
-            </div>
+      {activeTab === 'analytics' && (
+        <AnalyticsPanel analytics={analytics} failureChart={failureChart} costComparison={costComparison} />
+      )}
 
-            {trackingLoading ? (
-              <div className="skeleton" style={{ height: '150px' }}></div>
-            ) : trackingInfo ? (
-              <div>
-                <div className="card" style={{ background: 'var(--color-bg)', marginBottom: '16px' }}>
-                  <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>Current Status</p>
-                  <p style={{ fontSize: '20px', fontWeight: 700, textTransform: 'uppercase', marginTop: '6px' }}>
-                    {trackingInfo.state}
-                  </p>
-                  {trackingInfo.deliveredAt && (
-                    <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                      Delivered on {formatDate(trackingInfo.deliveredAt)}
-                    </p>
-                  )}
-                </div>
+      {assigning && (
+        <Modal title="Assign Own Driver" onClose={() => setAssigning(null)}>
+          <form onSubmit={assignDriver} style={{ display: 'grid', gap: 16 }}>
+            <select className="input select" value={selectedDriverId} onChange={(e) => setSelectedDriverId(e.target.value)} required>
+              <option value="">Choose active available driver</option>
+              {drivers.filter(driver => driver.status === 'active' && driver.availability_status !== 'busy').map(driver => (
+                <option key={driver.id} value={driver.id}>{driver.name} ({driver.zone || 'No zone'})</option>
+              ))}
+            </select>
+            <button className="btn btn-primary" type="submit">Assign Driver</button>
+          </form>
+        </Modal>
+      )}
 
-                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '12px' }}>Tracking History</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {trackingInfo.history?.map((step, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: '12px', borderLeft: '2px solid var(--color-border-light)', paddingLeft: '16px', position: 'relative' }}>
-                      <div style={{
-                        position: 'absolute', left: '-5px', top: '6px', width: '8px', height: '8px',
-                        borderRadius: '50%', background: idx === 0 ? 'var(--color-info)' : 'var(--color-border)'
-                      }}></div>
-                      <div>
-                        <p style={{ fontWeight: 600, fontSize: '14px' }}>{step.state}</p>
-                        <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{formatDate(step.timestamp)}</p>
-                        {step.note && <p style={{ fontSize: '12px', marginTop: '2px', fontStyle: 'italic' }}>{step.note}</p>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p style={{ color: 'var(--color-error)' }}>Failed to load tracking data.</p>
+      {statusTarget && (
+        <Modal title="Update Delivery Status" onClose={() => setStatusTarget(null)}>
+          <form onSubmit={updateStatus} style={{ display: 'grid', gap: 16 }}>
+            <select className="input select" value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required>
+              {STATUS_OPTIONS.map(status => <option key={status} value={status}>{status.replace(/_/g, ' ')}</option>)}
+            </select>
+            {newStatus === 'failed' && (
+              <select className="input select" value={failedReason} onChange={(e) => setFailedReason(e.target.value)} required>
+                {FAILURE_REASONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
             )}
-          </div>
-        </div>
+            <button className="btn btn-primary" type="submit">Save Status</button>
+          </form>
+        </Modal>
+      )}
+
+      {bostaTarget && (
+        <Modal title="Create Bosta Shipment" onClose={() => setBostaTarget(null)}>
+          <form onSubmit={createBostaShipment} style={{ display: 'grid', gap: 12 }}>
+            <input className="input" value={bostaTarget.orders?.customer_name || ''} readOnly />
+            <input className="input" value={bostaTarget.orders?.customer_phone || ''} readOnly />
+            <input className="input" value={bostaTarget.customer_address || ''} readOnly />
+            <select className="input select" value={bostaForm.package_size} onChange={(e) => setBostaForm({ ...bostaForm, package_size: e.target.value })}>
+              <option value="SMALL">Small</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LARGE">Large</option>
+            </select>
+            <input className="input" value={bostaForm.city} onChange={(e) => setBostaForm({ ...bostaForm, city: e.target.value })} placeholder="City" />
+            <input className="input" value={bostaForm.zone} onChange={(e) => setBostaForm({ ...bostaForm, zone: e.target.value })} placeholder="Zone" />
+            <input className="input" type="number" value={bostaForm.cod_amount} onChange={(e) => setBostaForm({ ...bostaForm, cod_amount: e.target.value })} placeholder="COD amount EGP" />
+            <button className="btn btn-primary" type="submit">Create Shipment</button>
+          </form>
+        </Modal>
+      )}
+
+      {driverModalOpen && (
+        <Modal title={editingDriver ? 'Edit Driver' : 'Add Driver'} onClose={() => setDriverModalOpen(false)}>
+          <form onSubmit={saveDriver} style={{ display: 'grid', gap: 12 }}>
+            <input className="input" value={driverForm.name} onChange={(e) => setDriverForm({ ...driverForm, name: e.target.value })} placeholder="Driver name" required />
+            <input className="input" value={driverForm.phone} onChange={(e) => setDriverForm({ ...driverForm, phone: e.target.value })} placeholder="Phone" required />
+            <input className="input" value={driverForm.zone} onChange={(e) => setDriverForm({ ...driverForm, zone: e.target.value })} placeholder="Zone" />
+            <select className="input select" value={driverForm.status} onChange={(e) => setDriverForm({ ...driverForm, status: e.target.value })}>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <select className="input select" value={driverForm.availability_status} onChange={(e) => setDriverForm({ ...driverForm, availability_status: e.target.value })}>
+              <option value="available">Available</option>
+              <option value="busy">Busy</option>
+            </select>
+            <button className="btn btn-primary" type="submit">{editingDriver ? 'Save Driver' : 'Add Driver'}</button>
+          </form>
+        </Modal>
       )}
     </DashboardShell>
+  );
+}
+
+function SummaryCards({ summary }) {
+  const cards = [
+    ['Total Today', summary?.total_today || 0, ''],
+    ['Out for Delivery', summary?.out_for_delivery || 0, 'var(--color-warning)'],
+    ['Delivered', summary?.delivered || 0, 'var(--color-success)'],
+    ['Failed', summary?.failed || 0, 'var(--color-error)'],
+    ['COD Outstanding', formatEGP(summary?.cod_outstanding || summary?.cod_to_collect || 0), '']
+  ];
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 20 }}>
+      {cards.map(([label, value, color]) => (
+        <div className="card" key={label}>
+          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 8 }}>{label}</p>
+          <p className="font-mono" style={{ fontSize: 26, fontWeight: 800, color: color || 'var(--color-text)' }}>{value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DriversPanel({ drivers, openDriverModal, deleteDriver, toggleAvailability }) {
+  return (
+    <>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+        <p className="text-title">Drivers</p>
+        <button className="btn btn-primary" onClick={() => openDriverModal()}>Add Driver</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+        {drivers.map(driver => (
+          <div className="card" key={driver.id}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 800 }}>{driver.name}</h3>
+                <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{driver.phone} · {driver.zone || 'No zone'}</p>
+              </div>
+              <span className={`badge badge-${driver.status === 'active' ? 'success' : 'neutral'}`}>{driver.status}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 18 }}>
+              <DriverMetric label="Total" value={driver.stats?.total_deliveries || 0} />
+              <DriverMetric label="Done" value={driver.stats?.delivered || 0} />
+              <DriverMetric label="Failed" value={driver.stats?.failed || 0} />
+              <DriverMetric label="Rate" value={`${driver.stats?.success_rate || 0}%`} />
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 18 }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => toggleAvailability(driver)}>
+                {driver.availability_status === 'busy' ? 'Mark Available' : 'Mark Busy'}
+              </button>
+              <button className="btn btn-secondary btn-sm" onClick={() => openDriverModal(driver)}>Edit</button>
+              <button className="btn btn-danger btn-sm" onClick={() => deleteDriver(driver)}>Delete</button>
+              <span className="font-mono" style={{ fontSize: 11, color: 'var(--color-text-muted)', alignSelf: 'center' }}>
+                /driver/{driver.uuid_link || driver.id}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function DriverMetric({ label, value }) {
+  return (
+    <div style={{ border: '1px solid var(--color-border-light)', padding: 8 }}>
+      <p className="text-label" style={{ fontSize: 9, color: 'var(--color-text-dim)' }}>{label}</p>
+      <p className="font-mono" style={{ fontWeight: 800, marginTop: 4 }}>{value}</p>
+    </div>
+  );
+}
+
+function AnalyticsPanel({ analytics, failureChart, costComparison }) {
+  return (
+    <div style={{ display: 'grid', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+        <div className="card">
+          <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>COD Collected</p>
+          <p className="font-mono" style={{ fontSize: 26, fontWeight: 800 }}>{formatEGP(analytics?.cod?.collected || 0)}</p>
+        </div>
+        <div className="card">
+          <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>COD Outstanding</p>
+          <p className="font-mono" style={{ fontSize: 26, fontWeight: 800 }}>{formatEGP(analytics?.cod?.outstanding || 0)}</p>
+        </div>
+      </div>
+
+      <div className="card">
+        <p className="text-title" style={{ marginBottom: 16 }}>Average Delivery Time per Driver</p>
+        <div style={{ height: 280 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={analytics?.driverAnalytics || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="avg_delivery_time_hrs" name="Avg hours" fill="#e5e2e1" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+        <div className="card">
+          <p className="text-title" style={{ marginBottom: 16 }}>Failed Delivery Rate by Reason</p>
+          <div style={{ height: 260 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={failureChart} dataKey="value" nameKey="name" outerRadius={90} label>
+                  {failureChart.map((entry, index) => <Cell key={entry.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="card">
+          <p className="text-title" style={{ marginBottom: 16 }}>Bosta vs Own Driver</p>
+          <div style={{ height: 260 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={costComparison}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
+                <XAxis dataKey="type" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="total" fill="#988e90" />
+                <Bar dataKey="delivered" fill="#22c55e" />
+                <Bar dataKey="failed" fill="#ef4444" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Modal({ title, children, onClose }) {
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ maxWidth: 520, width: '100%' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', marginBottom: 18 }}>
+          <p className="text-title">{title}</p>
+          <button className="btn btn-secondary btn-sm" onClick={onClose}>Close</button>
+        </div>
+        {children}
+      </div>
+    </div>
   );
 }

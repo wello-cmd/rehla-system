@@ -34,8 +34,7 @@ function verifyBostaWebhook(req, res, next) {
   const signature = req.headers['x-bosta-signature'] || req.headers['x-webhook-signature'];
 
   if (!secret) {
-    console.warn('[Webhook] Bosta webhook secret not configured, skipping verification');
-    return next();
+    return res.status(401).json({ error: 'Bosta webhook verification failed: missing secret.' });
   }
 
   if (!signature) {
@@ -52,7 +51,9 @@ function verifyBostaWebhook(req, res, next) {
     .update(rawBody, 'utf8')
     .digest('hex');
 
-  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+  const signatureBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expectedSignature);
+  if (signatureBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
     console.warn('[Webhook] Bosta signature verification failed');
     return res.status(401).json({ error: 'Invalid Bosta webhook signature.' });
   }
