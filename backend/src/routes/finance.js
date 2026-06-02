@@ -339,4 +339,89 @@ router.get('/cashflow', authenticate, async (req, res) => {
   }
 });
 
+// Part 6: 3PL Fulfillment Billing
+router.post('/generate-3pl', authenticate, authorize('admin', 'ceo'), async (req, res) => {
+  try {
+    const { month_start, month_end } = req.body; // YYYY-MM-DD
+    if (!month_start || !month_end) return res.status(400).json({ error: 'month_start and month_end are required' });
+
+    const { data: clients } = await supabase.from('clients').select('*');
+    if (!clients) return res.json({ success: true, message: 'No clients found', invoices_created: 0 });
+
+    let invoicesCreated = 0;
+
+    for (const client of clients) {
+      if (client.fulfillment_fee_percentage <= 0 && client.storage_fee_monthly <= 0 && client.storage_fee_per_unit <= 0) continue;
+
+      const { data: products } = await supabase.from('products').select('id, stock_quantity, price').eq('client_id', client.id);
+      if (!products || products.length === 0) continue;
+
+      const productIds = products.map(p => p.id);
+      const totalUnitsStored = products.reduce((sum, p) => sum + Number(p.stock_quantity), 0);
+
+      // Find delivered orders in the time period
+      const { data: deliveredOrders } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('status', 'delivered')
+        .gte('created_at', month_start)
+        .lte('created_at', month_end + 'T23:59:59Z');
+
+      const orderIds = (deliveredOrders || []).map(o => o.id);
+      let commissionTotal = 0;
+
+      if (orderIds.length > 0) {
+        const { data: soldItems } = await supabase
+          .from('order_items')
+          .select('quantity, price')
+          .in('order_id', orderIds)
+          .in('product_id', productIds);
+
+        const totalSalesValue = (soldItems || []).reduce((sum, i) => sum + (Number(i.quantity) * Number(i.price)), 0);
+        commissionTotal = totalSalesValue * (Number(client.fulfillment_fee_percentage) / 100);
+      }
+
+      const storageFlat = Number(client.storage_fee_monthly) || 0;
+      const storagePerUnit = totalUnitsStored * (Number(client.storage_fee_per_unit) || 0);
+      const totalStorage = storageFlat + storagePerUnit;
+      const totalInvoiceAmount = totalStorage + commissionTotal;
+
+      if (totalInvoiceAmount > 0) {
+        // Create an invoice
+        const { data: invoice, error: invErr } = await supabase
+          .from('invoices')
+          .insert({
+            client_id: client.id,
+            status: 'draft',
+            issue_date: new Date().toISOString().split('T')[0],
+            due_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            total_amount: totalInvoiceAmount,
+            amount_paid: 0,
+            notes: `3PL Fulfillment Billing: ${month_start} to ${month_end}`
+          })
+          .select().single();
+          
+        if (invErr) throw invErr;
+
+        // Create invoice items
+        if (commissionTotal > 0) {
+          await supabase.from('invoice_items').insert({ invoice_id: invoice.id, description: `Fulfillment Commission (${client.fulfillment_fee_percentage}%)`, quantity: 1, unit_price: commissionTotal, total: commissionTotal });
+        }
+        if (storageFlat > 0) {
+          await supabase.from('invoice_items').insert({ invoice_id: invoice.id, description: `Monthly Storage Fee`, quantity: 1, unit_price: storageFlat, total: storageFlat });
+        }
+        if (storagePerUnit > 0) {
+          await supabase.from('invoice_items').insert({ invoice_id: invoice.id, description: `Per-Unit Storage Fee (${totalUnitsStored} units)`, quantity: totalUnitsStored, unit_price: client.storage_fee_per_unit, total: storagePerUnit });
+        }
+
+        invoicesCreated++;
+      }
+    }
+
+    res.json({ success: true, invoices_created: invoicesCreated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

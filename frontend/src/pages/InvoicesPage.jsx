@@ -15,6 +15,9 @@ export default function InvoicesPage() {
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [show3PLModal, setShow3PLModal] = useState(false);
+  const [monthStart, setMonthStart] = useState('');
+  const [monthEnd, setMonthEnd] = useState('');
   const navigate = useNavigate();
 
   async function fetchInvoices() {
@@ -81,6 +84,24 @@ export default function InvoicesPage() {
       fetchInvoices();
     } catch (err) {
       toast.error(err.message || 'Failed to update overdue status', { id: loadingToast });
+    }
+  }
+
+  // Generate 3PL Invoices
+  async function handleGenerate3PL(e) {
+    e.preventDefault();
+    if (!monthStart || !monthEnd) {
+      toast.error('Please select start and end dates');
+      return;
+    }
+    const loadingToast = toast.loading('Generating 3PL invoices...');
+    try {
+      const res = await api.post('/finance/generate-3pl', { month_start: monthStart, month_end: monthEnd });
+      toast.success(`Success! Created ${res.invoices_created} invoices.`, { id: loadingToast });
+      setShow3PLModal(false);
+      fetchInvoices();
+    } catch (err) {
+      toast.error(err.message || 'Failed to generate 3PL invoices', { id: loadingToast });
     }
   }
 
@@ -165,6 +186,9 @@ export default function InvoicesPage() {
               </select>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
+              <button className="btn btn-secondary" onClick={() => setShow3PLModal(true)}>
+                Generate 3PL Bills
+              </button>
               <button className="btn btn-secondary" onClick={handleFlagOverdue}>
                 Check Overdue
               </button>
@@ -362,6 +386,32 @@ export default function InvoicesPage() {
                 </form>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Generate 3PL Invoices Modal */}
+      {show3PLModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <p className="text-title" style={{ marginBottom: '16px' }}>Generate 3PL Invoices</p>
+            <p className="text-body" style={{ color: 'var(--color-text-dim)', marginBottom: '24px' }}>
+              This will automatically calculate monthly rent and sales commissions for all 3PL clients for the selected period, generating draft invoices.
+            </p>
+            <form onSubmit={handleGenerate3PL} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label className="text-label" style={{ display: 'block', marginBottom: '6px' }}>Start Date</label>
+                <input type="date" className="input" value={monthStart} onChange={(e) => setMonthStart(e.target.value)} required />
+              </div>
+              <div>
+                <label className="text-label" style={{ display: 'block', marginBottom: '6px' }}>End Date</label>
+                <input type="date" className="input" value={monthEnd} onChange={(e) => setMonthEnd(e.target.value)} required />
+              </div>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '12px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShow3PLModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Generate</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

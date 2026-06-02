@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
     const { start_date, end_date } = req.query;
     const { data, error } = await supabase
       .from('products')
-      .select('*, warehouses(name, code)')
+      .select('*, warehouses(name, code), clients(company_name)')
       .order('name');
 
     if (error) throw error;
@@ -65,7 +65,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/inventory — Add new product
 router.post('/', authenticate, authorize('admin', 'ceo'), async (req, res) => {
-  const { sku, name, description, stock_quantity, price, cost_per_unit, category, image_url, warehouse_id, brand, barcode } = req.body;
+  const { sku, name, description, stock_quantity, price, cost_per_unit, category, image_url, warehouse_id, brand, barcode, client_id } = req.body;
   if (!sku || !name || price === undefined) {
     return res.status(400).json({ error: 'SKU, name, and price are required.' });
   }
@@ -84,9 +84,10 @@ router.post('/', authenticate, authorize('admin', 'ceo'), async (req, res) => {
         image_url: image_url || '',
         warehouse_id: warehouse_id || null,
         brand: brand || 'REHLA',
+        client_id: client_id || null,
         barcode: barcode || require('../services/barcodeGenerator').generateBarcodeString()
       })
-      .select('*, warehouses(name, code)')
+      .select('*, warehouses(name, code), clients(company_name)')
       .single();
 
     if (error) throw error;
@@ -100,7 +101,7 @@ router.post('/', authenticate, authorize('admin', 'ceo'), async (req, res) => {
 router.put('/:id', authenticate, authorize('admin', 'ceo'), async (req, res) => {
   try {
     const updates = {};
-    const allowed = ['name', 'description', 'price', 'cost_per_unit', 'category', 'image_url', 'warehouse_id', 'brand', 'barcode'];
+    const allowed = ['name', 'description', 'price', 'cost_per_unit', 'category', 'image_url', 'warehouse_id', 'brand', 'barcode', 'client_id'];
     for (const key of allowed) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
     }
@@ -109,7 +110,7 @@ router.put('/:id', authenticate, authorize('admin', 'ceo'), async (req, res) => 
       .from('products')
       .update(updates)
       .eq('id', req.params.id)
-      .select('*, warehouses(name, code)')
+      .select('*, warehouses(name, code), clients(company_name)')
       .single();
 
     if (error) throw error;
@@ -209,7 +210,7 @@ router.post('/:id/barcode/generate', authenticate, authorize('admin', 'ceo'), as
       .from('products')
       .update({ barcode: newBarcode })
       .eq('id', req.params.id)
-      .select('*, warehouses(name, code)')
+      .select('*, warehouses(name, code), clients(company_name)')
       .single();
 
     if (error) throw error;
@@ -254,7 +255,7 @@ router.get('/export/csv', authenticate, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('products')
-      .select('sku, name, category, brand, stock_quantity, price, cost_per_unit, warehouses(name)')
+      .select('sku, name, category, brand, stock_quantity, price, cost_per_unit, warehouses(name), clients(company_name)')
       .order('name');
 
     if (error) throw error;
@@ -267,7 +268,8 @@ router.get('/export/csv', authenticate, async (req, res) => {
       'Stock Quantity': p.stock_quantity,
       'Price (EGP)': p.price,
       'Cost Per Unit (EGP)': p.cost_per_unit,
-      Warehouse: p.warehouses?.name || ''
+      Warehouse: p.warehouses?.name || '',
+      Client: p.clients?.company_name || 'Internal'
     }));
 
     const csv = stringify(rows, { header: true });

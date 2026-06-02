@@ -17,6 +17,9 @@ export default function ClientsPage() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [taxNumber, setTaxNumber] = useState('');
+  const [fulfillmentFee, setFulfillmentFee] = useState('');
+  const [storageFeeMonthly, setStorageFeeMonthly] = useState('');
+  const [storageFeePerUnit, setStorageFeePerUnit] = useState('');
 
   async function fetchClients() {
     try {
@@ -47,6 +50,9 @@ export default function ClientsPage() {
     setPhone('');
     setAddress('');
     setTaxNumber('');
+    setFulfillmentFee('');
+    setStorageFeeMonthly('');
+    setStorageFeePerUnit('');
     setShowModal(true);
   }
 
@@ -58,6 +64,9 @@ export default function ClientsPage() {
     setPhone(client.phone || '');
     setAddress(client.address || '');
     setTaxNumber(client.tax_number || '');
+    setFulfillmentFee(client.fulfillment_fee_percentage || '');
+    setStorageFeeMonthly(client.storage_fee_monthly || '');
+    setStorageFeePerUnit(client.storage_fee_per_unit || '');
     setShowModal(true);
   }
 
@@ -74,7 +83,10 @@ export default function ClientsPage() {
       email: email.trim(),
       phone: phone.trim(),
       address: address.trim(),
-      tax_number: taxNumber.trim()
+      tax_number: taxNumber.trim(),
+      fulfillment_fee_percentage: parseFloat(fulfillmentFee) || 0,
+      storage_fee_monthly: parseFloat(storageFeeMonthly) || 0,
+      storage_fee_per_unit: parseFloat(storageFeePerUnit) || 0
     };
 
     try {
@@ -140,6 +152,8 @@ export default function ClientsPage() {
                     <th>Phone Number</th>
                     <th>Address</th>
                     <th>Tax Number</th>
+                    <th>3PL Commission</th>
+                    <th>3PL Rent (M/U)</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
@@ -152,6 +166,13 @@ export default function ClientsPage() {
                       <td className="font-mono">{c.phone || '—'}</td>
                       <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.address || '—'}</td>
                       <td className="font-mono">{c.tax_number || '—'}</td>
+                      <td className="font-mono">{c.fulfillment_fee_percentage ? `${c.fulfillment_fee_percentage}%` : '—'}</td>
+                      <td className="font-mono">
+                        {c.storage_fee_monthly || c.storage_fee_per_unit 
+                          ? `${c.storage_fee_monthly || 0} / ${c.storage_fee_per_unit || 0}`
+                          : '—'
+                        }
+                      </td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: '8px' }}>
                           <button
@@ -250,6 +271,25 @@ export default function ClientsPage() {
                   onChange={(e) => setTaxNumber(e.target.value)}
                   placeholder="e.g. 123-456-789"
                 />
+              </div>
+
+              {/* 3PL Fulfillment Fees */}
+              <div style={{ padding: '16px', background: 'var(--color-bg-inset)', borderRadius: '12px', marginTop: '8px' }}>
+                <p className="text-label" style={{ marginBottom: '12px', color: 'var(--color-text-dim)' }}>3PL Fulfillment Settings</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+                  <div>
+                    <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Commission (%)</label>
+                    <input type="number" step="0.01" className="input" value={fulfillmentFee} onChange={(e) => setFulfillmentFee(e.target.value)} placeholder="0.00" />
+                  </div>
+                  <div>
+                    <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Monthly Rent (Flat)</label>
+                    <input type="number" step="0.01" className="input" value={storageFeeMonthly} onChange={(e) => setStorageFeeMonthly(e.target.value)} placeholder="0.00" />
+                  </div>
+                  <div>
+                    <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Per-Unit Fee</label>
+                    <input type="number" step="0.01" className="input" value={storageFeePerUnit} onChange={(e) => setStorageFeePerUnit(e.target.value)} placeholder="0.00" />
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '12px' }}>

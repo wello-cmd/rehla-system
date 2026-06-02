@@ -11,7 +11,8 @@ export default function InventoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [form, setForm] = useState({ sku: '', name: '', price: '', cost_per_unit: '', stock_quantity: '', category: 'Uncategorized', brand: 'REHLA', barcode: '' });
+  const [clients, setClients] = useState([]);
+  const [form, setForm] = useState({ sku: '', name: '', price: '', cost_per_unit: '', stock_quantity: '', category: 'Uncategorized', brand: 'REHLA', barcode: '', client_id: '' });
   const [syncing, setSyncing] = useState(false);
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
   const [selectedProductForBarcode, setSelectedProductForBarcode] = useState(null);
@@ -30,7 +31,7 @@ export default function InventoryPage() {
 
   function openAdd() {
     setSelectedProduct(null);
-    setForm({ sku: '', name: '', price: '', cost_per_unit: '', stock_quantity: '', category: 'Uncategorized', brand: 'REHLA', barcode: '' });
+    setForm({ sku: '', name: '', price: '', cost_per_unit: '', stock_quantity: '', category: 'Uncategorized', brand: 'REHLA', barcode: '', client_id: '' });
     setShowModal(true);
   }
 
@@ -102,7 +103,16 @@ export default function InventoryPage() {
     e.stopPropagation();
   }
 
-  useEffect(() => { fetchProducts(); }, [startDate, endDate]);
+  useEffect(() => { fetchProducts(); fetchClients(); }, [startDate, endDate]);
+
+  async function fetchClients() {
+    try {
+      const data = await api.get('/clients');
+      setClients(data);
+    } catch (err) {
+      console.error('Failed to load clients:', err);
+    }
+  }
 
   async function fetchProducts() {
     try {
@@ -145,13 +155,14 @@ export default function InventoryPage() {
           stock_quantity: Number(form.stock_quantity), 
           price: Number(form.price), 
           cost_per_unit: Number(form.cost_per_unit),
-          barcode: form.barcode.trim() || undefined 
+          barcode: form.barcode.trim() || undefined,
+          client_id: form.client_id || undefined
         });
         toast.success('Product created');
       }
       setShowModal(false);
       setSelectedProduct(null);
-      setForm({ sku: '', name: '', price: '', cost_per_unit: '', stock_quantity: '', category: 'Uncategorized', brand: 'REHLA', barcode: '' });
+      setForm({ sku: '', name: '', price: '', cost_per_unit: '', stock_quantity: '', category: 'Uncategorized', brand: 'REHLA', barcode: '', client_id: '' });
       fetchProducts();
     } catch (err) {
       toast.error(err.message);
@@ -180,7 +191,7 @@ export default function InventoryPage() {
 
   function openEdit(product) {
     setSelectedProduct(product);
-    setForm({ sku: product.sku, name: product.name, price: product.price, cost_per_unit: product.cost_per_unit, stock_quantity: product.stock_quantity, category: product.category, brand: product.brand, barcode: product.barcode || '' });
+    setForm({ sku: product.sku, name: product.name, price: product.price, cost_per_unit: product.cost_per_unit, stock_quantity: product.stock_quantity, category: product.category, brand: product.brand, barcode: product.barcode || '', client_id: product.client_id || '' });
     setShowModal(true);
   }
 
@@ -309,6 +320,7 @@ export default function InventoryPage() {
                 </th>
                 <th>SKU</th>
                 <th>Product</th>
+                <th>Owner (3PL)</th>
                 <th style={STYLES.textRight}>Price</th>
                 <th style={STYLES.textRight}>In Warehouse</th>
                 <th style={STYLES.textRight}>Left Warehouse</th>
@@ -332,6 +344,11 @@ export default function InventoryPage() {
                       )}
                       <span style={STYLES.productName}>{product.name}</span>
                     </div>
+                  </td>
+                  <td>
+                    <span className="badge" style={{fontSize: '10px', background: 'var(--color-bg-inset)', color: 'var(--color-text-dim)'}}>
+                      {product.clients?.company_name || 'REHLA (Internal)'}
+                    </span>
                   </td>
                   <td className="font-mono" style={STYLES.priceCol}>{formatEGP(product.price)}</td>
                   <td className="font-mono" style={STYLES.priceCol}>{formatNumber(product.in_warehouse)}</td>
@@ -394,6 +411,15 @@ export default function InventoryPage() {
                 <div>
                   <label className="text-label" style={STYLES.modalLabel}>Category</label>
                   <input className="input" name="category" value={form.category} onChange={handleChange} />
+                </div>
+                <div>
+                  <label className="text-label" style={STYLES.modalLabel}>Product Owner (3PL)</label>
+                  <select className="input" name="client_id" value={form.client_id} onChange={handleChange}>
+                    <option value="">REHLA (Internal)</option>
+                    {clients.map(c => (
+                      <option key={c.id} value={c.id}>{c.company_name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-label" style={STYLES.modalLabel}>Barcode</label>
