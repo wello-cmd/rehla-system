@@ -231,8 +231,23 @@ class ShopifySync {
         const orders = data.orders || [];
 
         for (const shopifyOrder of orders) {
-          const result = await this.upsertShopifyOrder(shopifyOrder, { ensureDelivery: true });
-          if (result.success) ordersSynced++;
+          let retryCount = 0;
+          while (retryCount < 3) {
+            try {
+              const result = await this.upsertShopifyOrder(shopifyOrder, { ensureDelivery: true });
+              if (result.success) ordersSynced++;
+              break;
+            } catch (upsertErr) {
+              if (upsertErr.message && upsertErr.message.includes('fetch failed')) {
+                retryCount++;
+                console.warn(`[Shopify] Upsert fetch failed for order. Retrying... (${retryCount}/3)`);
+                if (retryCount >= 3) throw upsertErr;
+                await new Promise(r => setTimeout(r, 2000 * retryCount));
+              } else {
+                throw upsertErr;
+              }
+            }
+          }
         }
 
         pageInfo = this.extractPageInfo(headers?.link);
