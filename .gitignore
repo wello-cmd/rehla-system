@@ -9,6 +9,7 @@ web_modules/
 .env.development.local
 .env.test.local
 .env.production.local
+render_env.json
 
 # Logs
 logs/
