@@ -95,8 +95,7 @@ class ShopifySync {
 
         for (const shopifyProduct of products) {
           for (const variant of shopifyProduct.variants) {
-            const sku = variant.sku;
-            if (!sku) continue;
+      const sku = variant.sku || `SHP-${variant.id}`;
 
             // Check if product exists by SKU
             const { data: existing } = await supabase
@@ -416,8 +415,7 @@ class ShopifySync {
     if (!shopifyProduct || !shopifyProduct.variants) return;
     
     for (const variant of shopifyProduct.variants) {
-      const sku = variant.sku;
-      if (!sku) continue;
+      const sku = variant.sku || `SHP-${variant.id}`;
 
       const newName = `${shopifyProduct.title}${variant.title !== 'Default Title' ? ` - ${variant.title}` : ''}`;
       const newPrice = parseFloat(variant.price) || 0;
