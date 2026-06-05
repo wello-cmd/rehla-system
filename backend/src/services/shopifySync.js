@@ -32,6 +32,12 @@ class ShopifySync {
   /**
    * Rate-limited API call with exponential backoff (FR-SH-08, NFR-RL-05)
    */
+  extractPageInfo(linkHeader) {
+    if (!linkHeader) return null;
+    const match = linkHeader.match(/<[^>]+page_info=([^>&]+)[^>]*>;\s*rel="next"/);
+    return match ? match[1] : null;
+  }
+
   async shopifyRequest(endpoint, method = 'GET', data = null) {
     if (!this.isConfigured()) {
       throw new Error('Shopify credentials not fully configured in .env');
@@ -48,7 +54,7 @@ class ShopifySync {
 
       const response = await axios(config);
       this.retryCount = 0;
-      return response.data;
+      return { data: response.data, headers: response.headers };
     } catch (err) {
       if (err.response?.status === 429 && this.retryCount < this.maxRetries) {
         try {
@@ -90,8 +96,8 @@ class ShopifySync {
           ? `/products.json?limit=50&page_info=${pageInfo}`
           : '/products.json?limit=50';
 
-        const response = await this.shopifyRequest(endpoint);
-        const products = response.products || [];
+        const { data, headers } = await this.shopifyRequest(endpoint);
+        const products = data.products || [];
 
         for (const shopifyProduct of products) {
           for (const variant of shopifyProduct.variants) {
@@ -156,7 +162,8 @@ class ShopifySync {
             }
           }
         }
-        hasNextPage = false;
+        pageInfo = this.extractPageInfo(headers?.link);
+        hasNextPage = !!pageInfo;
       }
 
       const durationMs = Date.now() - startTime;
@@ -211,13 +218,25 @@ class ShopifySync {
     }
 
     try {
-      const response = await this.shopifyRequest('/orders.json?status=any&limit=50');
-      const orders = response.orders || [];
+      let hasNextPage = true;
+      let pageInfo = null;
       let ordersSynced = 0;
 
-      for (const shopifyOrder of orders) {
-        const result = await this.upsertShopifyOrder(shopifyOrder, { ensureDelivery: true });
-        if (result.success) ordersSynced++;
+      while (hasNextPage) {
+        const endpoint = pageInfo
+          ? `/orders.json?limit=50&page_info=${pageInfo}`
+          : '/orders.json?status=any&limit=50';
+
+        const { data, headers } = await this.shopifyRequest(endpoint);
+        const orders = data.orders || [];
+
+        for (const shopifyOrder of orders) {
+          const result = await this.upsertShopifyOrder(shopifyOrder, { ensureDelivery: true });
+          if (result.success) ordersSynced++;
+        }
+
+        pageInfo = this.extractPageInfo(headers?.link);
+        hasNextPage = !!pageInfo;
       }
 
       await supabase.from('sync_log').insert({
@@ -323,10 +342,20 @@ class ShopifySync {
     if (deliveryFetchErr) throw deliveryFetchErr;
 
     const paymentStatus = mapShopifyPaymentStatus(shopifyOrder.financial_status);
+    let bostaTrackingNumber = null;
+    if (shopifyOrder.fulfillments && shopifyOrder.fulfillments.length > 0) {
+      const bostaFulfillment = shopifyOrder.fulfillments.find(f => 
+        (f.tracking_company && f.tracking_company.toLowerCase().includes('bosta')) ||
+        (f.tracking_number && f.tracking_number.toString().startsWith('3'))
+      );
+      if (bostaFulfillment) bostaTrackingNumber = bostaFulfillment.tracking_number;
+    }
+
     const deliveryPayload = {
       customer_address: formatShopifyAddress(shopifyOrder.shipping_address || shopifyOrder.billing_address),
       cod_amount: paymentStatus === 'paid' ? 0 : parseFloat(shopifyOrder.total_price) || 0,
       notes: shopifyOrder.note || '',
+      ...(bostaTrackingNumber && { tracking_number: bostaTrackingNumber, delivery_type: 'bosta' }),
       updated_at: new Date().toISOString()
     };
 
