@@ -83,10 +83,7 @@ class ShopifySync {
     let productsUpdated = 0;
     let productsSkipped = 0;
     let productsCreated = 0;
-    let syncStatus = 'success';
-    let errorDetails = '';
 
-    let syncError = null;
     try {
       let hasNextPage = true;
       let pageInfo = null;
@@ -189,8 +186,8 @@ class ShopifySync {
       };
     } catch (err) {
       const durationMs = Date.now() - startTime;
-      const errorDetails = err.response?.data ? JSON.stringify(err.response.data) : err.message;
-      console.error('[Shopify] Product sync failed:', errorDetails);
+      const errorMsg = err.response?.data ? JSON.stringify(err.response.data) : err.message;
+      console.error('[Shopify] Product sync failed:', errorMsg);
 
       const logWriteResponse = await supabase.from('sync_log').insert({
         products_updated: productsUpdated,
@@ -198,7 +195,7 @@ class ShopifySync {
         products_created: productsCreated,
         triggered_by: triggeredBy,
         status: 'failed',
-        error_details: errorDetails,
+        error_details: errorMsg,
         duration_ms: durationMs
       });
       if (logWriteResponse && logWriteResponse.error) {
@@ -548,6 +545,7 @@ function normalizeShopifyItems(lineItems) {
 function buildOrderPayload(shopifyOrder, items) {
   return {
     shopify_order_id: String(shopifyOrder.id),
+    shopify_order_name: shopifyOrder.name || `#${shopifyOrder.order_number}`,
     customer_name: getShopifyCustomerName(shopifyOrder),
     customer_phone: shopifyOrder.customer?.phone || shopifyOrder.shipping_address?.phone || shopifyOrder.billing_address?.phone || 'N/A',
     customer_email: shopifyOrder.customer?.email || shopifyOrder.email || '',
@@ -563,12 +561,12 @@ function buildOrderPayload(shopifyOrder, items) {
 }
 
 function getShopifyCustomerName(shopifyOrder) {
-  const customer = shopifyOrder.customer;
-  const shipping = shopifyOrder.shipping_address;
-  return [
-    customer?.first_name || shipping?.first_name || '',
-    customer?.last_name || shipping?.last_name || ''
-  ].join(' ').trim() || shipping?.name || 'Shopify Customer';
+  const c = shopifyOrder.customer || {};
+  const s = shopifyOrder.shipping_address || {};
+  const b = shopifyOrder.billing_address || {};
+
+  const name = `${c.first_name || s.first_name || b.first_name || ''} ${c.last_name || s.last_name || b.last_name || ''}`.trim();
+  return name || s.name || b.name || 'Shopify Customer';
 }
 
 function formatShopifyAddress(address = {}) {

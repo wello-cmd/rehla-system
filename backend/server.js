@@ -27,6 +27,7 @@ const posRoutes = require('./src/routes/pos');
 const shopifyRoutes = require('./src/routes/shopify');
 const bostaRoutes = require('./src/routes/bosta');
 const aiRoutes = require('./src/routes/ai');
+const channelsRoutes = require('./src/routes/channels');
 
 // Services
 const { startCronJobs } = require('./src/services/cronJobs');
@@ -41,7 +42,7 @@ const PORT = process.env.PORT || 5000;
 // CORS (NFR-SC-04)
 app.use(cors({
   origin: process.env.FRONTEND_URL || '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -76,6 +77,7 @@ app.use('/api/pos', posRoutes);
 app.use('/api/shopify', shopifyRoutes);
 app.use('/api/bosta', bostaRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/channels', channelsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

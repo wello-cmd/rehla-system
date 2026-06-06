@@ -20,6 +20,9 @@ import DriverPage from './pages/DriverPage';
 import UsersPage from './pages/UsersPage';
 import WarehouseLogsPage from './pages/WarehouseLogsPage';
 import FinancialDashboardPage from './pages/FinancialDashboardPage';
+import ShopifyPage from './pages/ShopifyPage';
+import BostaPage from './pages/BostaPage';
+import ChannelsPage from './pages/ChannelsPage';
 
 // Protected Route Wrapper
 function ProtectedRoute({ children, allowedRoles }) {
@@ -162,6 +165,24 @@ function AppContent() {
         <Route path="/ai" element={
           <ProtectedRoute allowedRoles={['ceo']}>
             <AiPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/shopify" element={
+          <ProtectedRoute allowedRoles={['ceo', 'admin']}>
+            <ShopifyPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/bosta" element={
+          <ProtectedRoute allowedRoles={['ceo', 'admin', 'dispatcher']}>
+            <BostaPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/channels" element={
+          <ProtectedRoute allowedRoles={['ceo', 'admin']}>
+            <ChannelsPage />
           </ProtectedRoute>
         } />
 

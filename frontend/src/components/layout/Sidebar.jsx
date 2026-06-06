@@ -1,5 +1,5 @@
 // Sidebar Navigation Component — Mobile-Responsive
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, Link } from 'react-router-dom';
 
@@ -9,6 +9,9 @@ const NAV_ITEMS = [
   { path: '/warehouse/exit', label: 'Warehouse Exit', icon: 'barcode_scanner', roles: ['ceo', 'admin', 'worker'] },
   { path: '/warehouse/logs', label: 'Warehouse Logs', icon: 'history', roles: ['ceo', 'admin', 'worker'] },
   { path: '/delivery', label: 'Delivery', icon: 'local_shipping', roles: ['ceo', 'admin', 'dispatcher', 'worker'] },
+  { path: '/shopify', label: 'Shopify', icon: 'shopping_bag', roles: ['ceo', 'admin'] },
+  { path: '/bosta', label: 'Bosta', icon: 'deployed_code', roles: ['ceo', 'admin', 'dispatcher'] },
+  { path: '/channels', label: 'Channel Compare', icon: 'compare_arrows', roles: ['ceo', 'admin'] },
   { path: '/invoices', label: 'Invoices', icon: 'receipt_long', roles: ['ceo', 'admin', 'accountant'] },
   { path: '/clients', label: 'Clients', icon: 'business', roles: ['ceo', 'admin'] },
   { path: '/users', label: 'Users', icon: 'people', roles: ['ceo', 'admin'] },

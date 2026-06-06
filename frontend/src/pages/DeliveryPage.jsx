@@ -270,7 +270,7 @@ export default function DeliveryPage() {
                     <tr><td colSpan="9" style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-dim)' }}>No delivery orders found.</td></tr>
                   ) : deliveries.map(delivery => (
                     <tr key={delivery.id}>
-                      <td className="font-mono">#{delivery.orders?.order_number || delivery.id.slice(0, 8)}</td>
+                      <td className="font-mono">{delivery.orders?.shopify_order_name || `#${delivery.orders?.order_number || delivery.id.slice(0, 8)}`}</td>
                       <td>
                         <strong>{delivery.orders?.customer_name}</strong>
                         <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{delivery.orders?.customer_phone}</div>

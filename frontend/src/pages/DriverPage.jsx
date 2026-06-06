@@ -108,7 +108,7 @@ export default function DriverPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
               <div>
                 <span className="badge badge-neutral" style={{ fontFamily: 'var(--font-mono)' }}>
-                  ORDER #{d.orders?.order_number || 'N/A'}
+                  ORDER {d.orders?.shopify_order_name || `#${d.orders?.order_number || 'N/A'}`}
                 </span>
                 <h3 style={{ fontSize: '16px', fontWeight: 700, marginTop: '6px' }}>{d.orders?.customer_name}</h3>
               </div>

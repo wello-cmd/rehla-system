@@ -50,7 +50,7 @@ async function listDeliveryOrders(req, res) {
       .from('delivery_orders')
       .select(`
         *,
-        orders(customer_name, customer_phone, customer_email, total, payment_method, items, order_number, created_at),
+        orders(customer_name, customer_phone, customer_email, total, payment_method, items, order_number, shopify_order_name, created_at),
         drivers(name, phone, zone, uuid_link, availability_status)
       `)
       .order('created_at', { ascending: false });
@@ -223,7 +223,7 @@ async function getDriverOrders(req, res) {
       .from('delivery_orders')
       .select(`
         *,
-        orders(customer_name, customer_phone, total, payment_method, items, order_number, created_at)
+        orders(customer_name, customer_phone, total, payment_method, items, order_number, shopify_order_name, created_at)
       `)
       .eq('driver_id', driver.id)
       .in('status', ['assigned', 'out_for_delivery'])
