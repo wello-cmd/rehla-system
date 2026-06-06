@@ -4,60 +4,157 @@ const router = express.Router();
 const { supabase } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
 
-// GET /api/analytics/sales — Sales analytics (FR-AN-01)
+// Group an array of records by a time period key
+function groupByPeriod(items, groupBy, dateField = 'created_at') {
+  const map = {};
+  for (const o of items) {
+    const d = new Date(o[dateField]);
+    if (isNaN(d.getTime())) continue;
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    let key;
+    if (groupBy === 'day') {
+      key = d.toISOString().substring(0, 10);
+    } else if (groupBy === 'week') {
+      const jan1 = new Date(y, 0, 1);
+      const w = Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+      key = `${y}-W${String(w).padStart(2, '0')}`;
+    } else if (groupBy === 'quarter') {
+      key = `${y}-Q${Math.ceil((m + 1) / 3)}`;
+    } else if (groupBy === 'half') {
+      key = `${y}-${m < 6 ? 'H1' : 'H2'}`;
+    } else if (groupBy === 'year') {
+      key = String(y);
+    } else {
+      key = d.toISOString().substring(0, 7); // month default
+    }
+    if (!map[key]) map[key] = { label: key, revenue: 0, orders: 0 };
+    map[key].revenue += Number(o.total || 0);
+    map[key].orders++;
+  }
+  return Object.values(map).sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function periodKey(dateStr, groupBy) {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  const m = d.getMonth();
+  if (groupBy === 'day') return d.toISOString().substring(0, 10);
+  if (groupBy === 'week') {
+    const jan1 = new Date(y, 0, 1);
+    const w = Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+    return `${y}-W${String(w).padStart(2, '0')}`;
+  }
+  if (groupBy === 'quarter') return `${y}-Q${Math.ceil((m + 1) / 3)}`;
+  if (groupBy === 'half') return `${y}-${m < 6 ? 'H1' : 'H2'}`;
+  if (groupBy === 'year') return String(y);
+  return d.toISOString().substring(0, 7);
+}
+
+function endParam(end) {
+  return end ? end + 'T23:59:59.999Z' : null;
+}
+
+// GET /api/analytics/sales?start&end&groupBy
 router.get('/sales', authenticate, async (req, res) => {
   try {
-    const { start, end } = req.query;
-    let query = supabase.from('orders').select('total, created_at').eq('payment_status', 'paid');
-    if (start) query = query.gte('created_at', start);
-    if (end) query = query.lte('created_at', end);
-    const { data: orders } = await query;
+    const { start, end, groupBy = 'month' } = req.query;
 
-    const totalOrders = (orders || []).length;
+    let query = supabase.from('orders').select('id, total, created_at, status, payment_status').eq('payment_status', 'paid');
+    if (start) query = query.gte('created_at', start);
+    if (end)   query = query.lte('created_at', endParam(end));
+    const { data: orders, error } = await query;
+    if (error) throw error;
+
+    const totalOrders  = (orders || []).length;
     const totalRevenue = (orders || []).reduce((s, o) => s + Number(o.total), 0);
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-    // Revenue by day of week heatmap
-    const dayMap = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' };
+    // Day-of-week heatmap
+    const dayMap = { 0:'Sun', 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat' };
     const heatmap = Array(7).fill(null).map((_, i) => ({ day: dayMap[i], revenue: 0, orders: 0 }));
     for (const o of orders || []) {
-      const dayIdx = new Date(o.created_at).getDay();
-      heatmap[dayIdx].revenue += Number(o.total);
-      heatmap[dayIdx].orders++;
+      const idx = new Date(o.created_at).getDay();
+      heatmap[idx].revenue += Number(o.total);
+      heatmap[idx].orders++;
     }
 
-    res.json({ totalOrders, totalRevenue, avgOrderValue, heatmap });
+    // Revenue trend grouped by period
+    const trend = groupByPeriod(orders || [], groupBy);
+
+    // Category revenue via product lookup
+    const orderIds = (orders || []).map(o => o.id);
+    let categoryRevenue = [];
+    if (orderIds.length > 0) {
+      const [{ data: items }, { data: products }] = await Promise.all([
+        supabase.from('order_items').select('sku, quantity, price').in('order_id', orderIds.slice(0, 500)),
+        supabase.from('products').select('sku, category')
+      ]);
+      const catMap = Object.fromEntries((products || []).map(p => [p.sku, p.category || 'Other']));
+      const revMap = {};
+      for (const item of items || []) {
+        const cat = catMap[item.sku] || 'Other';
+        if (!revMap[cat]) revMap[cat] = { name: cat, revenue: 0, units: 0 };
+        revMap[cat].revenue += Number(item.quantity) * Number(item.price);
+        revMap[cat].units   += Number(item.quantity);
+      }
+      categoryRevenue = Object.values(revMap).sort((a, b) => b.revenue - a.revenue).slice(0, 8);
+    }
+
+    // Hour-of-day distribution (useful for day mode)
+    const hourly = Array(24).fill(null).map((_, h) => ({ hour: `${String(h).padStart(2,'0')}:00`, revenue: 0, orders: 0 }));
+    for (const o of orders || []) {
+      const h = new Date(o.created_at).getHours();
+      hourly[h].revenue += Number(o.total);
+      hourly[h].orders++;
+    }
+
+    res.json({ totalOrders, totalRevenue, avgOrderValue, heatmap, trend, categoryRevenue, hourly });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/analytics/top-products — Top 5 products (FR-AN-02)
+// GET /api/analytics/top-products?start&end
 router.get('/top-products', authenticate, async (req, res) => {
   try {
-    const { data: items } = await supabase.from('order_items').select('sku, name, quantity, price');
+    const { start, end } = req.query;
 
+    let orderQuery = supabase.from('orders').select('id').eq('payment_status', 'paid');
+    if (start) orderQuery = orderQuery.gte('created_at', start);
+    if (end)   orderQuery = orderQuery.lte('created_at', endParam(end));
+    const { data: paidOrders } = await orderQuery;
+
+    const orderIds = (paidOrders || []).map(o => o.id);
+    if ((start || end) && orderIds.length === 0) {
+      return res.json({ byRevenue: [], byUnits: [] });
+    }
+
+    let itemQuery = supabase.from('order_items').select('sku, name, quantity, price');
+    if (orderIds.length > 0) itemQuery = itemQuery.in('order_id', orderIds.slice(0, 500));
+
+    const { data: items } = await itemQuery;
     const productMap = {};
     for (const item of items || []) {
       if (!productMap[item.sku]) productMap[item.sku] = { sku: item.sku, name: item.name, units: 0, revenue: 0 };
-      productMap[item.sku].units += Number(item.quantity);
+      productMap[item.sku].units   += Number(item.quantity);
       productMap[item.sku].revenue += Number(item.quantity) * Number(item.price);
     }
 
-    const byRevenue = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
-    const byUnits = Object.values(productMap).sort((a, b) => b.units - a.units).slice(0, 5);
-
+    const byRevenue = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
+    const byUnits   = Object.values(productMap).sort((a, b) => b.units   - a.units).slice(0, 10);
     res.json({ byRevenue, byUnits });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/analytics/products — Product analytics (FR-AN-03)
-router.get('/products', authenticate, async (req, res) => {
+// GET /api/analytics/products (all-time inventory sell-through)
+router.get('/products', authenticate, async (_req, res) => {
   try {
-    const { data: products } = await supabase.from('products').select('id, sku, name, stock_quantity, price');
-    const { data: items } = await supabase.from('order_items').select('sku, quantity');
+    const { data: products } = await supabase.from('products').select('id, sku, name, stock_quantity, price, category');
+    const { data: items }    = await supabase.from('order_items').select('sku, quantity');
 
     const salesMap = {};
     for (const item of items || []) {
@@ -65,48 +162,44 @@ router.get('/products', authenticate, async (req, res) => {
     }
 
     const analytics = (products || []).map(p => {
-      const unitsSold = salesMap[p.sku] || 0;
+      const unitsSold  = salesMap[p.sku] || 0;
       const totalStock = unitsSold + p.stock_quantity;
       return {
-        sku: p.sku,
-        name: p.name,
-        units_sold: unitsSold,
-        current_stock: p.stock_quantity,
+        sku: p.sku, name: p.name, category: p.category,
+        units_sold: unitsSold, current_stock: p.stock_quantity,
         sell_through_rate: totalStock > 0 ? ((unitsSold / totalStock) * 100).toFixed(1) : '0.0',
         zero_sales: unitsSold === 0
       };
     });
 
-    const worstPerformers = analytics.filter(a => !a.zero_sales).sort((a, b) => a.units_sold - b.units_sold).slice(0, 5);
-    const zeroSales = analytics.filter(a => a.zero_sales);
-
+    const worstPerformers = analytics.filter(a => !a.zero_sales).sort((a, b) => a.units_sold - b.units_sold).slice(0, 10);
+    const zeroSales       = analytics.filter(a => a.zero_sales);
     res.json({ products: analytics, worstPerformers, zeroSales });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/analytics/delivery — Delivery analytics (FR-AN-04)
+// GET /api/analytics/delivery?start&end
 router.get('/delivery', authenticate, async (req, res) => {
   try {
-    const { data: deliveries } = await supabase
-      .from('delivery_orders')
-      .select('*, drivers(name, zone)');
+    const { start, end } = req.query;
+    let query = supabase.from('delivery_orders').select('*, drivers(name, zone)');
+    if (start) query = query.gte('created_at', start);
+    if (end)   query = query.lte('created_at', endParam(end));
+    const { data: deliveries } = await query;
 
     const driverStats = {};
     for (const d of deliveries || []) {
-      const driverName = d.drivers?.name || 'Unassigned';
-      if (!driverStats[driverName]) {
-        driverStats[driverName] = { name: driverName, zone: d.drivers?.zone || '', total: 0, delivered: 0, failed: 0, totalTimeMs: 0 };
-      }
-      driverStats[driverName].total++;
+      const name = d.drivers?.name || 'Unassigned';
+      if (!driverStats[name]) driverStats[name] = { name, zone: d.drivers?.zone || '', total: 0, delivered: 0, failed: 0, totalTimeMs: 0 };
+      driverStats[name].total++;
       if (d.status === 'delivered') {
-        driverStats[driverName].delivered++;
-        if (d.assigned_at && d.delivered_at) {
-          driverStats[driverName].totalTimeMs += new Date(d.delivered_at) - new Date(d.assigned_at);
-        }
+        driverStats[name].delivered++;
+        if (d.assigned_at && d.delivered_at)
+          driverStats[name].totalTimeMs += new Date(d.delivered_at) - new Date(d.assigned_at);
       }
-      if (d.status === 'failed') driverStats[driverName].failed++;
+      if (d.status === 'failed') driverStats[name].failed++;
     }
 
     const driverAnalytics = Object.values(driverStats).map(d => ({
@@ -115,66 +208,89 @@ router.get('/delivery', authenticate, async (req, res) => {
       avg_delivery_time_hrs: d.delivered > 0 ? ((d.totalTimeMs / d.delivered) / 3600000).toFixed(1) : null
     }));
 
-    // Failed reasons breakdown
     const failedReasons = {};
     for (const d of (deliveries || []).filter(d => d.status === 'failed')) {
-      const reason = d.failed_reason || 'unknown';
-      failedReasons[reason] = (failedReasons[reason] || 0) + 1;
+      const r = d.failed_reason || 'unknown';
+      failedReasons[r] = (failedReasons[r] || 0) + 1;
     }
 
-    res.json({ driverAnalytics, failedReasons });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/analytics/delivery/cost-comparison — Bosta vs own driver (FR-AN-05)
-router.get('/delivery/cost-comparison', authenticate, async (req, res) => {
-  try {
-    const { data: deliveries } = await supabase.from('delivery_orders').select('delivery_type, status');
-
-    const own = (deliveries || []).filter(d => d.delivery_type === 'own_driver');
-    const bosta = (deliveries || []).filter(d => d.delivery_type === 'bosta');
+    const statusBreakdown = {};
+    for (const d of deliveries || []) {
+      statusBreakdown[d.status] = (statusBreakdown[d.status] || 0) + 1;
+    }
 
     res.json({
-      own_driver: { total: own.length, delivered: own.filter(d => d.status === 'delivered').length, failed: own.filter(d => d.status === 'failed').length },
-      bosta: { total: bosta.length, delivered: bosta.filter(d => d.status === 'delivered').length, failed: bosta.filter(d => d.status === 'failed').length }
+      driverAnalytics, failedReasons, statusBreakdown,
+      total: (deliveries || []).length,
+      delivered: (deliveries || []).filter(d => d.status === 'delivered').length,
+      failed:    (deliveries || []).filter(d => d.status === 'failed').length,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/analytics/financial-kpis — Financial KPIs (FR-AN-06)
+// GET /api/analytics/delivery/cost-comparison?start&end
+router.get('/delivery/cost-comparison', authenticate, async (req, res) => {
+  try {
+    const { start, end } = req.query;
+    let query = supabase.from('delivery_orders').select('delivery_type, status, cod_amount');
+    if (start) query = query.gte('created_at', start);
+    if (end)   query = query.lte('created_at', endParam(end));
+    const { data: deliveries } = await query;
+
+    const own   = (deliveries || []).filter(d => d.delivery_type === 'own_driver');
+    const bosta = (deliveries || []).filter(d => d.delivery_type === 'bosta');
+
+    const summarize = (arr) => ({
+      total:     arr.length,
+      delivered: arr.filter(d => d.status === 'delivered').length,
+      failed:    arr.filter(d => d.status === 'failed').length,
+      cod_collected: arr.filter(d => d.status === 'delivered').reduce((s, d) => s + Number(d.cod_amount || 0), 0)
+    });
+
+    res.json({ own_driver: summarize(own), bosta: summarize(bosta) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/analytics/financial-kpis?start&end&groupBy
 router.get('/financial-kpis', authenticate, async (req, res) => {
   try {
-    const { data: orders } = await supabase.from('orders').select('total, created_at').eq('payment_status', 'paid');
-    const { data: expenses } = await supabase.from('expenses').select('amount, date').eq('status', 'approved');
+    const { start, end, groupBy = 'month' } = req.query;
 
-    // Group revenue by month for MoM growth
-    const monthlyRevenue = {};
+    let ordersQ   = supabase.from('orders').select('total, created_at').eq('payment_status', 'paid');
+    let expensesQ = supabase.from('expenses').select('amount, date').eq('status', 'approved');
+    if (start) { ordersQ = ordersQ.gte('created_at', start);  expensesQ = expensesQ.gte('date', start); }
+    if (end)   { ordersQ = ordersQ.lte('created_at', endParam(end)); expensesQ = expensesQ.lte('date', end); }
+
+    const [{ data: orders }, { data: expenses }] = await Promise.all([ordersQ, expensesQ]);
+
+    const revenueMap = {};
     for (const o of orders || []) {
-      const m = o.created_at?.substring(0, 7);
-      if (m) monthlyRevenue[m] = (monthlyRevenue[m] || 0) + Number(o.total);
-    }
-    const monthlyExpenses = {};
-    for (const e of expenses || []) {
-      const m = e.date?.substring(0, 7);
-      if (m) monthlyExpenses[m] = (monthlyExpenses[m] || 0) + Number(e.amount);
+      const k = periodKey(o.created_at, groupBy);
+      if (k) revenueMap[k] = (revenueMap[k] || 0) + Number(o.total);
     }
 
-    const months = [...new Set([...Object.keys(monthlyRevenue), ...Object.keys(monthlyExpenses)])].sort();
-    const kpis = months.map((month, i) => {
-      const rev = monthlyRevenue[month] || 0;
-      const exp = monthlyExpenses[month] || 0;
-      const prevRev = i > 0 ? (monthlyRevenue[months[i-1]] || 0) : 0;
+    const expenseMap = {};
+    for (const e of expenses || []) {
+      const k = periodKey(e.date, groupBy);
+      if (k) expenseMap[k] = (expenseMap[k] || 0) + Number(e.amount);
+    }
+
+    const periods = [...new Set([...Object.keys(revenueMap), ...Object.keys(expenseMap)])].sort();
+    const kpis = periods.map((period, i) => {
+      const rev    = revenueMap[period] || 0;
+      const exp    = expenseMap[period] || 0;
+      const profit = rev - exp;
+      const prevRev = i > 0 ? (revenueMap[periods[i - 1]] || 0) : 0;
       return {
-        month,
-        revenue: rev,
-        expenses: exp,
-        profit_margin: rev > 0 ? (((rev - exp) / rev) * 100).toFixed(1) : '0.0',
-        expense_ratio: rev > 0 ? ((exp / rev) * 100).toFixed(1) : '0.0',
-        mom_growth: prevRev > 0 ? (((rev - prevRev) / prevRev) * 100).toFixed(1) : 'N/A'
+        period, month: period,
+        revenue: rev, expenses: exp, profit,
+        profit_margin:  rev > 0 ? (((rev - exp) / rev) * 100).toFixed(1) : '0.0',
+        expense_ratio:  rev > 0 ? ((exp / rev) * 100).toFixed(1) : '0.0',
+        mom_growth:     prevRev > 0 ? (((rev - prevRev) / prevRev) * 100).toFixed(1) : 'N/A'
       };
     });
 
