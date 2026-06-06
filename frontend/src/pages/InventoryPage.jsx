@@ -271,13 +271,27 @@ export default function InventoryPage() {
       const result = await api.post('/inventory/barcode/bulk', { product_ids: selectedProducts });
       const printWindow = window.open('', '_blank');
       if (printWindow) {
-        let html = '<html><head><title>Print Barcodes</title><style>body { font-family: monospace; text-align: center; } .label { display: inline-block; margin: 20px; padding: 10px; border: 1px dashed #ccc; }</style></head><body>';
+        let html = `<html><head><title>Print Barcodes</title><style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; background: #fff; }
+          .labels-grid { display: flex; flex-wrap: wrap; padding: 20px; gap: 12px; }
+          .label { text-align: center; padding: 12px 16px; border: 1px dashed #999; width: 240px; }
+          .product-name { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+          .barcode-img { width: 100%; display: block; }
+          .ref1, .ref2 { font-size: 10px; font-family: monospace; letter-spacing: 0.04em; margin-top: 3px; }
+          @media print { .label { border: 1px dashed #ccc; break-inside: avoid; } }
+        </style></head><body><div class="labels-grid">`;
         result.forEach(item => {
-           if (item.barcode_image) {
-             html += `<div class="label"><h3>${item.name}</h3><p>SKU: ${item.sku}</p><img src="data:image/png;base64,${item.barcode_image}" /></div>`;
-           }
+          if (item.barcode_image) {
+            html += `<div class="label">
+              <p class="product-name">${item.name}</p>
+              <img class="barcode-img" src="data:image/png;base64,${item.barcode_image}" />
+              <p class="ref1">${item.line1}</p>
+              <p class="ref2">${item.line2}</p>
+            </div>`;
+          }
         });
-        html += '</body></html>';
+        html += '</div></body></html>';
         printWindow.document.write(html);
         printWindow.document.close();
         printWindow.focus();

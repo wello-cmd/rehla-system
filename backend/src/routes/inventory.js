@@ -5,7 +5,7 @@ const { supabase } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const rateLimit = require('../middleware/rateLimiter');
-const { generateBarcode, generateBulkBarcodes } = require('../services/barcodeGenerator');
+const { generateBulkBarcodes, generateLabelHtml, formatLabelLines } = require('../services/barcodeGenerator');
 const { stringify } = require('csv-stringify/sync');
 
 // Apply rate limiting to all inventory routes (FR-WH-01 through FR-WH-15)
@@ -180,23 +180,20 @@ router.delete('/:id', authenticate, authorize('admin', 'ceo'), async (req, res) 
   }
 });
 
-// GET /api/inventory/:id/barcode — Generate barcode image (FR-WH-02, FR-WH-03)
+// GET /api/inventory/:id/barcode — Print-ready label HTML (FR-WH-02, FR-WH-03)
 router.get('/:id/barcode', async (req, res) => {
   try {
     const { data: product } = await supabase
       .from('products')
-      .select('sku, barcode')
+      .select('id, sku, name, barcode, category')
       .eq('id', req.params.id)
       .single();
 
     if (!product) return res.status(404).json({ error: 'Product not found.' });
 
-    const barcodeText = product.barcode || product.sku;
-    const png = await generateBarcode(barcodeText);
-
-    res.set('Content-Type', 'image/png');
-    res.set('Content-Disposition', `inline; filename="${product.sku}-barcode.png"`);
-    res.send(png);
+    const html = await generateLabelHtml(product);
+    res.set('Content-Type', 'text/html');
+    res.send(html);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -236,13 +233,17 @@ router.post('/barcode/bulk', authenticate, async (req, res) => {
     const skus = products.map(p => p.barcode || p.sku);
     const barcodes = await generateBulkBarcodes(skus);
 
-    // Return base64 encoded images
-    const results = products.map((p, i) => ({
-      id: p.id,
-      sku: p.sku,
-      name: p.name,
-      barcode_image: barcodes[i].success ? barcodes[i].image.toString('base64') : null
-    }));
+    const results = products.map((p, i) => {
+      const { line1, line2 } = formatLabelLines(p);
+      return {
+        id: p.id,
+        sku: p.sku,
+        name: p.name,
+        barcode_image: barcodes[i].success ? barcodes[i].image.toString('base64') : null,
+        line1,
+        line2
+      };
+    });
 
     res.json(results);
   } catch (err) {
