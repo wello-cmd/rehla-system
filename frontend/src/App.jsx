@@ -24,6 +24,7 @@ import ShopifyPage from './pages/ShopifyPage';
 import BostaPage from './pages/BostaPage';
 import ChannelsPage from './pages/ChannelsPage';
 import ReturnsPage from './pages/ReturnsPage';
+import CustomersPage from './pages/CustomersPage';
 
 // Protected Route Wrapper
 function ProtectedRoute({ children, allowedRoles }) {
@@ -190,6 +191,12 @@ function AppContent() {
         <Route path="/returns" element={
           <ProtectedRoute allowedRoles={['ceo', 'admin', 'dispatcher']}>
             <ReturnsPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/customers" element={
+          <ProtectedRoute allowedRoles={['ceo', 'admin']}>
+            <CustomersPage />
           </ProtectedRoute>
         } />
 

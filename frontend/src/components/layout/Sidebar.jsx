@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { path: '/channels', label: 'Channel Compare', icon: 'compare_arrows', roles: ['ceo', 'admin'] },
   { path: '/returns', label: 'Returns', icon: 'assignment_return', roles: ['ceo', 'admin', 'dispatcher'] },
   { path: '/invoices', label: 'Invoices', icon: 'receipt_long', roles: ['ceo', 'admin', 'accountant'] },
+  { path: '/customers', label: 'Customers', icon: 'contacts', roles: ['ceo', 'admin'] },
   { path: '/clients', label: 'Clients', icon: 'business', roles: ['ceo', 'admin'] },
   { path: '/users', label: 'Users', icon: 'people', roles: ['ceo', 'admin'] },
   { path: '/expenses', label: 'Expenses', icon: 'payments', roles: ['ceo', 'admin', 'accountant'] },

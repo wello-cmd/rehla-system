@@ -28,7 +28,8 @@ const shopifyRoutes = require('./src/routes/shopify');
 const bostaRoutes = require('./src/routes/bosta');
 const aiRoutes = require('./src/routes/ai');
 const channelsRoutes = require('./src/routes/channels');
-const returnsRoutes = require('./src/routes/returns');
+const returnsRoutes   = require('./src/routes/returns');
+const customersRoutes = require('./src/routes/customers');
 
 // Services
 const { startCronJobs } = require('./src/services/cronJobs');
@@ -80,6 +81,7 @@ app.use('/api/bosta', bostaRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/channels', channelsRoutes);
 app.use('/api/returns', returnsRoutes);
+app.use('/api/customers', customersRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
