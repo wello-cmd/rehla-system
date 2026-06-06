@@ -13,25 +13,43 @@ function Badge({ status }) {
 }
 
 export default function CustomersPage() {
-  const [customers, setCustomers]   = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [search, setSearch]         = useState('');
-  const [expanded, setExpanded]     = useState(null); // customer key
-  const [sortBy, setSortBy]         = useState('total_spent'); // total_spent | order_count | last_order_at
+  const [customers, setCustomers]         = useState([]);
+  const [anonymousCount, setAnonCount]    = useState(0);
+  const [anonymousRevenue, setAnonRev]    = useState(0);
+  const [loading, setLoading]             = useState(true);
+  const [syncing, setSyncing]             = useState(false);
+  const [search, setSearch]               = useState('');
+  const [expanded, setExpanded]           = useState(null);
+  const [sortBy, setSortBy]               = useState('total_spent');
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const data = await api.get('/customers');
-        setCustomers(data.customers || []);
-      } catch {
-        toast.error('Failed to load customers');
-      } finally {
-        setLoading(false);
-      }
+  async function load() {
+    setLoading(true);
+    try {
+      const data = await api.get('/customers');
+      setCustomers(data.customers || []);
+      setAnonCount(data.anonymousCount || 0);
+      setAnonRev(data.anonymousRevenue || 0);
+    } catch {
+      toast.error('Failed to load customers');
+    } finally {
+      setLoading(false);
     }
-    load();
-  }, []);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function triggerSync() {
+    setSyncing(true);
+    try {
+      await api.post('/shopify/sync', {});
+      toast.success('Shopify sync started — reload in a moment');
+      setTimeout(() => load(), 5000);
+    } catch {
+      toast.error('Sync failed');
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -85,6 +103,30 @@ export default function CustomersPage() {
           </p>
         </div>
       </div>
+
+      {/* Anonymous-orders warning */}
+      {anonymousCount > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
+          background: 'var(--color-bg-elevated)', border: '1px solid var(--color-warning, #e6a817)',
+          borderRadius: 4, marginBottom: 16,
+        }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--color-warning, #e6a817)', flexShrink: 0 }}>warning</span>
+          <p style={{ fontSize: 13, flex: 1 }}>
+            <strong>{anonymousCount} orders</strong> ({formatEGP(anonymousRevenue)}) have no customer data and are hidden.
+            Run a Shopify sync to populate phone numbers and names.
+          </p>
+          <button
+            className="btn btn-sm btn-secondary"
+            onClick={triggerSync}
+            disabled={syncing}
+            style={{ flexShrink: 0, fontSize: 12 }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sync</span>
+            {syncing ? 'Syncing…' : 'Sync Shopify'}
+          </button>
+        </div>
+      )}
 
       {/* Search + Sort */}
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>

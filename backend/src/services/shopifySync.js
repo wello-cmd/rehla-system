@@ -542,12 +542,27 @@ function normalizeShopifyItems(lineItems) {
   }));
 }
 
+function extractNotePhone(noteAttributes) {
+  if (!Array.isArray(noteAttributes)) return null;
+  const attr = noteAttributes.find(a =>
+    a.name && /phone|mobile|هاتف|رقم|tel/i.test(a.name)
+  );
+  const val = attr?.value?.trim();
+  return val || null;
+}
+
 function buildOrderPayload(shopifyOrder, items) {
+  const notePhone = extractNotePhone(shopifyOrder.note_attributes);
   return {
     shopify_order_id: String(shopifyOrder.id),
     shopify_order_name: shopifyOrder.name || `#${shopifyOrder.order_number}`,
     customer_name: getShopifyCustomerName(shopifyOrder),
-    customer_phone: shopifyOrder.customer?.phone || shopifyOrder.shipping_address?.phone || shopifyOrder.billing_address?.phone || 'N/A',
+    customer_phone: shopifyOrder.customer?.phone
+      || shopifyOrder.shipping_address?.phone
+      || shopifyOrder.billing_address?.phone
+      || shopifyOrder.phone
+      || notePhone
+      || 'N/A',
     customer_email: shopifyOrder.customer?.email || shopifyOrder.email || '',
     items,
     subtotal: parseFloat(shopifyOrder.subtotal_price) || 0,

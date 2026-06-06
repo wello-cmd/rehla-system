@@ -16,24 +16,41 @@ router.get('/', authenticate, async (req, res) => {
 
     if (error) throw error;
 
-    // Deduplicate by phone (primary key for Egyptian customers), fallback to email, then name
+    // Deduplicate by phone → email → name.
+    // Orders that have no real identity (N/A phone, no email, generic name) are
+    // counted separately and excluded from the directory — they need a Shopify re-sync.
+    const GENERIC_NAMES = new Set(['shopify customer', '', 'n/a']);
     const map = {};
+    let anonymousCount = 0;
+    let anonymousRevenue = 0;
+
     for (const o of orders || []) {
       const phone = (o.customer_phone || '').trim().replace(/\s/g, '');
       const email = (o.customer_email || '').trim().toLowerCase();
       const name  = (o.customer_name  || '').trim();
 
-      // Build a stable key: prefer phone → email → name
-      const key = phone && phone !== 'N/A' && phone !== '' ? `phone:${phone}`
-                : email && email !== '' ? `email:${email}`
-                : `name:${name}`;
+      const hasPhone = phone && phone !== 'N/A';
+      const hasEmail = email !== '';
+      const hasName  = name !== '' && !GENERIC_NAMES.has(name.toLowerCase());
+
+      // If we have no identifying info at all, count as anonymous but don't add to directory
+      if (!hasPhone && !hasEmail && !hasName) {
+        anonymousCount++;
+        anonymousRevenue += Number(o.total || 0);
+        continue;
+      }
+
+      // Build stable key: phone → email → name
+      const key = hasPhone ? `phone:${phone}`
+                : hasEmail ? `email:${email}`
+                : `name:${name.toLowerCase()}`;
 
       if (!map[key]) {
         map[key] = {
           key,
-          name,
-          phone: phone && phone !== 'N/A' ? phone : '',
-          email,
+          name:  hasName  ? name  : '',
+          phone: hasPhone ? phone : '',
+          email: hasEmail ? email : '',
           order_count: 0,
           total_spent: 0,
           paid_orders: 0,
@@ -44,10 +61,10 @@ router.get('/', authenticate, async (req, res) => {
       }
 
       const c = map[key];
-      // Keep most complete name
-      if (name && name.length > c.name.length) c.name = name;
-      if (!c.phone && phone && phone !== 'N/A') c.phone = phone;
-      if (!c.email && email) c.email = email;
+      // Upgrade to more complete data if available
+      if (name && name.length > c.name.length && !GENERIC_NAMES.has(name.toLowerCase())) c.name = name;
+      if (!c.phone && hasPhone) c.phone = phone;
+      if (!c.email && hasEmail) c.email = email;
 
       c.order_count++;
       c.total_spent += Number(o.total || 0);
@@ -81,7 +98,7 @@ router.get('/', authenticate, async (req, res) => {
       );
     }
 
-    res.json({ customers, total: customers.length });
+    res.json({ customers, total: customers.length, anonymousCount, anonymousRevenue });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
