@@ -21,9 +21,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Build directories
-dist/
 build/
 out/
+# Track frontend dist so Render serves the correct build
+!frontend/dist/
 
 # IDE / Editor configuration
 .idea/
