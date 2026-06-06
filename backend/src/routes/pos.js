@@ -6,7 +6,7 @@ const authenticate = require('../middleware/authenticate');
 
 // POST /api/pos/checkout
 router.post('/checkout', authenticate, async (req, res) => {
-  const { items, payment_method, amount_received, customer_name, customer_phone, delivery_address } = req.body;
+  const { items, payment_method, amount_received, customer_name, customer_phone, delivery_address, discount_amount, discount_reason } = req.body;
 
   if (!items || items.length === 0 || !payment_method) {
     return res.status(400).json({ error: 'Items list and payment method are required.' });
@@ -37,7 +37,8 @@ router.post('/checkout', authenticate, async (req, res) => {
       });
     }
 
-    const total = subtotal; // No tax in v1 per SRS constraints
+    const discount = Math.max(0, parseFloat(discount_amount || 0));
+    const total = Math.max(0, subtotal - discount);
 
     // Deduct stock after all items have been validated.
     for (const item of itemsWithDetails) {
@@ -56,6 +57,8 @@ router.post('/checkout', authenticate, async (req, res) => {
         customer_name: customer_name || 'Walk-in Customer',
         customer_phone: customer_phone || 'N/A',
         subtotal, total,
+        discount_amount: discount,
+        discount_reason: discount_reason || '',
         payment_status: 'paid',
         payment_method,
         source: 'pos'
@@ -105,7 +108,7 @@ router.post('/checkout', authenticate, async (req, res) => {
 
     res.status(201).json({
       success: true, order_id: order.id, invoice_number: invoiceNumber,
-      total, subtotal, change: amount_received ? (amount_received - total) : 0,
+      total, subtotal, discount_amount: discount, change: amount_received ? (amount_received - total) : 0,
       items: itemsWithDetails
     });
   } catch (err) {

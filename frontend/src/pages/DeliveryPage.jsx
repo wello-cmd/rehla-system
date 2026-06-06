@@ -45,6 +45,10 @@ export default function DeliveryPage() {
   const [driverModalOpen, setDriverModalOpen] = useState(false);
   const [editingDriver, setEditingDriver] = useState(null);
   const [driverForm, setDriverForm] = useState({ name: '', phone: '', zone: '', status: 'active', availability_status: 'available' });
+  const [queue, setQueue] = useState({ orders: [], drivers: [] });
+  const [queueLoading, setQueueLoading] = useState(false);
+  const [quickAssignTarget, setQuickAssignTarget] = useState(null);
+  const [quickDriverId, setQuickDriverId] = useState('');
 
   async function fetchData() {
     setLoading(true);
@@ -140,6 +144,32 @@ export default function DeliveryPage() {
     }
   }
 
+  async function fetchQueue() {
+    setQueueLoading(true);
+    try {
+      const data = await api.get('/delivery/dispatch-queue');
+      setQueue(data);
+    } catch (err) {
+      toast.error(err.message || 'Failed to load dispatch queue');
+    } finally {
+      setQueueLoading(false);
+    }
+  }
+
+  async function quickAssign(e) {
+    e.preventDefault();
+    if (!quickAssignTarget || !quickDriverId) return toast.error('Select a driver');
+    try {
+      await api.post('/delivery/assign', { delivery_id: quickAssignTarget.id, driver_id: quickDriverId });
+      toast.success('Driver assigned');
+      setQuickAssignTarget(null);
+      setQuickDriverId('');
+      fetchQueue();
+    } catch (err) {
+      toast.error(err.message || 'Failed to assign driver');
+    }
+  }
+
   async function trackBosta(delivery) {
     if (!delivery.tracking_number) return;
     try {
@@ -212,14 +242,13 @@ export default function DeliveryPage() {
   return (
     <DashboardShell title="Delivery Management">
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
-        {['dispatcher', 'drivers', 'analytics'].map(tab => (
+        {[['dispatcher', 'Dispatcher'], ['dispatch-queue', 'Dispatch Queue'], ['drivers', 'Drivers'], ['analytics', 'Analytics']].map(([id, label]) => (
           <button
-            key={tab}
-            className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-            onClick={() => setActiveTab(tab)}
-            style={{ textTransform: 'capitalize' }}
+            key={id}
+            className={`btn ${activeTab === id ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+            onClick={() => { setActiveTab(id); if (id === 'dispatch-queue') fetchQueue(); }}
           >
-            {tab}
+            {label}
           </button>
         ))}
       </div>
@@ -343,6 +372,95 @@ export default function DeliveryPage() {
               </table>
             </div>
           </div>
+        </>
+      )}
+
+      {activeTab === 'dispatch-queue' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <p style={{ fontSize: 13, color: 'var(--color-text-dim)' }}>
+              Own-driver orders awaiting dispatch — oldest first.
+            </p>
+            <button className="btn btn-secondary btn-sm" onClick={fetchQueue}>⟲ Refresh</button>
+          </div>
+
+          {/* Driver availability bar */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+            {queue.drivers.map(d => (
+              <div key={d.id} style={{ padding: '8px 14px', borderRadius: 4, border: '1px solid var(--color-border-light)', fontSize: 12 }}>
+                <span style={{ fontWeight: 700 }}>{d.name}</span>
+                <span style={{ color: 'var(--color-text-dim)', marginLeft: 6 }}>{d.zone || 'No zone'}</span>
+                <span style={{ marginLeft: 10, padding: '2px 8px', borderRadius: 3, fontSize: 10, fontWeight: 700, background: d.availability_status === 'available' ? '#22c55e22' : '#f59e0b22', color: d.availability_status === 'available' ? '#22c55e' : '#f59e0b' }}>
+                  {d.availability_status}
+                </span>
+                <span className="font-mono" style={{ marginLeft: 8, color: 'var(--color-text-dim)', fontSize: 11 }}>{d.active_orders} active</span>
+              </div>
+            ))}
+            {queue.drivers.length === 0 && <p style={{ fontSize: 13, color: 'var(--color-text-dim)' }}>No active drivers configured.</p>}
+          </div>
+
+          {queueLoading ? (
+            <div className="skeleton" style={{ height: 200 }} />
+          ) : (
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div className="table-container">
+                <table className="data-table">
+                  <thead>
+                    <tr><th>Order</th><th>Customer</th><th>Address</th><th>COD</th><th>Status</th><th>Assigned Driver</th><th>Actions</th></tr>
+                  </thead>
+                  <tbody>
+                    {queue.orders.map(o => (
+                      <tr key={o.id}>
+                        <td className="font-mono" style={{ fontSize: 12 }}>{o.orders?.shopify_order_name || (o.orders?.order_number ? `#${o.orders.order_number}` : '—')}</td>
+                        <td>
+                          <div style={{ fontSize: 13, fontWeight: 600 }}>{o.orders?.customer_name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>{o.orders?.customer_phone}</div>
+                        </td>
+                        <td style={{ fontSize: 12, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={o.customer_address}>{o.customer_address || '—'}</td>
+                        <td className="font-mono" style={{ fontSize: 13 }}>{formatEGP(o.cod_amount || 0)}</td>
+                        <td><span className={`badge badge-${o.status === 'assigned' ? 'warning' : 'neutral'}`}>{o.status}</span></td>
+                        <td style={{ fontSize: 13 }}>{o.drivers?.name || <span style={{ color: 'var(--color-text-dim)' }}>Unassigned</span>}</td>
+                        <td>
+                          <button className="btn btn-primary btn-sm" style={{ fontSize: 11 }} onClick={() => { setQuickAssignTarget(o); setQuickDriverId(''); }}>
+                            {o.drivers ? 'Reassign' : 'Assign Driver'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {queue.orders.length === 0 && (
+                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-dim)' }}>No pending own-driver orders.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Quick-assign modal */}
+          {quickAssignTarget && (
+            <Modal title={`Assign Driver — ${quickAssignTarget.orders?.shopify_order_name || '#' + quickAssignTarget.orders?.order_number}`} onClose={() => setQuickAssignTarget(null)}>
+              <p style={{ fontSize: 13, marginBottom: 16, color: 'var(--color-text-dim)' }}>
+                {quickAssignTarget.orders?.customer_name} · {quickAssignTarget.customer_address}
+              </p>
+              <form onSubmit={quickAssign} style={{ display: 'grid', gap: 16 }}>
+                <div>
+                  <label className="text-label" style={{ display: 'block', marginBottom: 6 }}>Select Driver</label>
+                  <select className="input" required value={quickDriverId} onChange={e => setQuickDriverId(e.target.value)}>
+                    <option value="">— Choose driver —</option>
+                    {queue.drivers.map(d => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} ({d.zone || 'No zone'}) — {d.active_orders} active orders — {d.availability_status}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setQuickAssignTarget(null)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary btn-sm">Assign</button>
+                </div>
+              </form>
+            </Modal>
+          )}
         </>
       )}
 

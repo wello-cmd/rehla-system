@@ -15,6 +15,8 @@ export default function PosPage() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [amountReceived, setAmountReceived] = useState('');
+  const [discountAmount, setDiscountAmount] = useState('');
+  const [discountReason, setDiscountReason] = useState('');
   const [checkoutResult, setCheckoutResult] = useState(null);
 
   async function fetchProducts() {
@@ -104,7 +106,8 @@ export default function PosPage() {
   }
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const total = subtotal;
+  const discount = Math.max(0, parseFloat(discountAmount || 0));
+  const total = Math.max(0, subtotal - discount);
   const change = amountReceived ? Math.max(0, parseFloat(amountReceived) - total) : 0;
 
   async function handleCheckout(e) {
@@ -121,7 +124,9 @@ export default function PosPage() {
         amount_received: amountReceived ? parseFloat(amountReceived) : null,
         customer_name: customerName.trim() || 'Walk-in Customer',
         customer_phone: customerPhone.trim() || 'N/A',
-        delivery_address: deliveryAddress.trim() || null
+        delivery_address: deliveryAddress.trim() || null,
+        discount_amount: discount || undefined,
+        discount_reason: discountReason.trim() || undefined
       };
 
       const result = await api.post('/pos/checkout', payload);
@@ -133,6 +138,8 @@ export default function PosPage() {
       setCustomerPhone('');
       setDeliveryAddress('');
       setAmountReceived('');
+      setDiscountAmount('');
+      setDiscountReason('');
       fetchProducts();
     } catch (err) {
       toast.error(err.message || 'Checkout failed');
@@ -232,10 +239,32 @@ export default function PosPage() {
               )}
             </div>
 
-            {/* Total Row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 600 }}>Total amount:</span>
-              <span className="font-mono" style={{ fontSize: '20px', fontWeight: 800 }}>{formatEGP(total)}</span>
+            {/* Subtotal / Discount / Total */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-dim)' }}>
+                <span>Subtotal</span>
+                <span className="font-mono">{formatEGP(subtotal)}</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8 }}>
+                <div>
+                  <label className="text-label" style={{ fontSize: 9, display: 'block', marginBottom: 4 }}>Discount (EGP)</label>
+                  <input type="number" step="0.01" min="0" className="input" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)} placeholder="0" />
+                </div>
+                <div>
+                  <label className="text-label" style={{ fontSize: 9, display: 'block', marginBottom: 4 }}>Discount Reason</label>
+                  <input className="input" value={discountReason} onChange={e => setDiscountReason(e.target.value)} placeholder="Promo / loyalty / staff..." />
+                </div>
+              </div>
+              {discount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-error)' }}>
+                  <span>Discount</span>
+                  <span className="font-mono">− {formatEGP(discount)}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTop: '1px solid var(--color-border-light)' }}>
+                <span style={{ fontWeight: 700 }}>Total</span>
+                <span className="font-mono" style={{ fontSize: 20, fontWeight: 800 }}>{formatEGP(total)}</span>
+              </div>
             </div>
 
             {/* Checkout Form */}
@@ -329,9 +358,19 @@ export default function PosPage() {
             </p>
 
             <div className="card" style={{ background: 'var(--color-bg)', textAlign: 'left', padding: '16px', marginBottom: '24px', fontSize: '13px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '8px', marginBottom: '8px' }}>
-                <span>Transaction Total:</span>
-                <span className="font-mono" style={{ fontWeight: 700 }}>{formatEGP(checkoutResult.total)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span>Subtotal:</span>
+                <span className="font-mono">{formatEGP(checkoutResult.total + (checkoutResult.discount_amount || 0))}</span>
+              </div>
+              {checkoutResult.discount_amount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--color-error)' }}>
+                  <span>Discount:</span>
+                  <span className="font-mono">− {formatEGP(checkoutResult.discount_amount)}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '8px', marginBottom: '8px', fontWeight: 700 }}>
+                <span>Total:</span>
+                <span className="font-mono">{formatEGP(checkoutResult.total)}</span>
               </div>
               {amountReceived && (
                 <>

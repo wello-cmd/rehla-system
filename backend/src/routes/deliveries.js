@@ -582,4 +582,42 @@ router.put('/driver/:id/orders/:orderId/status', updateDriverOrderStatus);
 router.patch('/driver/:id/orders/:orderId/status', updateDriverOrderStatus);
 router.get('/analytics', authenticate, deliveryAnalytics);
 
+// GET /api/delivery/dispatch-queue — pending own_driver orders grouped with available drivers
+router.get('/dispatch-queue', authenticate, authorize('admin', 'ceo', 'dispatcher'), async (_req, res) => {
+  try {
+    const [ordersRes, driversRes] = await Promise.all([
+      supabase
+        .from('delivery_orders')
+        .select(`
+          *,
+          orders(customer_name, customer_phone, total, items, order_number, shopify_order_name),
+          drivers(name, phone, zone, availability_status)
+        `)
+        .eq('delivery_type', 'own_driver')
+        .in('status', ['pending', 'assigned'])
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('drivers')
+        .select('id, name, phone, zone, availability_status')
+        .eq('status', 'active')
+    ]);
+
+    if (ordersRes.error) throw ordersRes.error;
+    if (driversRes.error) throw driversRes.error;
+
+    const orders = ordersRes.data || [];
+    const drivers = driversRes.data || [];
+
+    const driverLoads = {};
+    for (const o of orders) {
+      if (o.driver_id) driverLoads[o.driver_id] = (driverLoads[o.driver_id] || 0) + 1;
+    }
+    const enrichedDrivers = drivers.map(d => ({ ...d, active_orders: driverLoads[d.id] || 0 }));
+
+    res.json({ orders, drivers: enrichedDrivers });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

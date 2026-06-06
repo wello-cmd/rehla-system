@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { path: '/shopify', label: 'Shopify', icon: 'shopping_bag', roles: ['ceo', 'admin'] },
   { path: '/bosta', label: 'Bosta', icon: 'deployed_code', roles: ['ceo', 'admin', 'dispatcher'] },
   { path: '/channels', label: 'Channel Compare', icon: 'compare_arrows', roles: ['ceo', 'admin'] },
+  { path: '/returns', label: 'Returns', icon: 'assignment_return', roles: ['ceo', 'admin', 'dispatcher'] },
   { path: '/invoices', label: 'Invoices', icon: 'receipt_long', roles: ['ceo', 'admin', 'accountant'] },
   { path: '/clients', label: 'Clients', icon: 'business', roles: ['ceo', 'admin'] },
   { path: '/users', label: 'Users', icon: 'people', roles: ['ceo', 'admin'] },

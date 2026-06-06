@@ -19,6 +19,11 @@ export default function InventoryPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [showVariantsModal, setShowVariantsModal] = useState(false);
+  const [variantsProduct, setVariantsProduct] = useState(null);
+  const [variants, setVariants] = useState([]);
+  const [variantForm, setVariantForm] = useState({ sku: '', size: '', color: '', stock_quantity: '', price: '' });
+  const [editingVariant, setEditingVariant] = useState(null);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -195,6 +200,56 @@ export default function InventoryPage() {
     setShowModal(true);
   }
 
+  async function openVariants(product) {
+    setVariantsProduct(product);
+    setVariantForm({ sku: '', size: '', color: '', stock_quantity: '', price: '' });
+    setEditingVariant(null);
+    setShowVariantsModal(true);
+    try {
+      const data = await api.get(`/inventory/${product.id}/variants`);
+      setVariants(data);
+    } catch (err) {
+      toast.error('Failed to load variants: ' + err.message);
+    }
+  }
+
+  async function handleSaveVariant(e) {
+    e.preventDefault();
+    if (!variantsProduct) return;
+    try {
+      if (editingVariant) {
+        await api.patch(`/inventory/${variantsProduct.id}/variants/${editingVariant.id}`, variantForm);
+        toast.success('Variant updated');
+      } else {
+        await api.post(`/inventory/${variantsProduct.id}/variants`, variantForm);
+        toast.success('Variant added');
+      }
+      setVariantForm({ sku: '', size: '', color: '', stock_quantity: '', price: '' });
+      setEditingVariant(null);
+      const data = await api.get(`/inventory/${variantsProduct.id}/variants`);
+      setVariants(data);
+    } catch (err) {
+      toast.error(err.message);
+    }
+  }
+
+  async function handleDeleteVariant(variantId) {
+    if (!variantsProduct) return;
+    try {
+      await api.delete(`/inventory/${variantsProduct.id}/variants/${variantId}`);
+      toast.success('Variant deleted');
+      const data = await api.get(`/inventory/${variantsProduct.id}/variants`);
+      setVariants(data);
+    } catch (err) {
+      toast.error(err.message);
+    }
+  }
+
+  function startEditVariant(v) {
+    setEditingVariant(v);
+    setVariantForm({ sku: v.sku, size: v.size || '', color: v.color || '', stock_quantity: v.stock_quantity, price: v.price || '' });
+  }
+
   function toggleSelection(id) {
     setSelectedProducts(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
   }
@@ -365,6 +420,7 @@ export default function InventoryPage() {
                   <td>
                     <div style={STYLES.actionsCell}>
                       <button className="btn btn-secondary btn-sm" style={STYLES.actionBtn} data-id={product.id} onClick={handleEditProduct}>Edit</button>
+                      <button className="btn btn-secondary btn-sm" style={STYLES.actionBtn} onClick={() => openVariants(product)}>Variants</button>
                       <button className="btn btn-secondary btn-sm" style={STYLES.actionBtn} data-id={product.id} onClick={handleBarcodeClick}>Barcode</button>
                       <button className="btn btn-secondary btn-sm" style={STYLES.actionBtn} data-id={product.id} onClick={handleDeleteProduct}>✕</button>
                     </div>
@@ -439,6 +495,84 @@ export default function InventoryPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Variants Modal */}
+      {showVariantsModal && variantsProduct && (
+        <div className="modal-overlay" onClick={() => setShowVariantsModal(false)}>
+          <div className="modal-content" style={{ maxWidth: 680, width: '95%' }} onClick={e => e.stopPropagation()}>
+            <h2 className="text-title" style={{ marginBottom: 4 }}>Variants — {variantsProduct.name}</h2>
+            <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 20 }}>Base SKU: {variantsProduct.sku}</p>
+
+            {/* Add / Edit form */}
+            <form onSubmit={handleSaveVariant} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 20 }}>
+              <div>
+                <label className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Variant SKU *</label>
+                <input className="input" required value={variantForm.sku} onChange={e => setVariantForm(p => ({ ...p, sku: e.target.value }))} placeholder="RHL-RED-S" />
+              </div>
+              <div>
+                <label className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Size</label>
+                <input className="input" value={variantForm.size} onChange={e => setVariantForm(p => ({ ...p, size: e.target.value }))} placeholder="S / M / L / XL" />
+              </div>
+              <div>
+                <label className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Color</label>
+                <input className="input" value={variantForm.color} onChange={e => setVariantForm(p => ({ ...p, color: e.target.value }))} placeholder="Red" />
+              </div>
+              <div>
+                <label className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Stock</label>
+                <input className="input" type="number" value={variantForm.stock_quantity} onChange={e => setVariantForm(p => ({ ...p, stock_quantity: e.target.value }))} placeholder="0" />
+              </div>
+              <div>
+                <label className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Price (EGP)</label>
+                <input className="input" type="number" step="0.01" value={variantForm.price} onChange={e => setVariantForm(p => ({ ...p, price: e.target.value }))} placeholder="Optional" />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                <button type="submit" className="btn btn-primary btn-sm" style={{ flex: 1 }}>
+                  {editingVariant ? 'Update' : '+ Add'}
+                </button>
+                {editingVariant && (
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setEditingVariant(null); setVariantForm({ sku: '', size: '', color: '', stock_quantity: '', price: '' }); }}>
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+
+            {/* Variants list */}
+            {variants.length === 0 ? (
+              <p style={{ color: 'var(--color-text-dim)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>No variants yet — add the first one above.</p>
+            ) : (
+              <div className="table-container" style={{ padding: 0 }}>
+                <table className="data-table">
+                  <thead>
+                    <tr><th>SKU</th><th>Size</th><th>Color</th><th style={{ textAlign: 'right' }}>Stock</th><th style={{ textAlign: 'right' }}>Price</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    {variants.map(v => (
+                      <tr key={v.id}>
+                        <td className="font-mono" style={{ fontSize: 12 }}>{v.sku}</td>
+                        <td>{v.size || '—'}</td>
+                        <td>{v.color || '—'}</td>
+                        <td className="font-mono" style={{ textAlign: 'right' }}>{v.stock_quantity}</td>
+                        <td className="font-mono" style={{ textAlign: 'right' }}>{v.price ? formatEGP(v.price) : '—'}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button className="btn btn-secondary btn-sm" style={{ padding: '3px 8px', fontSize: 11 }} onClick={() => startEditVariant(v)}>Edit</button>
+                            <button className="btn btn-secondary btn-sm" style={{ padding: '3px 8px', fontSize: 11 }} onClick={() => handleDeleteVariant(v.id)}>✕</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowVariantsModal(false)}>Close</button>
+            </div>
           </div>
         </div>
       )}

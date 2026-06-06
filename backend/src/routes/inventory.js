@@ -368,4 +368,124 @@ router.get('/logs', authenticate, authorize('admin', 'ceo', 'worker'), async (re
   }
 });
 
+// POST /api/inventory/warehouse/restock — Receive / add stock inbound
+router.post('/warehouse/restock', authenticate, authorize('admin', 'ceo', 'worker'), async (req, res) => {
+  const { sku, quantity, notes } = req.body;
+  if (!sku || !quantity || quantity <= 0) {
+    return res.status(400).json({ error: 'SKU and a positive quantity are required.' });
+  }
+  try {
+    const { data: product, error: findErr } = await supabase
+      .from('products')
+      .select('id, name, sku, stock_quantity, barcode')
+      .or(`sku.eq.${sku.toUpperCase()},barcode.eq.${sku}`)
+      .single();
+
+    if (findErr || !product) return res.status(404).json({ error: `Product not found: ${sku}` });
+
+    const qty = parseInt(quantity, 10);
+    const newQty = product.stock_quantity + qty;
+
+    const { error: updateErr } = await supabase
+      .from('products')
+      .update({ stock_quantity: newQty })
+      .eq('id', product.id);
+
+    if (updateErr) throw updateErr;
+
+    await supabase.from('inventory_log').insert({
+      product_id: product.id,
+      sku: product.sku,
+      event_type: 'restock',
+      quantity_changed: qty,
+      previous_quantity: product.stock_quantity,
+      new_quantity: newQty,
+      notes: notes || 'Manual restock',
+      handler_name: req.user?.name || 'system'
+    });
+
+    res.json({
+      product: {
+        id: product.id,
+        name: product.name,
+        sku: product.sku,
+        barcode: product.barcode,
+        previous_stock: product.stock_quantity,
+        current_stock: newQty,
+        quantity_added: qty
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Product Variants ────────────────────────────────────────────────────────
+
+// GET /api/inventory/:productId/variants
+router.get('/:productId/variants', authenticate, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('product_variants')
+      .select('*')
+      .eq('product_id', req.params.productId)
+      .order('created_at');
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/inventory/:productId/variants
+router.post('/:productId/variants', authenticate, authorize('admin', 'ceo'), async (req, res) => {
+  const { sku, size, color, stock_quantity, price, barcode } = req.body;
+  if (!sku) return res.status(400).json({ error: 'Variant SKU is required.' });
+  try {
+    const { data, error } = await supabase
+      .from('product_variants')
+      .insert({ product_id: req.params.productId, sku: sku.toUpperCase(), size: size || '', color: color || '', stock_quantity: parseInt(stock_quantity || 0), price: price ? parseFloat(price) : null, barcode: barcode || null })
+      .select().single();
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/inventory/:productId/variants/:variantId
+router.patch('/:productId/variants/:variantId', authenticate, authorize('admin', 'ceo'), async (req, res) => {
+  const allowed = ['sku', 'size', 'color', 'stock_quantity', 'price', 'barcode'];
+  const updates = Object.fromEntries(Object.entries(req.body).filter(([k]) => allowed.includes(k)));
+  if (updates.stock_quantity !== undefined) updates.stock_quantity = parseInt(updates.stock_quantity, 10);
+  if (updates.price !== undefined) updates.price = parseFloat(updates.price);
+  try {
+    const { data, error } = await supabase
+      .from('product_variants')
+      .update(updates)
+      .eq('id', req.params.variantId)
+      .eq('product_id', req.params.productId)
+      .select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/inventory/:productId/variants/:variantId
+router.delete('/:productId/variants/:variantId', authenticate, authorize('admin', 'ceo'), async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('product_variants')
+      .delete()
+      .eq('id', req.params.variantId)
+      .eq('product_id', req.params.productId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

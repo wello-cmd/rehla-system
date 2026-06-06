@@ -23,6 +23,7 @@ import FinancialDashboardPage from './pages/FinancialDashboardPage';
 import ShopifyPage from './pages/ShopifyPage';
 import BostaPage from './pages/BostaPage';
 import ChannelsPage from './pages/ChannelsPage';
+import ReturnsPage from './pages/ReturnsPage';
 
 // Protected Route Wrapper
 function ProtectedRoute({ children, allowedRoles }) {
@@ -183,6 +184,12 @@ function AppContent() {
         <Route path="/channels" element={
           <ProtectedRoute allowedRoles={['ceo', 'admin']}>
             <ChannelsPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/returns" element={
+          <ProtectedRoute allowedRoles={['ceo', 'admin', 'dispatcher']}>
+            <ReturnsPage />
           </ProtectedRoute>
         } />
 
