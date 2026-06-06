@@ -75,16 +75,6 @@ export default function DeliveryPage() {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    const activeBosta = deliveries.filter(
-      d => d.delivery_type === 'bosta' && d.tracking_number && !['delivered', 'failed', 'returned'].includes(d.status)
-    );
-    activeBosta.forEach(d => {
-      if (!tracking[d.id]) {
-        trackBosta(d);
-      }
-    });
-  }, [deliveries]);
 
   async function applyFilters(e) {
     e.preventDefault();
