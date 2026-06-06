@@ -170,13 +170,15 @@ export default function DeliveryPage() {
     }
   }
 
-  async function trackBosta(delivery) {
+  async function trackBosta(delivery, showError = false) {
     if (!delivery.tracking_number) return;
     try {
       const data = await api.get(`/delivery/bosta/track/${delivery.tracking_number}`);
-      setTracking(prev => ({ ...prev, [delivery.id]: data }));
+      if (data?.status !== 'not_found') {
+        setTracking(prev => ({ ...prev, [delivery.id]: data }));
+      }
     } catch (err) {
-      toast.error(err.message || 'Failed to fetch Bosta status');
+      if (showError) toast.error(err.message || 'Failed to fetch Bosta status');
     }
   }
 
@@ -351,7 +353,7 @@ export default function DeliveryPage() {
                         {delivery.tracking_number ? (
                           <>
                             <div className="font-mono" style={{ fontSize: 12 }}>{delivery.tracking_number}</div>
-                            <button className="btn btn-secondary btn-sm" onClick={() => trackBosta(delivery)}>Track</button>
+                            <button className="btn btn-secondary btn-sm" onClick={() => trackBosta(delivery, true)}>Track</button>
                             {tracking[delivery.id] && (
                               <div style={{ fontSize: 12, marginTop: 4 }}>{tracking[delivery.id].statusName || tracking[delivery.id].status}</div>
                             )}

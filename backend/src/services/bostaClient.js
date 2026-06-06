@@ -91,6 +91,9 @@ class BostaClient {
         lastUpdate: data.updatedAt || data.updated_at
       };
     } catch (err) {
+      if (err.response?.status === 404) {
+        return { success: false, status: 'not_found', statusName: 'Not Found', history: [], lastUpdate: null };
+      }
       const errorMsg = this.formatApiError(err);
       console.error('[Bosta] Tracking failed:', errorMsg);
       throw new Error(`Bosta tracking failed: ${errorMsg}`);

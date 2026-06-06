@@ -348,6 +348,9 @@ async function trackBosta(req, res) {
     const tracking = await bostaClient.getTrackingStatus(req.params.trackingNumber);
     res.json(tracking);
   } catch (err) {
+    if (err.message?.includes('404') || err.response?.status === 404) {
+      return res.json({ success: false, status: 'not_found', statusName: 'Not Found', history: [], lastUpdate: null });
+    }
     res.status(500).json({ error: err.message });
   }
 }
