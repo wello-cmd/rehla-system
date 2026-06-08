@@ -668,6 +668,7 @@ function buildOrderPayload(shopifyOrder, items) {
     items,
     subtotal: parseFloat(shopifyOrder.subtotal_price) || 0,
     total: parseFloat(shopifyOrder.total_price) || 0,
+    total_refunded: parseFloat(shopifyOrder.total_refunded || '0') || 0,
     status: shopifyOrder.cancelled_at ? 'cancelled' : mapShopifyStatus(shopifyOrder.fulfillment_status),
     payment_status: mapShopifyPaymentStatus(shopifyOrder.financial_status),
     payment_method: mapShopifyPaymentMethod(shopifyOrder),

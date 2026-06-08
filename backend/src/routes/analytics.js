@@ -29,7 +29,7 @@ function groupByPeriod(items, groupBy, dateField = 'created_at') {
       key = d.toISOString().substring(0, 7); // month default
     }
     if (!map[key]) map[key] = { label: key, revenue: 0, orders: 0 };
-    map[key].revenue += Number(o.total || 0);
+    map[key].revenue += Number(o.total || 0) - Number(o.total_refunded || 0);
     map[key].orders++;
   }
   return Object.values(map).sort((a, b) => a.label.localeCompare(b.label));
@@ -61,16 +61,17 @@ router.get('/sales', authenticate, async (req, res) => {
   try {
     const { start, end, groupBy = 'month' } = req.query;
 
-    // Fetch ALL non-cancelled orders (matches Shopify GMV — includes COD/pending payment)
-    let ordersQ = supabase.from('orders').select('id, total, created_at, status, payment_status').neq('status', 'cancelled');
+    // Fetch ALL non-cancelled orders (net of refunds, matches Shopify "Total sales")
+    let ordersQ = supabase.from('orders').select('id, total, total_refunded, created_at, status, payment_status').neq('status', 'cancelled');
     if (start) ordersQ = ordersQ.gte('created_at', start);
     if (end)   ordersQ = ordersQ.lte('created_at', endParam(end));
     const orders = await fetchAll(ordersQ);
 
+    const netTotal = o => Number(o.total) - Number(o.total_refunded || 0);
     const totalOrders   = (orders || []).length;
-    const totalRevenue  = (orders || []).reduce((s, o) => s + Number(o.total), 0);
+    const totalRevenue  = (orders || []).reduce((s, o) => s + netTotal(o), 0);
     const paidOrders    = (orders || []).filter(o => o.payment_status === 'paid').length;
-    const paidRevenue   = (orders || []).filter(o => o.payment_status === 'paid').reduce((s, o) => s + Number(o.total), 0);
+    const paidRevenue   = (orders || []).filter(o => o.payment_status === 'paid').reduce((s, o) => s + netTotal(o), 0);
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     // Day-of-week heatmap
@@ -78,7 +79,7 @@ router.get('/sales', authenticate, async (req, res) => {
     const heatmap = Array(7).fill(null).map((_, i) => ({ day: dayMap[i], revenue: 0, orders: 0 }));
     for (const o of orders || []) {
       const idx = new Date(o.created_at).getDay();
-      heatmap[idx].revenue += Number(o.total);
+      heatmap[idx].revenue += Number(o.total) - Number(o.total_refunded || 0);
       heatmap[idx].orders++;
     }
 
