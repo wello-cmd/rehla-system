@@ -52,6 +52,19 @@ function periodKey(dateStr, groupBy) {
   return d.toISOString().substring(0, 7);
 }
 
+// Egypt is UTC+2 (EET, no DST). Shopify reports in Cairo time so we align our filters.
+const CAIRO_OFFSET_MS = 2 * 60 * 60 * 1000;
+
+function cairoStartUTC(dateStr) {
+  // "2026-06-01" → Cairo midnight = 2026-05-31T22:00:00.000Z
+  return new Date(new Date(dateStr + 'T00:00:00.000Z').getTime() - CAIRO_OFFSET_MS).toISOString();
+}
+
+function cairoEndUTC(dateStr) {
+  // "2026-06-08" → Cairo end-of-day = 2026-06-08T21:59:59.999Z
+  return new Date(new Date(dateStr + 'T23:59:59.999Z').getTime() - CAIRO_OFFSET_MS).toISOString();
+}
+
 function endParam(end) {
   return end ? end + 'T23:59:59.999Z' : null;
 }
@@ -62,9 +75,10 @@ router.get('/sales', authenticate, async (req, res) => {
     const { start, end, groupBy = 'month' } = req.query;
 
     // Fetch ALL orders (including returned) to compute both GMV and net revenue
+    // Dates are Cairo-local from frontend — shift to UTC so our stored timestamps align with Shopify
     let ordersQ = supabase.from('orders').select('id, total, total_refunded, created_at, status, payment_status').neq('status', 'cancelled');
-    if (start) ordersQ = ordersQ.gte('created_at', start);
-    if (end)   ordersQ = ordersQ.lte('created_at', endParam(end));
+    if (start) ordersQ = ordersQ.gte('created_at', cairoStartUTC(start));
+    if (end)   ordersQ = ordersQ.lte('created_at', cairoEndUTC(end));
     const orders = await fetchAll(ordersQ);
 
     const activeOrders  = (orders || []).filter(o => o.status !== 'returned');
@@ -101,8 +115,8 @@ router.get('/sales', authenticate, async (req, res) => {
       // Scope to the same date range as orders above
       if (start || end) {
         let dateQ = supabase.from('orders').select('id').eq('payment_status', 'paid');
-        if (start) dateQ = dateQ.gte('created_at', start);
-        if (end)   dateQ = dateQ.lte('created_at', endParam(end));
+        if (start) dateQ = dateQ.gte('created_at', cairoStartUTC(start));
+        if (end)   dateQ = dateQ.lte('created_at', cairoEndUTC(end));
         const paidOrders = await fetchAll(dateQ);
         const ids = paidOrders.map(o => o.id);
         if (ids.length === 0) { categoryRevenue = []; }
@@ -160,8 +174,8 @@ router.get('/top-products', authenticate, async (req, res) => {
 
     // Fetch paid order IDs in the date range, then batch-fetch items in 500-id chunks
     let orderQuery = supabase.from('orders').select('id').eq('payment_status', 'paid');
-    if (start) orderQuery = orderQuery.gte('created_at', start);
-    if (end)   orderQuery = orderQuery.lte('created_at', endParam(end));
+    if (start) orderQuery = orderQuery.gte('created_at', cairoStartUTC(start));
+    if (end)   orderQuery = orderQuery.lte('created_at', cairoEndUTC(end));
     const paidOrders = await fetchAll(orderQuery);
     const orderIds = paidOrders.map(o => o.id);
     if ((start || end) && orderIds.length === 0) {
@@ -316,8 +330,8 @@ router.get('/financial-kpis', authenticate, async (req, res) => {
 
     let ordersQ   = supabase.from('orders').select('total, created_at').eq('payment_status', 'paid');
     let expensesQ = supabase.from('expenses').select('amount, date').eq('status', 'approved');
-    if (start) { ordersQ = ordersQ.gte('created_at', start);  expensesQ = expensesQ.gte('date', start); }
-    if (end)   { ordersQ = ordersQ.lte('created_at', endParam(end)); expensesQ = expensesQ.lte('date', end); }
+    if (start) { ordersQ = ordersQ.gte('created_at', cairoStartUTC(start));  expensesQ = expensesQ.gte('date', start); }
+    if (end)   { ordersQ = ordersQ.lte('created_at', cairoEndUTC(end)); expensesQ = expensesQ.lte('date', end); }
 
     const [orders, expenses] = await Promise.all([fetchAll(ordersQ), fetchAll(expensesQ)]);
 
