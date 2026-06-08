@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { supabase } = require('../db/supabase');
+const { supabase, fetchAll } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 
@@ -19,21 +19,21 @@ router.get('/revenue', authenticate, async (req, res) => {
     // Fetch paid orders
     let queryPaid = supabase.from('orders').select('id, total, created_at').eq('payment_status', 'paid');
     queryPaid = applyDateFilter(queryPaid, start, end);
-    const { data: paidOrders } = await queryPaid;
+    const paidOrders = await fetchAll(queryPaid);
 
     // Fetch refunded orders
     let queryRefunded = supabase.from('orders').select('total, created_at').eq('payment_status', 'refunded');
     queryRefunded = applyDateFilter(queryRefunded, start, end);
-    const { data: refundedOrders } = await queryRefunded;
+    const refundedOrders = await fetchAll(queryRefunded);
 
-    const totalRevenue = (paidOrders || []).reduce((sum, o) => sum + Number(o.total), 0);
-    const orderCount = (paidOrders || []).length;
+    const totalRevenue = paidOrders.reduce((sum, o) => sum + Number(o.total), 0);
+    const orderCount = paidOrders.length;
     const avgOrderValue = orderCount > 0 ? totalRevenue / orderCount : 0;
-    const totalRefunded = (refundedOrders || []).reduce((sum, o) => sum + Number(o.total), 0);
+    const totalRefunded = refundedOrders.reduce((sum, o) => sum + Number(o.total), 0);
 
     // Line chart data (Group by day)
     const revenueByDay = {};
-    for (const o of paidOrders || []) {
+    for (const o of paidOrders) {
       const day = o.created_at.split('T')[0];
       revenueByDay[day] = (revenueByDay[day] || 0) + Number(o.total);
     }
@@ -43,16 +43,21 @@ router.get('/revenue', authenticate, async (req, res) => {
     }));
 
     // Top 5 Products
-    const orderIds = (paidOrders || []).map(o => o.id);
+    const orderIds = paidOrders.map(o => o.id);
     let topProductsRevenue = [];
     let topProductsQty = [];
 
     if (orderIds.length > 0) {
-      // Chunk orderIds if there are too many, but Supabase usually handles a good amount in IN clause
-      const { data: items } = await supabase.from('order_items').select('name, quantity, price, order_id').in('order_id', orderIds);
-      
+      const allItems = [];
+      for (let i = 0; i < orderIds.length; i += 500) {
+        const { data: chunk } = await supabase.from('order_items')
+          .select('name, quantity, price')
+          .in('order_id', orderIds.slice(i, i + 500));
+        allItems.push(...(chunk || []));
+      }
+
       const productStats = {};
-      for (const item of items || []) {
+      for (const item of allItems) {
         if (!productStats[item.name]) {
           productStats[item.name] = { name: item.name, revenue: 0, quantity: 0 };
         }
@@ -185,54 +190,57 @@ router.get('/pnl', authenticate, async (req, res) => {
 
     let ordersQuery = supabase.from('orders').select('id, total, created_at').eq('payment_status', 'paid');
     ordersQuery = applyDateFilter(ordersQuery, start, end);
-    const { data: orders } = await ordersQuery;
-    const revenue = (orders || []).reduce((s, o) => s + Number(o.total), 0);
+    const orders = await fetchAll(ordersQuery);
+    const revenue = orders.reduce((s, o) => s + Number(o.total), 0);
 
-    const orderIds = (orders || []).map(o => o.id);
+    const orderIds = orders.map(o => o.id);
     let cogs = 0;
     if (orderIds.length > 0) {
-      const { data: items } = await supabase.from('order_items').select('quantity, cost_per_unit').in('order_id', orderIds);
-      cogs = (items || []).reduce((s, i) => s + (Number(i.quantity) * Number(i.cost_per_unit || 0)), 0);
+      for (let i = 0; i < orderIds.length; i += 500) {
+        const { data: items } = await supabase.from('order_items')
+          .select('quantity, cost_per_unit')
+          .in('order_id', orderIds.slice(i, i + 500));
+        cogs += (items || []).reduce((s, item) => s + (Number(item.quantity) * Number(item.cost_per_unit || 0)), 0);
+      }
     }
 
     const grossProfit = revenue - cogs;
 
     let expQuery = supabase.from('expenses').select('amount').eq('status', 'approved');
     expQuery = applyDateFilter(expQuery, start, end, 'date');
-    const { data: expenses } = await expQuery;
-    const totalExpenses = (expenses || []).reduce((s, e) => s + Number(e.amount), 0);
+    const expenses = await fetchAll(expQuery);
+    const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
 
     const netProfit = grossProfit - totalExpenses;
     const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
     const netMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
 
     // Monthly Trend Data for Chart
-    const { data: allOrders } = await supabase.from('orders').select('total, created_at').eq('payment_status', 'paid');
-    const { data: allExpenses } = await supabase.from('expenses').select('amount, date').eq('status', 'approved');
-    
+    const [allOrders, allExpenses, allItems] = await Promise.all([
+      fetchAll(supabase.from('orders').select('id, total, created_at').eq('payment_status', 'paid')),
+      fetchAll(supabase.from('expenses').select('amount, date').eq('status', 'approved')),
+      fetchAll(supabase.from('order_items').select('quantity, cost_per_unit, order_id')),
+    ]);
+
     const monthlyData = {};
-    for (const o of allOrders || []) {
+    for (const o of allOrders) {
       const month = o.created_at?.substring(0, 7);
       if (!month) continue;
       if (!monthlyData[month]) monthlyData[month] = { revenue: 0, cogs: 0, expenses: 0 };
       monthlyData[month].revenue += Number(o.total);
     }
-    
-    // We would ideally fetch all order_items for all orders to get exact COGS per month, 
-    // but a simplified approach is applying the average COGS margin to all months, 
-    // or fetching all order_items. To be accurate, let's fetch all items.
-    const { data: allItems } = await supabase.from('order_items').select('quantity, cost_per_unit, order_id');
+
     const orderMonthMap = {};
-    for (const o of allOrders || []) orderMonthMap[o.id] = o.created_at?.substring(0, 7);
-    
-    for (const item of allItems || []) {
+    for (const o of allOrders) orderMonthMap[o.id] = o.created_at?.substring(0, 7);
+
+    for (const item of allItems) {
       const month = orderMonthMap[item.order_id];
       if (month && monthlyData[month]) {
         monthlyData[month].cogs += (Number(item.quantity) * Number(item.cost_per_unit || 0));
       }
     }
 
-    for (const e of allExpenses || []) {
+    for (const e of allExpenses) {
       const month = e.date?.substring(0, 7);
       if (!month) continue;
       if (!monthlyData[month]) monthlyData[month] = { revenue: 0, cogs: 0, expenses: 0 };
@@ -296,20 +304,19 @@ router.get('/cashflow', authenticate, async (req, res) => {
 
     let ordersQuery = supabase.from('orders').select('total, created_at').eq('payment_status', 'paid');
     ordersQuery = applyDateFilter(ordersQuery, start, end);
-    const { data: orders } = await ordersQuery;
-
-    let expQuery = supabase.from('expenses').select('amount, date').eq('status', 'approved');
-    expQuery = applyDateFilter(expQuery, start, end, 'date');
-    const { data: expenses } = await expQuery;
+    const [orders, expenses] = await Promise.all([
+      fetchAll(ordersQuery),
+      fetchAll(applyDateFilter(supabase.from('expenses').select('amount, date').eq('status', 'approved'), start, end, 'date'))
+    ]);
 
     const monthlyData = {};
-    for (const o of orders || []) {
+    for (const o of orders) {
       const month = o.created_at?.substring(0, 7);
       if (!month) continue;
       if (!monthlyData[month]) monthlyData[month] = { moneyIn: 0, moneyOut: 0 };
       monthlyData[month].moneyIn += Number(o.total);
     }
-    for (const e of expenses || []) {
+    for (const e of expenses) {
       const month = e.date?.substring(0, 7);
       if (!month) continue;
       if (!monthlyData[month]) monthlyData[month] = { moneyIn: 0, moneyOut: 0 };
@@ -350,6 +357,17 @@ router.post('/generate-3pl', authenticate, authorize('admin', 'ceo'), async (req
 
     let invoicesCreated = 0;
 
+    // Get the starting invoice number once before the loop to avoid duplicates
+    const year = new Date().getFullYear();
+    const { data: lastInvRow } = await supabase
+      .from('invoices')
+      .select('invoice_number')
+      .like('invoice_number', `INV-${year}-%`)
+      .order('invoice_number', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    let nextInvoiceNum = lastInvRow ? parseInt(lastInvRow.invoice_number.split('-')[2]) + 1 : 1;
+
     for (const client of clients) {
       if (client.fulfillment_fee_percentage <= 0 && client.storage_fee_monthly <= 0 && client.storage_fee_per_unit <= 0) continue;
 
@@ -387,31 +405,41 @@ router.post('/generate-3pl', authenticate, authorize('admin', 'ceo'), async (req
       const totalInvoiceAmount = totalStorage + commissionTotal;
 
       if (totalInvoiceAmount > 0) {
-        // Create an invoice
+        const invoiceNumber = `INV-${year}-${String(nextInvoiceNum++).padStart(4, '0')}`;
+        const issueDate = new Date().toISOString().split('T')[0];
+        const dueDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
         const { data: invoice, error: invErr } = await supabase
           .from('invoices')
           .insert({
             client_id: client.id,
-            status: 'draft',
-            issue_date: new Date().toISOString().split('T')[0],
-            due_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            total_amount: totalInvoiceAmount,
-            amount_paid: 0,
+            invoice_number: invoiceNumber,
+            customer_name: client.company_name,
+            customer_email: client.email || '',
+            status: 'Draft',
+            issue_date: issueDate,
+            due_date: dueDate,
+            subtotal: totalInvoiceAmount,
+            total: totalInvoiceAmount,
             notes: `3PL Fulfillment Billing: ${month_start} to ${month_end}`
           })
           .select().single();
-          
+
         if (invErr) throw invErr;
 
-        // Create invoice items
+        // Create invoice items — schema column is `subtotal`, not `total`
+        const itemsToInsert = [];
         if (commissionTotal > 0) {
-          await supabase.from('invoice_items').insert({ invoice_id: invoice.id, description: `Fulfillment Commission (${client.fulfillment_fee_percentage}%)`, quantity: 1, unit_price: commissionTotal, total: commissionTotal });
+          itemsToInsert.push({ invoice_id: invoice.id, description: `Fulfillment Commission (${client.fulfillment_fee_percentage}%)`, quantity: 1, unit_price: commissionTotal, subtotal: commissionTotal });
         }
         if (storageFlat > 0) {
-          await supabase.from('invoice_items').insert({ invoice_id: invoice.id, description: `Monthly Storage Fee`, quantity: 1, unit_price: storageFlat, total: storageFlat });
+          itemsToInsert.push({ invoice_id: invoice.id, description: `Monthly Storage Fee`, quantity: 1, unit_price: storageFlat, subtotal: storageFlat });
         }
         if (storagePerUnit > 0) {
-          await supabase.from('invoice_items').insert({ invoice_id: invoice.id, description: `Per-Unit Storage Fee (${totalUnitsStored} units)`, quantity: totalUnitsStored, unit_price: client.storage_fee_per_unit, total: storagePerUnit });
+          itemsToInsert.push({ invoice_id: invoice.id, description: `Per-Unit Storage Fee (${totalUnitsStored} units)`, quantity: totalUnitsStored, unit_price: Number(client.storage_fee_per_unit), subtotal: storagePerUnit });
+        }
+        if (itemsToInsert.length > 0) {
+          await supabase.from('invoice_items').insert(itemsToInsert);
         }
 
         invoicesCreated++;

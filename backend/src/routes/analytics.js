@@ -1,7 +1,7 @@
 // Analytics Routes — FR-AN-01 through FR-AN-08
 const express = require('express');
 const router = express.Router();
-const { supabase } = require('../db/supabase');
+const { supabase, fetchAll } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
 
 // Group an array of records by a time period key
@@ -61,11 +61,10 @@ router.get('/sales', authenticate, async (req, res) => {
   try {
     const { start, end, groupBy = 'month' } = req.query;
 
-    let query = supabase.from('orders').select('id, total, created_at, status, payment_status').eq('payment_status', 'paid');
-    if (start) query = query.gte('created_at', start);
-    if (end)   query = query.lte('created_at', endParam(end));
-    const { data: orders, error } = await query;
-    if (error) throw error;
+    let ordersQ = supabase.from('orders').select('id, total, created_at, status, payment_status').eq('payment_status', 'paid');
+    if (start) ordersQ = ordersQ.gte('created_at', start);
+    if (end)   ordersQ = ordersQ.lte('created_at', endParam(end));
+    const orders = await fetchAll(ordersQ);
 
     const totalOrders  = (orders || []).length;
     const totalRevenue = (orders || []).reduce((s, o) => s + Number(o.total), 0);
@@ -83,23 +82,52 @@ router.get('/sales', authenticate, async (req, res) => {
     // Revenue trend grouped by period
     const trend = groupByPeriod(orders || [], groupBy);
 
-    // Category revenue via product lookup
-    const orderIds = (orders || []).map(o => o.id);
+    // Category revenue — join order_items → products via product_id to avoid SKU mismatch with variants
     let categoryRevenue = [];
-    if (orderIds.length > 0) {
-      const [{ data: items }, { data: products }] = await Promise.all([
-        supabase.from('order_items').select('sku, quantity, price').in('order_id', orderIds.slice(0, 500)),
-        supabase.from('products').select('sku, category')
-      ]);
-      const catMap = Object.fromEntries((products || []).map(p => [p.sku, p.category || 'Other']));
-      const revMap = {};
-      for (const item of items || []) {
-        const cat = catMap[item.sku] || 'Other';
-        if (!revMap[cat]) revMap[cat] = { name: cat, revenue: 0, units: 0 };
-        revMap[cat].revenue += Number(item.quantity) * Number(item.price);
-        revMap[cat].units   += Number(item.quantity);
+    {
+      let itemQ = supabase
+        .from('order_items')
+        .select('quantity, price, products(category)')
+        .not('product_id', 'is', null);
+      // Scope to the same date range as orders above
+      if (start || end) {
+        let dateQ = supabase.from('orders').select('id').eq('payment_status', 'paid');
+        if (start) dateQ = dateQ.gte('created_at', start);
+        if (end)   dateQ = dateQ.lte('created_at', endParam(end));
+        const paidOrders = await fetchAll(dateQ);
+        const ids = paidOrders.map(o => o.id);
+        if (ids.length === 0) { categoryRevenue = []; }
+        else {
+          // Batch in chunks of 500 to stay within PostgREST limits
+          const chunks = [];
+          for (let i = 0; i < ids.length; i += 500) chunks.push(ids.slice(i, i + 500));
+          const allItems = [];
+          for (const chunk of chunks) {
+            const { data: chunkItems } = await supabase
+              .from('order_items').select('quantity, price, products(category)')
+              .in('order_id', chunk).not('product_id', 'is', null);
+            allItems.push(...(chunkItems || []));
+          }
+          const revMap = {};
+          for (const item of allItems) {
+            const cat = item.products?.category || 'Other';
+            if (!revMap[cat]) revMap[cat] = { name: cat, revenue: 0, units: 0 };
+            revMap[cat].revenue += Number(item.quantity) * Number(item.price);
+            revMap[cat].units   += Number(item.quantity);
+          }
+          categoryRevenue = Object.values(revMap).sort((a, b) => b.revenue - a.revenue).slice(0, 8);
+        }
+      } else {
+        const allItems = await fetchAll(itemQ);
+        const revMap = {};
+        for (const item of allItems) {
+          const cat = item.products?.category || 'Other';
+          if (!revMap[cat]) revMap[cat] = { name: cat, revenue: 0, units: 0 };
+          revMap[cat].revenue += Number(item.quantity) * Number(item.price);
+          revMap[cat].units   += Number(item.quantity);
+        }
+        categoryRevenue = Object.values(revMap).sort((a, b) => b.revenue - a.revenue).slice(0, 8);
       }
-      categoryRevenue = Object.values(revMap).sort((a, b) => b.revenue - a.revenue).slice(0, 8);
     }
 
     // Hour-of-day distribution (useful for day mode)
@@ -121,22 +149,30 @@ router.get('/top-products', authenticate, async (req, res) => {
   try {
     const { start, end } = req.query;
 
+    // Fetch paid order IDs in the date range, then batch-fetch items in 500-id chunks
     let orderQuery = supabase.from('orders').select('id').eq('payment_status', 'paid');
     if (start) orderQuery = orderQuery.gte('created_at', start);
     if (end)   orderQuery = orderQuery.lte('created_at', endParam(end));
-    const { data: paidOrders } = await orderQuery;
-
-    const orderIds = (paidOrders || []).map(o => o.id);
+    const paidOrders = await fetchAll(orderQuery);
+    const orderIds = paidOrders.map(o => o.id);
     if ((start || end) && orderIds.length === 0) {
       return res.json({ byRevenue: [], byUnits: [] });
     }
 
-    let itemQuery = supabase.from('order_items').select('sku, name, quantity, price');
-    if (orderIds.length > 0) itemQuery = itemQuery.in('order_id', orderIds.slice(0, 500));
+    const allItems = [];
+    if (orderIds.length === 0) {
+      const { data } = await supabase.from('order_items').select('sku, name, quantity, price');
+      allItems.push(...(data || []));
+    } else {
+      for (let i = 0; i < orderIds.length; i += 500) {
+        const { data } = await supabase.from('order_items').select('sku, name, quantity, price')
+          .in('order_id', orderIds.slice(i, i + 500));
+        allItems.push(...(data || []));
+      }
+    }
 
-    const { data: items } = await itemQuery;
     const productMap = {};
-    for (const item of items || []) {
+    for (const item of allItems) {
       if (!productMap[item.sku]) productMap[item.sku] = { sku: item.sku, name: item.name, units: 0, revenue: 0 };
       productMap[item.sku].units   += Number(item.quantity);
       productMap[item.sku].revenue += Number(item.quantity) * Number(item.price);
@@ -153,16 +189,25 @@ router.get('/top-products', authenticate, async (req, res) => {
 // GET /api/analytics/products (all-time inventory sell-through)
 router.get('/products', authenticate, async (_req, res) => {
   try {
-    const { data: products } = await supabase.from('products').select('id, sku, name, stock_quantity, price, category');
-    const { data: items }    = await supabase.from('order_items').select('sku, quantity');
+    const [products, itemsById, itemsBySku, variants] = await Promise.all([
+      fetchAll(supabase.from('products').select('id, sku, name, stock_quantity, price, category')),
+      fetchAll(supabase.from('order_items').select('product_id, quantity').not('product_id', 'is', null)),
+      fetchAll(supabase.from('order_items').select('sku, quantity').is('product_id', null)),
+      fetchAll(supabase.from('product_variants').select('id, product_id, sku')),
+    ]);
+    const skuToProductId = Object.fromEntries((variants || []).map(v => [v.sku, v.product_id]));
 
     const salesMap = {};
-    for (const item of items || []) {
-      salesMap[item.sku] = (salesMap[item.sku] || 0) + Number(item.quantity);
+    for (const item of itemsById || []) {
+      salesMap[item.product_id] = (salesMap[item.product_id] || 0) + Number(item.quantity);
+    }
+    for (const item of itemsBySku || []) {
+      const pid = skuToProductId[item.sku];
+      if (pid) salesMap[pid] = (salesMap[pid] || 0) + Number(item.quantity);
     }
 
     const analytics = (products || []).map(p => {
-      const unitsSold  = salesMap[p.sku] || 0;
+      const unitsSold  = salesMap[p.id] || 0;
       const totalStock = unitsSold + p.stock_quantity;
       return {
         sku: p.sku, name: p.name, category: p.category,
@@ -184,10 +229,10 @@ router.get('/products', authenticate, async (_req, res) => {
 router.get('/delivery', authenticate, async (req, res) => {
   try {
     const { start, end } = req.query;
-    let query = supabase.from('delivery_orders').select('*, drivers(name, zone)');
+    let query = supabase.from('delivery_orders').select('status, cod_amount, assigned_at, delivered_at, failed_reason, created_at, drivers(name, zone)');
     if (start) query = query.gte('created_at', start);
     if (end)   query = query.lte('created_at', endParam(end));
-    const { data: deliveries } = await query;
+    const deliveries = await fetchAll(query);
 
     const driverStats = {};
     for (const d of deliveries || []) {
@@ -237,10 +282,10 @@ router.get('/delivery/cost-comparison', authenticate, async (req, res) => {
     let query = supabase.from('delivery_orders').select('delivery_type, status, cod_amount');
     if (start) query = query.gte('created_at', start);
     if (end)   query = query.lte('created_at', endParam(end));
-    const { data: deliveries } = await query;
+    const deliveries = await fetchAll(query);
 
-    const own   = (deliveries || []).filter(d => d.delivery_type === 'own_driver');
-    const bosta = (deliveries || []).filter(d => d.delivery_type === 'bosta');
+    const own   = deliveries.filter(d => d.delivery_type === 'own_driver');
+    const bosta = deliveries.filter(d => d.delivery_type === 'bosta');
 
     const summarize = (arr) => ({
       total:     arr.length,
@@ -265,16 +310,16 @@ router.get('/financial-kpis', authenticate, async (req, res) => {
     if (start) { ordersQ = ordersQ.gte('created_at', start);  expensesQ = expensesQ.gte('date', start); }
     if (end)   { ordersQ = ordersQ.lte('created_at', endParam(end)); expensesQ = expensesQ.lte('date', end); }
 
-    const [{ data: orders }, { data: expenses }] = await Promise.all([ordersQ, expensesQ]);
+    const [orders, expenses] = await Promise.all([fetchAll(ordersQ), fetchAll(expensesQ)]);
 
     const revenueMap = {};
-    for (const o of orders || []) {
+    for (const o of orders) {
       const k = periodKey(o.created_at, groupBy);
       if (k) revenueMap[k] = (revenueMap[k] || 0) + Number(o.total);
     }
 
     const expenseMap = {};
-    for (const e of expenses || []) {
+    for (const e of expenses) {
       const k = periodKey(e.date, groupBy);
       if (k) expenseMap[k] = (expenseMap[k] || 0) + Number(e.amount);
     }

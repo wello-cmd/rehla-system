@@ -1,7 +1,7 @@
 // Delivery Routes — dispatcher, driver mobile links, Bosta, and analytics
 const express = require('express');
 const router = express.Router();
-const { supabase } = require('../db/supabase');
+const { supabase, fetchAll } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const { verifyBostaWebhook } = require('../middleware/webhookVerify');
@@ -82,12 +82,9 @@ async function listDeliveryOrders(req, res) {
 async function getSummary(req, res) {
   try {
     const today = toDateOnly();
-    const { data: all, error } = await supabase
-      .from('delivery_orders')
-      .select('status, cod_amount, cod_collected, created_at');
-    if (error) throw error;
-
-    const orders = all || [];
+    const orders = await fetchAll(
+      supabase.from('delivery_orders').select('status, cod_amount, cod_collected, created_at')
+    );
     const todayOrders = orders.filter(d => d.created_at?.startsWith(today));
     const summary = {
       total_today: todayOrders.length,

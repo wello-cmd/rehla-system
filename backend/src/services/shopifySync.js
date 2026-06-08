@@ -4,7 +4,7 @@
 
 const axios = require('axios');
 const { supabase } = require('../db/supabase');
-const { generateBarcodeString } = require('./barcodeGenerator');
+
 
 const SHOPIFY_STORE = process.env.SHOPIFY_STORE_URL;
 const SHOPIFY_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
@@ -56,16 +56,17 @@ class ShopifySync {
       this.retryCount = 0;
       return { data: response.data, headers: response.headers };
     } catch (err) {
-      if (err.response?.status === 429 && this.retryCount < this.maxRetries) {
-        try {
-          this.retryCount++;
-          const backoffMs = Math.pow(2, this.retryCount) * 1000;
-          console.warn(`[Shopify] Rate limited. Retrying in ${backoffMs}ms (attempt ${this.retryCount})`);
-          await this.delay(backoffMs);
-          return await this.shopifyRequest(endpoint, method, data);
-        } catch (retryErr) {
-          throw retryErr;
-        }
+      const isRateLimit = err.response?.status === 429;
+      const isNetworkErr = ['ECONNRESET', 'ETIMEDOUT', 'ECONNABORTED', 'ENOTFOUND'].includes(err.code) ||
+        err.message?.includes('read ECONNRESET') || err.message?.includes('socket hang up');
+      if ((isRateLimit || isNetworkErr) && this.retryCount < this.maxRetries) {
+        this.retryCount++;
+        const backoffMs = isRateLimit
+          ? Math.pow(2, this.retryCount) * 1000
+          : this.retryCount * 3000;
+        console.warn(`[Shopify] ${isRateLimit ? 'Rate limited' : 'Network error'} (${err.code || err.message?.slice(0, 40)}). Retrying in ${backoffMs}ms (attempt ${this.retryCount}/${this.maxRetries})`);
+        await this.delay(backoffMs);
+        return await this.shopifyRequest(endpoint, method, data);
       }
       throw err;
     }
@@ -73,6 +74,7 @@ class ShopifySync {
 
   /**
    * Full product sync from Shopify (FR-SH-01)
+   * One row in `products` per Shopify product; each variant goes into `product_variants`.
    */
   async syncProducts(triggeredBy = 'auto') {
     if (!this.isConfigured()) {
@@ -80,9 +82,9 @@ class ShopifySync {
     }
 
     const startTime = Date.now();
+    let productsCreated = 0;
     let productsUpdated = 0;
     let productsSkipped = 0;
-    let productsCreated = 0;
 
     try {
       let hasNextPage = true;
@@ -97,74 +99,71 @@ class ShopifySync {
         const products = data.products || [];
 
         for (const shopifyProduct of products) {
+          const shopifyProductId = String(shopifyProduct.id);
+          const firstVariant = shopifyProduct.variants[0];
+          const totalStock = shopifyProduct.variants.reduce(
+            (sum, v) => sum + (v.inventory_quantity || 0), 0
+          );
+
+          // Upsert parent product row (one per Shopify product)
+          const { data: parentProduct, error: parentErr } = await supabase
+            .from('products')
+            .upsert({
+              shopify_product_id: shopifyProductId,
+              name: shopifyProduct.title,
+              description: shopifyProduct.body_html?.replace(/<[^>]*>/g, '') || '',
+              category: shopifyProduct.product_type || 'Uncategorized',
+              image_url: shopifyProduct.image?.src || '',
+              brand: shopifyProduct.vendor || 'REHLA',
+              sku: firstVariant ? (firstVariant.sku || `SHP-${firstVariant.id}`).toUpperCase() : null,
+              price: parseFloat(firstVariant?.price) || 0,
+              cost_per_unit: parseFloat(firstVariant?.cost) || 0,
+              stock_quantity: totalStock,
+              barcode: firstVariant?.barcode || null,
+              last_synced_at: new Date().toISOString()
+            }, { onConflict: 'shopify_product_id' })
+            .select('id')
+            .single();
+
+          if (parentErr) {
+            productsSkipped++;
+            continue;
+          }
+
+          const isNew = !parentProduct; // upsert always returns the row
+          if (isNew) productsCreated++; else productsUpdated++;
+
+          // Upsert each variant into product_variants
           for (const variant of shopifyProduct.variants) {
-      const sku = variant.sku || `SHP-${variant.id}`;
+            const variantSku = (variant.sku || `SHP-${variant.id}`).toUpperCase();
+            const variantName = variant.title !== 'Default Title' ? variant.title : null;
 
-            // Check if product exists by SKU
-            const { data: existing } = await supabase
-              .from('products')
-              .select('id, sku, price, stock_quantity, name')
-              .eq('sku', sku)
-              .maybeSingle();
-
-            const newName = `${shopifyProduct.title}${variant.title !== 'Default Title' ? ` - ${variant.title}` : ''}`;
-            const newPrice = parseFloat(variant.price) || 0;
-            const newQty = variant.inventory_quantity || 0;
-
-            if (existing) {
-              if (existing.price === newPrice && existing.stock_quantity === newQty && existing.name === newName) {
-                productsSkipped++;
-                continue;
-              }
-
-              const { error: updateErr } = await supabase
-                .from('products')
-                .update({
-                  name: newName,
-                  price: newPrice,
-                  stock_quantity: newQty,
-                  shopify_variant_id: String(variant.id),
-                  shopify_inventory_item_id: variant.inventory_item_id ? String(variant.inventory_item_id) : null,
-                  image_url: shopifyProduct.image?.src || '',
-                  last_synced_at: new Date().toISOString()
-                })
-                .eq('id', existing.id);
-
-              if (updateErr) productsSkipped++;
-              else productsUpdated++;
-            } else {
-              const barcode = variant.barcode || generateBarcodeString();
-              const { error: insertErr } = await supabase
-                .from('products')
-                .insert({
-                  sku: sku.toUpperCase(),
-                  name: newName,
-                  description: shopifyProduct.body_html?.replace(/<[^>]*>/g, '') || '',
-                  barcode,
-                  price: newPrice,
-                  cost_per_unit: parseFloat(variant.cost) || 0,
-                  stock_quantity: variant.inventory_quantity || 0,
-                  category: shopifyProduct.product_type || 'Uncategorized',
-                  image_url: shopifyProduct.image?.src || '',
-                  shopify_variant_id: String(variant.id),
-                  shopify_inventory_item_id: variant.inventory_item_id ? String(variant.inventory_item_id) : null,
-                  last_synced_at: new Date().toISOString()
-                });
-
-              if (insertErr) {
-                productsSkipped++;
-              } else {
-                productsCreated++;
-              }
-            }
+            await supabase
+              .from('product_variants')
+              .upsert({
+                product_id: parentProduct.id,
+                shopify_variant_id: String(variant.id),
+                sku: variantSku,
+                variant_name: variantName,
+                size: variant.option1 || null,
+                color: variant.option2 || null,
+                price: parseFloat(variant.price) || 0,
+                cost_per_unit: parseFloat(variant.cost) || 0,
+                stock_quantity: variant.inventory_quantity || 0,
+                barcode: variant.barcode || null,
+                shopify_inventory_item_id: variant.inventory_item_id ? String(variant.inventory_item_id) : null,
+                image_url: shopifyProduct.image?.src || '',
+                last_synced_at: new Date().toISOString()
+              }, { onConflict: 'shopify_variant_id' });
           }
         }
+
         pageInfo = this.extractPageInfo(headers?.link);
         hasNextPage = !!pageInfo;
       }
 
       const durationMs = Date.now() - startTime;
-      const logWriteResponse = await supabase.from('sync_log').insert({
+      await supabase.from('sync_log').insert({
         products_updated: productsUpdated,
         products_skipped: productsSkipped,
         products_created: productsCreated,
@@ -173,23 +172,13 @@ class ShopifySync {
         error_details: '',
         duration_ms: durationMs
       });
-      if (logWriteResponse && logWriteResponse.error) {
-        console.error('[Shopify] Failed to write sync log:', logWriteResponse.error.message || logWriteResponse.error);
-      }
 
-      return {
-        success: true,
-        productsUpdated,
-        productsSkipped,
-        productsCreated,
-        durationMs
-      };
+      return { success: true, productsCreated, productsUpdated, productsSkipped, durationMs };
     } catch (err) {
       const durationMs = Date.now() - startTime;
       const errorMsg = err.response?.data ? JSON.stringify(err.response.data) : err.message;
       console.error('[Shopify] Product sync failed:', errorMsg);
-
-      const logWriteResponse = await supabase.from('sync_log').insert({
+      await supabase.from('sync_log').insert({
         products_updated: productsUpdated,
         products_skipped: productsSkipped,
         products_created: productsCreated,
@@ -198,21 +187,22 @@ class ShopifySync {
         error_details: errorMsg,
         duration_ms: durationMs
       });
-      if (logWriteResponse && logWriteResponse.error) {
-        console.error('[Shopify] Failed to write sync log:', logWriteResponse.error.message || logWriteResponse.error);
-      }
-
       throw err;
     }
   }
 
   /**
    * Sync orders from Shopify (FR-SH-02/03)
+   * @param {string} triggeredBy - 'auto', 'manual', 'cron'
+   * @param {object} options
+   * @param {string} [options.updatedAtMin] - ISO timestamp; only fetch orders updated after this (incremental sync)
    */
-  async syncOrders(triggeredBy = 'auto') {
+  async syncOrders(triggeredBy = 'auto', options = {}) {
     if (!this.isConfigured()) {
       return { success: false, error: 'Shopify is not configured in .env' };
     }
+
+    const { updatedAtMin = null } = options;
 
     try {
       let hasNextPage = true;
@@ -220,31 +210,36 @@ class ShopifySync {
       let ordersSynced = 0;
 
       while (hasNextPage) {
-        const endpoint = pageInfo
-          ? `/orders.json?limit=50&page_info=${pageInfo}`
-          : '/orders.json?status=any&limit=50';
+        let endpoint;
+        if (pageInfo) {
+          endpoint = `/orders.json?limit=250&page_info=${pageInfo}`;
+        } else if (updatedAtMin) {
+          endpoint = `/orders.json?status=any&limit=250&updated_at_min=${encodeURIComponent(updatedAtMin)}`;
+        } else {
+          endpoint = '/orders.json?status=any&limit=250';
+        }
 
         const { data, headers } = await this.shopifyRequest(endpoint);
         const orders = data.orders || [];
 
-        for (const shopifyOrder of orders) {
-          let retryCount = 0;
-          while (retryCount < 3) {
-            try {
-              const result = await this.upsertShopifyOrder(shopifyOrder, { ensureDelivery: true });
-              if (result.success) ordersSynced++;
-              break;
-            } catch (upsertErr) {
-              if (upsertErr.message && upsertErr.message.includes('fetch failed')) {
+        // Upsert this page's orders in parallel (5 at a time) for speed
+        const CONCURRENCY = 5;
+        for (let i = 0; i < orders.length; i += CONCURRENCY) {
+          const batch = orders.slice(i, i + CONCURRENCY);
+          await Promise.all(batch.map(async (shopifyOrder) => {
+            let retryCount = 0;
+            while (retryCount < 3) {
+              try {
+                const result = await this.upsertShopifyOrder(shopifyOrder, { ensureDelivery: true });
+                if (result.success) ordersSynced++;
+                break;
+              } catch (upsertErr) {
                 retryCount++;
-                console.warn(`[Shopify] Upsert fetch failed for order. Retrying... (${retryCount}/3)`);
                 if (retryCount >= 3) throw upsertErr;
                 await new Promise(r => setTimeout(r, 2000 * retryCount));
-              } else {
-                throw upsertErr;
               }
             }
-          }
+          }));
         }
 
         pageInfo = this.extractPageInfo(headers?.link);
@@ -320,20 +315,28 @@ class ShopifySync {
 
     const enrichedItems = [];
     for (const item of items) {
-      const { data: product } = await supabase
-        .from('products')
-        .select('id, cost_per_unit')
-        .eq('sku', item.sku)
-        .maybeSingle();
+      // Look up by shopify_variant_id first, fall back to SKU
+      let variantQuery = supabase
+        .from('product_variants')
+        .select('id, product_id, cost_per_unit');
+
+      if (item.shopify_variant_id) {
+        variantQuery = variantQuery.eq('shopify_variant_id', item.shopify_variant_id);
+      } else {
+        variantQuery = variantQuery.eq('sku', item.sku);
+      }
+
+      const { data: variant } = await variantQuery.maybeSingle();
 
       enrichedItems.push({
         order_id: orderId,
-        product_id: product?.id || null,
+        product_id: variant?.product_id || null,
+        variant_id: variant?.id || null,
         sku: item.sku,
         name: item.name,
         quantity: item.quantity,
         price: item.price,
-        cost_per_unit: product?.cost_per_unit || 0
+        cost_per_unit: variant?.cost_per_unit || 0
       });
     }
 
@@ -407,41 +410,53 @@ class ShopifySync {
 
   /**
    * Handle inventory level webhook (FR-SH-04)
+   * Updates the specific variant's stock, then recalculates the parent product total.
    */
   async handleInventoryUpdate(payload) {
     const inventoryItemId = payload.inventory_item_id;
     const available = payload.available;
 
     try {
-      const { data: product, error: fetchErr } = await supabase
-        .from('products')
-        .select('id, sku, stock_quantity')
+      const { data: variant, error: fetchErr } = await supabase
+        .from('product_variants')
+        .select('id, product_id, sku, stock_quantity')
         .eq('shopify_inventory_item_id', String(inventoryItemId))
-        .single();
+        .maybeSingle();
 
       if (fetchErr) throw fetchErr;
+      if (!variant || available === undefined) return;
 
-      if (product && available !== undefined) {
-        const prevQty = product.stock_quantity;
-        const { error: updateErr } = await supabase
-          .from('products')
-          .update({ stock_quantity: available, last_synced_at: new Date().toISOString() })
-          .eq('id', product.id);
+      const prevQty = variant.stock_quantity;
 
-        if (updateErr) throw updateErr;
+      // Update the variant's stock
+      await supabase
+        .from('product_variants')
+        .update({ stock_quantity: available, last_synced_at: new Date().toISOString() })
+        .eq('id', variant.id);
 
-        if (available > prevQty) {
-          const { error: logErr } = await supabase.from('inventory_log').insert({
-            product_id: product.id,
-            sku: product.sku,
-            event_type: 'restock',
-            quantity_changed: available - prevQty,
-            previous_quantity: prevQty,
-            new_quantity: available,
-            notes: 'Shopify inventory webhook'
-          });
-          if (logErr) throw logErr;
-        }
+      // Recalculate and update the parent product's total stock
+      const { data: allVariants } = await supabase
+        .from('product_variants')
+        .select('stock_quantity')
+        .eq('product_id', variant.product_id);
+
+      const totalStock = (allVariants || []).reduce((sum, v) => sum + (v.stock_quantity || 0), 0);
+      await supabase
+        .from('products')
+        .update({ stock_quantity: totalStock, last_synced_at: new Date().toISOString() })
+        .eq('id', variant.product_id);
+
+      // Log restock events
+      if (available > prevQty) {
+        await supabase.from('inventory_log').insert({
+          product_id: variant.product_id,
+          sku: variant.sku,
+          event_type: 'restock',
+          quantity_changed: available - prevQty,
+          previous_quantity: prevQty,
+          new_quantity: available,
+          notes: 'Shopify inventory webhook'
+        });
       }
     } catch (err) {
       console.error('[Shopify Webhook] Inventory update failed:', err.message || err);
@@ -451,52 +466,137 @@ class ShopifySync {
 
   /**
    * Handle product update webhook (Part 3)
+   * Upserts parent product then syncs all variant rows.
    */
   async handleProductUpdate(shopifyProduct) {
     if (!shopifyProduct || !shopifyProduct.variants) return;
-    
+
+    const shopifyProductId = String(shopifyProduct.id);
+    const firstVariant = shopifyProduct.variants[0];
+    const totalStock = shopifyProduct.variants.reduce(
+      (sum, v) => sum + (v.inventory_quantity || 0), 0
+    );
+
+    const { data: parentProduct, error: parentErr } = await supabase
+      .from('products')
+      .upsert({
+        shopify_product_id: shopifyProductId,
+        name: shopifyProduct.title,
+        description: shopifyProduct.body_html?.replace(/<[^>]*>/g, '') || '',
+        category: shopifyProduct.product_type || 'Uncategorized',
+        image_url: shopifyProduct.image?.src || '',
+        brand: shopifyProduct.vendor || 'REHLA',
+        sku: firstVariant ? (firstVariant.sku || `SHP-${firstVariant.id}`).toUpperCase() : null,
+        price: parseFloat(firstVariant?.price) || 0,
+        cost_per_unit: parseFloat(firstVariant?.cost) || 0,
+        stock_quantity: totalStock,
+        last_synced_at: new Date().toISOString()
+      }, { onConflict: 'shopify_product_id' })
+      .select('id')
+      .single();
+
+    if (parentErr || !parentProduct) return;
+
     for (const variant of shopifyProduct.variants) {
-      const sku = variant.sku || `SHP-${variant.id}`;
-
-      const newName = `${shopifyProduct.title}${variant.title !== 'Default Title' ? ` - ${variant.title}` : ''}`;
-      const newPrice = parseFloat(variant.price) || 0;
-      const newQty = variant.inventory_quantity || 0;
-
-      const { data: existing } = await supabase
-        .from('products')
-        .select('id')
-        .eq('sku', sku)
-        .maybeSingle();
-
-      if (existing) {
-        await supabase.from('products').update({
-          name: newName,
-          price: newPrice,
-          stock_quantity: newQty,
+      const variantSku = (variant.sku || `SHP-${variant.id}`).toUpperCase();
+      await supabase
+        .from('product_variants')
+        .upsert({
+          product_id: parentProduct.id,
           shopify_variant_id: String(variant.id),
-          shopify_inventory_item_id: variant.inventory_item_id ? String(variant.inventory_item_id) : null,
-          image_url: shopifyProduct.image?.src || '',
-          last_synced_at: new Date().toISOString()
-        }).eq('id', existing.id);
-      } else {
-        const barcode = variant.barcode || generateBarcodeString();
-        await supabase.from('products').insert({
-          sku: sku.toUpperCase(),
-          name: newName,
-          description: shopifyProduct.body_html?.replace(/<[^>]*>/g, '') || '',
-          barcode,
-          price: newPrice,
+          sku: variantSku,
+          variant_name: variant.title !== 'Default Title' ? variant.title : null,
+          size: variant.option1 || null,
+          color: variant.option2 || null,
+          price: parseFloat(variant.price) || 0,
           cost_per_unit: parseFloat(variant.cost) || 0,
-          stock_quantity: newQty,
-          category: shopifyProduct.product_type || 'Uncategorized',
-          image_url: shopifyProduct.image?.src || '',
-          shopify_variant_id: String(variant.id),
+          stock_quantity: variant.inventory_quantity || 0,
+          barcode: variant.barcode || null,
           shopify_inventory_item_id: variant.inventory_item_id ? String(variant.inventory_item_id) : null,
+          image_url: shopifyProduct.image?.src || '',
           last_synced_at: new Date().toISOString()
-        });
-      }
+        }, { onConflict: 'shopify_variant_id' });
     }
   }
+
+  /**
+   * Sync all customers from Shopify into the customers table.
+   * @param {string} triggeredBy
+   * @param {object} options
+   * @param {string} [options.updatedAtMin] - ISO timestamp for incremental sync
+   */
+  async syncCustomers(triggeredBy = 'auto', options = {}) {
+    if (!this.isConfigured()) return { success: false, error: 'Shopify not configured' };
+
+    const { updatedAtMin = null } = options;
+    let synced = 0;
+    let pageInfo = null;
+    let hasNext = true;
+
+    try {
+      while (hasNext) {
+        let endpoint;
+        if (pageInfo) {
+          endpoint = `/customers.json?limit=250&page_info=${pageInfo}`;
+        } else if (updatedAtMin) {
+          endpoint = `/customers.json?limit=250&updated_at_min=${encodeURIComponent(updatedAtMin)}`;
+        } else {
+          endpoint = '/customers.json?limit=250';
+        }
+
+        const { data, headers } = await this.shopifyRequest(endpoint);
+        const customers = data.customers || [];
+
+        if (customers.length > 0) {
+          const rows = customers.map(c => buildCustomerPayload(c));
+          const { error } = await supabase.from('customers').upsert(rows, { onConflict: 'shopify_customer_id' });
+          if (error) throw error;
+          synced += customers.length;
+        }
+
+        pageInfo = this.extractPageInfo(headers?.link);
+        hasNext = !!pageInfo;
+      }
+
+      await supabase.from('sync_log').insert({ triggered_by: triggeredBy, status: 'success', error_details: `customers:${synced}` });
+      return { success: true, synced };
+    } catch (err) {
+      console.error('[Shopify] Customer sync failed:', err.message);
+      throw err;
+    }
+  }
+
+  async handleCustomerWebhook(payload) {
+    if (!payload?.id) return;
+    const { error } = await supabase
+      .from('customers')
+      .upsert(buildCustomerPayload(payload), { onConflict: 'shopify_customer_id' });
+    if (error) throw error;
+  }
+}
+
+function buildCustomerPayload(c) {
+  const addr = c.default_address || {};
+  return {
+    shopify_customer_id: String(c.id),
+    email:            c.email || null,
+    first_name:       c.first_name || null,
+    last_name:        c.last_name || null,
+    phone:            c.phone || null,
+    address:          addr.address1 || null,
+    city:             addr.city || null,
+    province:         addr.province || null,
+    country:          addr.country || 'Egypt',
+    orders_count:     c.orders_count || 0,
+    total_spent:      parseFloat(c.total_spent) || 0,
+    tags:             c.tags || null,
+    note:             c.note || null,
+    verified_email:   c.verified_email || false,
+    accepts_marketing: c.email_marketing_consent?.state === 'subscribed',
+    shopify_state:    c.state || null,
+    shopify_created_at: c.created_at || null,
+    last_synced_at:   new Date().toISOString()
+  };
 }
 
 function mapShopifyStatus(fulfillmentStatus) {
@@ -538,7 +638,8 @@ function normalizeShopifyItems(lineItems) {
     sku: (item.sku || `SHOPIFY-${item.variant_id || item.id}`).toUpperCase(),
     name: item.name || item.title || 'Shopify Item',
     quantity: Number(item.quantity) || 0,
-    price: parseFloat(item.price) || 0
+    price: parseFloat(item.price) || 0,
+    shopify_variant_id: item.variant_id ? String(item.variant_id) : null
   }));
 }
 
@@ -567,11 +668,12 @@ function buildOrderPayload(shopifyOrder, items) {
     items,
     subtotal: parseFloat(shopifyOrder.subtotal_price) || 0,
     total: parseFloat(shopifyOrder.total_price) || 0,
-    status: mapShopifyStatus(shopifyOrder.fulfillment_status),
+    status: shopifyOrder.cancelled_at ? 'cancelled' : mapShopifyStatus(shopifyOrder.fulfillment_status),
     payment_status: mapShopifyPaymentStatus(shopifyOrder.financial_status),
     payment_method: mapShopifyPaymentMethod(shopifyOrder),
     source: 'shopify',
-    created_at: shopifyOrder.created_at || new Date().toISOString()
+    created_at: shopifyOrder.created_at || new Date().toISOString(),
+    shopify_customer_id: shopifyOrder.customer?.id ? String(shopifyOrder.customer.id) : null
   };
 }
 

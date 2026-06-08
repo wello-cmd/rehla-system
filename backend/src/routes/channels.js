@@ -1,7 +1,7 @@
 // Channel Comparison Route — Shopify vs Bosta cross-channel analytics
 const express = require('express');
 const router = express.Router();
-const { supabase } = require('../db/supabase');
+const { supabase, fetchAll } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
 
 // GET /api/channels/comparison
@@ -11,29 +11,12 @@ router.get('/comparison', authenticate, async (_req, res) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Fetch all data in parallel
-    const [shopifyRes, bostaRes, ownRes] = await Promise.all([
-      supabase
-        .from('orders')
-        .select('id, total, status, payment_status, created_at')
-        .eq('source', 'shopify'),
-      supabase
-        .from('delivery_orders')
-        .select('id, order_id, status, cod_amount, cod_collected, failed_reason, assigned_at, delivered_at, created_at')
-        .eq('delivery_type', 'bosta'),
-      supabase
-        .from('delivery_orders')
-        .select('id, order_id, status, cod_amount, cod_collected, created_at')
-        .eq('delivery_type', 'own_driver')
+    // Fetch all data in parallel — use fetchAll to bypass PostgREST 1000-row cap
+    const [shopifyOrders, bostaDeliveries, ownDeliveries] = await Promise.all([
+      fetchAll(supabase.from('orders').select('id, total, status, payment_status, created_at').eq('source', 'shopify')),
+      fetchAll(supabase.from('delivery_orders').select('id, order_id, status, cod_amount, cod_collected, failed_reason, assigned_at, delivered_at, created_at').eq('delivery_type', 'bosta')),
+      fetchAll(supabase.from('delivery_orders').select('id, order_id, status, cod_amount, cod_collected, created_at').eq('delivery_type', 'own_driver')),
     ]);
-
-    if (shopifyRes.error) throw shopifyRes.error;
-    if (bostaRes.error) throw bostaRes.error;
-    if (ownRes.error) throw ownRes.error;
-
-    const shopifyOrders = shopifyRes.data || [];
-    const bostaDeliveries = bostaRes.data || [];
-    const ownDeliveries = ownRes.data || [];
 
     // --- Shopify summary ---
     const shopifyPaid = shopifyOrders.filter(o => o.payment_status === 'paid');

@@ -1,11 +1,12 @@
 // Shopify Webhook Routes — FR-SH-01 through FR-SH-10
 const express = require('express');
 const router = express.Router();
+const axios = require('axios');
 const { verifyShopifyWebhook } = require('../middleware/webhookVerify');
 const shopifySync = require('../services/shopifySync');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
-const { supabase } = require('../db/supabase');
+const { supabase, fetchAll } = require('../db/supabase');
 
 // GET /api/shopify/orders — List Shopify orders with optional filters
 router.get('/orders', authenticate, async (req, res) => {
@@ -37,13 +38,11 @@ router.get('/analytics', authenticate, async (req, res) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const { data: allOrders, error: ordersErr } = await supabase
-      .from('orders')
-      .select('id, total, status, payment_status, payment_method, created_at')
-      .eq('source', 'shopify');
-    if (ordersErr) throw ordersErr;
-
-    const orders = allOrders || [];
+    const orders = await fetchAll(
+      supabase.from('orders')
+        .select('id, total, status, payment_status, payment_method, created_at')
+        .eq('source', 'shopify')
+    );
     const paidOrders = orders.filter(o => o.payment_status === 'paid');
     const totalRevenue = paidOrders.reduce((s, o) => s + Number(o.total), 0);
 
@@ -79,23 +78,19 @@ router.get('/analytics', authenticate, async (req, res) => {
       paymentStatusBreakdown[o.payment_status] = (paymentStatusBreakdown[o.payment_status] || 0) + 1;
     }
 
-    // Top products from Shopify orders
-    let topProducts = [];
-    const orderIds = orders.map(o => o.id);
-    if (orderIds.length > 0) {
-      const { data: items } = await supabase
-        .from('order_items')
-        .select('sku, name, quantity, price')
-        .in('order_id', orderIds);
+    // Top products from Shopify orders — join via product_id to avoid massive .in() on order IDs
+    const { data: items } = await supabase
+      .from('order_items')
+      .select('sku, name, quantity, price, orders!inner(source)')
+      .eq('orders.source', 'shopify');
 
-      const productMap = {};
-      for (const item of items || []) {
-        if (!productMap[item.sku]) productMap[item.sku] = { sku: item.sku, name: item.name, units: 0, revenue: 0 };
-        productMap[item.sku].units += Number(item.quantity);
-        productMap[item.sku].revenue += Number(item.quantity) * Number(item.price);
-      }
-      topProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
+    const productMap = {};
+    for (const item of items || []) {
+      if (!productMap[item.sku]) productMap[item.sku] = { sku: item.sku, name: item.name, units: 0, revenue: 0 };
+      productMap[item.sku].units += Number(item.quantity);
+      productMap[item.sku].revenue += Number(item.quantity) * Number(item.price);
     }
+    const topProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
 
     res.json({ summary, revenueChart, statusBreakdown, paymentMethodBreakdown, paymentStatusBreakdown, topProducts });
   } catch (err) {
@@ -159,6 +154,16 @@ router.post('/webhooks/orders/updated', verifyShopifyWebhook, (req, res) => {
   handleOrderWebhook(req, res, 'orders/updated');
 });
 
+// POST /api/shopify/webhooks/orders/cancelled
+router.post('/webhooks/orders/cancelled', verifyShopifyWebhook, (req, res) => {
+  handleOrderWebhook(req, res, 'orders/cancelled');
+});
+
+// POST /api/shopify/webhooks/orders/fulfilled
+router.post('/webhooks/orders/fulfilled', verifyShopifyWebhook, (req, res) => {
+  handleOrderWebhook(req, res, 'orders/fulfilled');
+});
+
 // POST /api/webhooks/shopify/inventory — Inventory update webhook (FR-SH-04)
 router.post('/webhooks/inventory', verifyShopifyWebhook, async (req, res) => {
   try {
@@ -185,6 +190,88 @@ router.post('/webhook', verifyShopifyWebhook, async (req, res) => {
   } catch (err) {
     console.error(`[Webhook] Shopify webhook error for topic ${topic}:`, err);
     res.status(200).json({ received: true, error: err.message });
+  }
+});
+
+// POST /api/shopify/webhooks/customers/create
+router.post('/webhooks/customers/create', verifyShopifyWebhook, async (req, res) => {
+  try { await shopifySync.handleCustomerWebhook(req.body); res.json({ received: true }); }
+  catch (err) { res.json({ received: true, error: err.message }); }
+});
+
+// POST /api/shopify/webhooks/customers/update
+router.post('/webhooks/customers/update', verifyShopifyWebhook, async (req, res) => {
+  try { await shopifySync.handleCustomerWebhook(req.body); res.json({ received: true }); }
+  catch (err) { res.json({ received: true, error: err.message }); }
+});
+
+// POST /api/shopify/register-webhooks — Register all webhooks on Shopify (run once per deployment)
+// Body: { baseUrl: "https://your-backend.onrender.com" }  (optional — falls back to BACKEND_URL env)
+router.post('/register-webhooks', authenticate, async (req, res) => {
+  const baseUrl = (req.body?.baseUrl || process.env.BACKEND_URL || '').replace(/\/$/, '');
+  if (!baseUrl) {
+    return res.status(400).json({ error: 'Provide baseUrl in body or set BACKEND_URL env var' });
+  }
+
+  const SHOPIFY_BASE = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01`;
+  const SHOPIFY_HEADERS = {
+    'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
+    'Content-Type': 'application/json'
+  };
+
+  const topics = [
+    { topic: 'orders/create',    address: `${baseUrl}/api/shopify/webhooks/orders/create` },
+    { topic: 'orders/updated',   address: `${baseUrl}/api/shopify/webhooks/orders/updated` },
+    { topic: 'orders/cancelled', address: `${baseUrl}/api/shopify/webhooks/orders/cancelled` },
+    { topic: 'orders/fulfilled', address: `${baseUrl}/api/shopify/webhooks/orders/fulfilled` },
+    { topic: 'products/create',   address: `${baseUrl}/api/shopify/webhook` },
+    { topic: 'products/update',   address: `${baseUrl}/api/shopify/webhook` },
+    { topic: 'products/delete',   address: `${baseUrl}/api/shopify/webhook` },
+    { topic: 'customers/create',  address: `${baseUrl}/api/shopify/webhooks/customers/create` },
+    { topic: 'customers/update',  address: `${baseUrl}/api/shopify/webhooks/customers/update` },
+  ];
+
+  // Delete all existing webhooks first to avoid duplicates
+  try {
+    const { data: existing } = await axios.get(`${SHOPIFY_BASE}/webhooks.json`, { headers: SHOPIFY_HEADERS });
+    for (const wh of existing.webhooks || []) {
+      await axios.delete(`${SHOPIFY_BASE}/webhooks/${wh.id}.json`, { headers: SHOPIFY_HEADERS });
+    }
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to clear existing webhooks: ' + err.message });
+  }
+
+  const results = [];
+  for (const { topic, address } of topics) {
+    try {
+      const { data } = await axios.post(`${SHOPIFY_BASE}/webhooks.json`, {
+        webhook: { topic, address, format: 'json' }
+      }, { headers: SHOPIFY_HEADERS });
+      results.push({ topic, id: data.webhook.id, status: 'registered' });
+    } catch (err) {
+      results.push({ topic, status: 'failed', error: err.response?.data || err.message });
+    }
+  }
+
+  const failed = results.filter(r => r.status === 'failed');
+  res.json({
+    registered: results.filter(r => r.status === 'registered').length,
+    failed: failed.length,
+    results,
+    ...(failed.length && { errors: failed })
+  });
+});
+
+// GET /api/shopify/webhooks — List currently registered Shopify webhooks
+router.get('/webhooks', authenticate, async (_req, res) => {
+  try {
+    const SHOPIFY_BASE = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01`;
+    const { data } = await axios.get(`${SHOPIFY_BASE}/webhooks.json`, {
+      headers: { 'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN }
+    });
+    res.json(data.webhooks || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

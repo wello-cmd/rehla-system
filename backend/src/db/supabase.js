@@ -26,4 +26,28 @@ async function runQuery(sql, params = []) {
   return data;
 }
 
-module.exports = { supabase, supabaseAnon };
+/**
+ * Fetch ALL rows from a Supabase query by paginating in 1000-row chunks.
+ * Use this instead of plain .select() for any analytics query that may exceed
+ * the PostgREST max_rows limit (default 1000).
+ *
+ * Usage:
+ *   const rows = await fetchAll(
+ *     supabase.from('orders').select('id, total').eq('source', 'shopify')
+ *   );
+ */
+async function fetchAll(query, pageSize = 1000) {
+  const allRows = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await query.range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allRows.push(...data);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return allRows;
+}
+
+module.exports = { supabase, supabaseAnon, fetchAll };
