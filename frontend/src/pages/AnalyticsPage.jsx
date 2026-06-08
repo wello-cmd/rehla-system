@@ -127,6 +127,14 @@ export default function AnalyticsPage() {
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(190px,1fr))', gap:12 }}>
                   <KpiCard label="Total Revenue"    value={formatEGP(salesData.totalRevenue)}   sub={`${salesData.totalOrders} orders (incl. COD)`} />
                   <KpiCard label="Paid / Collected" value={formatEGP(salesData.paidRevenue || 0)} sub={`${salesData.paidOrders || 0} paid orders`} />
+                  {(salesData.returnedCount > 0) && (
+                    <KpiCard
+                      label="Returns (RTO)"
+                      value={`−${formatEGP(salesData.returnedRevenue || 0)}`}
+                      sub={`${salesData.returnedCount} returned orders`}
+                      color="var(--color-error)"
+                    />
+                  )}
                   <KpiCard label="Avg Order Value"  value={formatEGP(salesData.avgOrderValue)}  />
                   {finTotal.revenue > 0 && (
                     <KpiCard

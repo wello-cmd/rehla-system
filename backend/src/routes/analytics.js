@@ -61,30 +61,35 @@ router.get('/sales', authenticate, async (req, res) => {
   try {
     const { start, end, groupBy = 'month' } = req.query;
 
-    // Fetch ALL non-cancelled orders (net of refunds, matches Shopify "Total sales")
+    // Fetch ALL orders (including returned) to compute both GMV and net revenue
     let ordersQ = supabase.from('orders').select('id, total, total_refunded, created_at, status, payment_status').neq('status', 'cancelled');
     if (start) ordersQ = ordersQ.gte('created_at', start);
     if (end)   ordersQ = ordersQ.lte('created_at', endParam(end));
     const orders = await fetchAll(ordersQ);
 
+    const activeOrders  = (orders || []).filter(o => o.status !== 'returned');
+    const returnedOrders = (orders || []).filter(o => o.status === 'returned');
     const netTotal = o => Number(o.total) - Number(o.total_refunded || 0);
-    const totalOrders   = (orders || []).length;
-    const totalRevenue  = (orders || []).reduce((s, o) => s + netTotal(o), 0);
-    const paidOrders    = (orders || []).filter(o => o.payment_status === 'paid').length;
-    const paidRevenue   = (orders || []).filter(o => o.payment_status === 'paid').reduce((s, o) => s + netTotal(o), 0);
+
+    const totalOrders   = activeOrders.length;
+    const totalRevenue  = activeOrders.reduce((s, o) => s + netTotal(o), 0);
+    const returnedCount = returnedOrders.length;
+    const returnedRevenue = returnedOrders.reduce((s, o) => s + netTotal(o), 0);
+    const paidOrders    = activeOrders.filter(o => o.payment_status === 'paid').length;
+    const paidRevenue   = activeOrders.filter(o => o.payment_status === 'paid').reduce((s, o) => s + netTotal(o), 0);
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     // Day-of-week heatmap
     const dayMap = { 0:'Sun', 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat' };
     const heatmap = Array(7).fill(null).map((_, i) => ({ day: dayMap[i], revenue: 0, orders: 0 }));
-    for (const o of orders || []) {
+    for (const o of activeOrders) {
       const idx = new Date(o.created_at).getDay();
-      heatmap[idx].revenue += Number(o.total) - Number(o.total_refunded || 0);
+      heatmap[idx].revenue += netTotal(o);
       heatmap[idx].orders++;
     }
 
-    // Revenue trend grouped by period
-    const trend = groupByPeriod(orders || [], groupBy);
+    // Revenue trend grouped by period (active orders only)
+    const trend = groupByPeriod(activeOrders, groupBy);
 
     // Category revenue — join order_items → products via product_id to avoid SKU mismatch with variants
     let categoryRevenue = [];
@@ -142,7 +147,7 @@ router.get('/sales', authenticate, async (req, res) => {
       hourly[h].orders++;
     }
 
-    res.json({ totalOrders, totalRevenue, avgOrderValue, paidOrders, paidRevenue, heatmap, trend, categoryRevenue, hourly });
+    res.json({ totalOrders, totalRevenue, avgOrderValue, paidOrders, paidRevenue, returnedCount, returnedRevenue, heatmap, trend, categoryRevenue, hourly });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

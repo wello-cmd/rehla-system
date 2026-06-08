@@ -669,7 +669,9 @@ function buildOrderPayload(shopifyOrder, items) {
     subtotal: parseFloat(shopifyOrder.subtotal_price) || 0,
     total: parseFloat(shopifyOrder.total_price) || 0,
     total_refunded: parseFloat(shopifyOrder.total_refunded || '0') || 0,
-    status: shopifyOrder.cancelled_at ? 'cancelled' : mapShopifyStatus(shopifyOrder.fulfillment_status),
+    status: shopifyOrder.cancelled_at ? 'cancelled'
+          : (shopifyOrder.returns?.length > 0 || shopifyOrder.financial_status === 'refunded') ? 'returned'
+          : mapShopifyStatus(shopifyOrder.fulfillment_status),
     payment_status: mapShopifyPaymentStatus(shopifyOrder.financial_status),
     payment_method: mapShopifyPaymentMethod(shopifyOrder),
     source: 'shopify',
