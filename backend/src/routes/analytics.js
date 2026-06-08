@@ -61,13 +61,16 @@ router.get('/sales', authenticate, async (req, res) => {
   try {
     const { start, end, groupBy = 'month' } = req.query;
 
-    let ordersQ = supabase.from('orders').select('id, total, created_at, status, payment_status').eq('payment_status', 'paid');
+    // Fetch ALL non-cancelled orders (matches Shopify GMV — includes COD/pending payment)
+    let ordersQ = supabase.from('orders').select('id, total, created_at, status, payment_status').neq('status', 'cancelled');
     if (start) ordersQ = ordersQ.gte('created_at', start);
     if (end)   ordersQ = ordersQ.lte('created_at', endParam(end));
     const orders = await fetchAll(ordersQ);
 
-    const totalOrders  = (orders || []).length;
-    const totalRevenue = (orders || []).reduce((s, o) => s + Number(o.total), 0);
+    const totalOrders   = (orders || []).length;
+    const totalRevenue  = (orders || []).reduce((s, o) => s + Number(o.total), 0);
+    const paidOrders    = (orders || []).filter(o => o.payment_status === 'paid').length;
+    const paidRevenue   = (orders || []).filter(o => o.payment_status === 'paid').reduce((s, o) => s + Number(o.total), 0);
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     // Day-of-week heatmap
@@ -138,7 +141,7 @@ router.get('/sales', authenticate, async (req, res) => {
       hourly[h].orders++;
     }
 
-    res.json({ totalOrders, totalRevenue, avgOrderValue, heatmap, trend, categoryRevenue, hourly });
+    res.json({ totalOrders, totalRevenue, avgOrderValue, paidOrders, paidRevenue, heatmap, trend, categoryRevenue, hourly });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

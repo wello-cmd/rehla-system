@@ -101,10 +101,13 @@ router.get('/', authenticate, async (req, res) => {
           accepts_marketing: c.accepts_marketing,
           shopify_created_at: c.shopify_created_at,
           db_order_count:   stats.order_count || 0,
+          order_count:      stats.order_count || 0,   // alias used by frontend
           paid_orders:      stats.paid_count  || 0,
+          avg_order_value:  stats.order_count > 0 ? ((c.total_spent || 0) / stats.order_count) : 0,
           first_order_at:   stats.first_order_at || null,
           last_order_at:    stats.last_order_at  || null,
-          orders:           stats.orders || []
+          orders:           stats.orders || [],
+          key:              c.id                      // stable key for expand toggle
         };
       });
 

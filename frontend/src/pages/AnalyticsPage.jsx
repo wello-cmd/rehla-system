@@ -125,8 +125,8 @@ export default function AnalyticsPage() {
 
                 {/* KPI cards */}
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(190px,1fr))', gap:12 }}>
-                  <KpiCard label="Total Revenue"    value={formatEGP(salesData.totalRevenue)}   sub={period.label} />
-                  <KpiCard label="Paid Orders"      value={formatNumber(salesData.totalOrders)} />
+                  <KpiCard label="Total Revenue"    value={formatEGP(salesData.totalRevenue)}   sub={`${salesData.totalOrders} orders (incl. COD)`} />
+                  <KpiCard label="Paid / Collected" value={formatEGP(salesData.paidRevenue || 0)} sub={`${salesData.paidOrders || 0} paid orders`} />
                   <KpiCard label="Avg Order Value"  value={formatEGP(salesData.avgOrderValue)}  />
                   {finTotal.revenue > 0 && (
                     <KpiCard

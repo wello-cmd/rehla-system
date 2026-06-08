@@ -62,9 +62,9 @@ export default function CustomersPage() {
       : customers;
 
     return [...list].sort((a, b) => {
-      if (sortBy === 'order_count')    return b.order_count - a.order_count;
-      if (sortBy === 'last_order_at')  return b.last_order_at.localeCompare(a.last_order_at);
-      return b.total_spent - a.total_spent;
+      if (sortBy === 'order_count')   return (b.order_count || 0) - (a.order_count || 0);
+      if (sortBy === 'last_order_at') return (b.last_order_at || '').localeCompare(a.last_order_at || '');
+      return (b.total_spent || 0) - (a.total_spent || 0);
     });
   }, [customers, search, sortBy]);
 
