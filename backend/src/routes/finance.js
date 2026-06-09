@@ -17,25 +17,26 @@ router.get('/revenue', authenticate, async (req, res) => {
     const { start, end } = req.query;
 
     // Fetch paid orders
-    let queryPaid = supabase.from('orders').select('id, total, created_at').eq('payment_status', 'paid');
+    let queryPaid = supabase.from('orders').select('id, total, subtotal, created_at').eq('payment_status', 'paid');
     queryPaid = applyDateFilter(queryPaid, start, end);
     const paidOrders = await fetchAll(queryPaid);
 
     // Fetch refunded orders
-    let queryRefunded = supabase.from('orders').select('total, created_at').eq('payment_status', 'refunded');
+    let queryRefunded = supabase.from('orders').select('total, subtotal, created_at').eq('payment_status', 'refunded');
     queryRefunded = applyDateFilter(queryRefunded, start, end);
     const refundedOrders = await fetchAll(queryRefunded);
 
-    const totalRevenue = paidOrders.reduce((sum, o) => sum + Number(o.total), 0);
+    const rev = o => Number(o.subtotal || o.total); // subtotal excludes shipping, matches Shopify Net Sales
+    const totalRevenue = paidOrders.reduce((sum, o) => sum + rev(o), 0);
     const orderCount = paidOrders.length;
     const avgOrderValue = orderCount > 0 ? totalRevenue / orderCount : 0;
-    const totalRefunded = refundedOrders.reduce((sum, o) => sum + Number(o.total), 0);
+    const totalRefunded = refundedOrders.reduce((sum, o) => sum + rev(o), 0);
 
     // Line chart data (Group by day)
     const revenueByDay = {};
     for (const o of paidOrders) {
       const day = o.created_at.split('T')[0];
-      revenueByDay[day] = (revenueByDay[day] || 0) + Number(o.total);
+      revenueByDay[day] = (revenueByDay[day] || 0) + rev(o);
     }
     const chartData = Object.keys(revenueByDay).sort().map(date => ({
       date,
@@ -188,10 +189,10 @@ router.get('/pnl', authenticate, async (req, res) => {
   try {
     const { start, end } = req.query;
 
-    let ordersQuery = supabase.from('orders').select('id, total, created_at').eq('payment_status', 'paid');
+    let ordersQuery = supabase.from('orders').select('id, total, subtotal, created_at').eq('payment_status', 'paid');
     ordersQuery = applyDateFilter(ordersQuery, start, end);
     const orders = await fetchAll(ordersQuery);
-    const revenue = orders.reduce((s, o) => s + Number(o.total), 0);
+    const revenue = orders.reduce((s, o) => s + Number(o.subtotal || o.total), 0);
 
     const orderIds = orders.map(o => o.id);
     let cogs = 0;
@@ -217,7 +218,7 @@ router.get('/pnl', authenticate, async (req, res) => {
 
     // Monthly Trend Data for Chart
     const [allOrders, allExpenses, allItems] = await Promise.all([
-      fetchAll(supabase.from('orders').select('id, total, created_at').eq('payment_status', 'paid')),
+      fetchAll(supabase.from('orders').select('id, total, subtotal, created_at').eq('payment_status', 'paid')),
       fetchAll(supabase.from('expenses').select('amount, date').eq('status', 'approved')),
       fetchAll(supabase.from('order_items').select('quantity, cost_per_unit, order_id')),
     ]);
@@ -227,7 +228,7 @@ router.get('/pnl', authenticate, async (req, res) => {
       const month = o.created_at?.substring(0, 7);
       if (!month) continue;
       if (!monthlyData[month]) monthlyData[month] = { revenue: 0, cogs: 0, expenses: 0 };
-      monthlyData[month].revenue += Number(o.total);
+      monthlyData[month].revenue += Number(o.subtotal || o.total);
     }
 
     const orderMonthMap = {};
@@ -314,7 +315,7 @@ router.get('/cashflow', authenticate, async (req, res) => {
       const month = o.created_at?.substring(0, 7);
       if (!month) continue;
       if (!monthlyData[month]) monthlyData[month] = { moneyIn: 0, moneyOut: 0 };
-      monthlyData[month].moneyIn += Number(o.total);
+      monthlyData[month].moneyIn += Number(o.subtotal || o.total);
     }
     for (const e of expenses) {
       const month = e.date?.substring(0, 7);

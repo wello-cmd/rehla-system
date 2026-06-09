@@ -13,14 +13,14 @@ router.get('/comparison', authenticate, async (_req, res) => {
 
     // Fetch all data in parallel — use fetchAll to bypass PostgREST 1000-row cap
     const [shopifyOrders, bostaDeliveries, ownDeliveries] = await Promise.all([
-      fetchAll(supabase.from('orders').select('id, total, status, payment_status, created_at').eq('source', 'shopify')),
+      fetchAll(supabase.from('orders').select('id, total, subtotal, status, payment_status, created_at').eq('source', 'shopify')),
       fetchAll(supabase.from('delivery_orders').select('id, order_id, status, cod_amount, cod_collected, failed_reason, assigned_at, delivered_at, created_at').eq('delivery_type', 'bosta')),
       fetchAll(supabase.from('delivery_orders').select('id, order_id, status, cod_amount, cod_collected, created_at').eq('delivery_type', 'own_driver')),
     ]);
 
     // --- Shopify summary ---
     const shopifyPaid = shopifyOrders.filter(o => o.payment_status === 'paid');
-    const shopifyRevenue = shopifyPaid.reduce((s, o) => s + Number(o.total), 0);
+    const shopifyRevenue = shopifyPaid.reduce((s, o) => s + Number(o.subtotal || o.total), 0);
     const shopifyDelivered = shopifyOrders.filter(o => o.status === 'delivered').length;
     const shopify = {
       total_orders: shopifyOrders.length,

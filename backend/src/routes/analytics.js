@@ -76,21 +76,25 @@ router.get('/sales', authenticate, async (req, res) => {
 
     // Fetch ALL orders (including returned) to compute both GMV and net revenue
     // Dates are Cairo-local from frontend — shift to UTC so our stored timestamps align with Shopify
-    let ordersQ = supabase.from('orders').select('id, total, total_refunded, created_at, status, payment_status').neq('status', 'cancelled');
+    let ordersQ = supabase.from('orders').select('id, total, subtotal, total_refunded, created_at, status, payment_status').neq('status', 'cancelled');
     if (start) ordersQ = ordersQ.gte('created_at', cairoStartUTC(start));
     if (end)   ordersQ = ordersQ.lte('created_at', cairoEndUTC(end));
     const orders = await fetchAll(ordersQ);
 
     const activeOrders   = (orders || []).filter(o => o.status !== 'returned');
     const returnedOrders = (orders || []).filter(o => o.status === 'returned');
-    const netTotal = o => Number(o.total) - Number(o.total_refunded || 0);
+
+    // Use subtotal (items after discounts, no shipping) to match Shopify's "Net Sales" metric.
+    // total includes shipping (EGP 100/order) which inflates revenue vs Shopify dashboard.
+    const netSales  = o => Number(o.subtotal  || o.total) - Number(o.total_refunded || 0);
 
     const totalOrders   = activeOrders.length;
-    const grossRevenue  = activeOrders.reduce((s, o) => s + netTotal(o), 0);
+    const grossRevenue  = activeOrders.reduce((s, o) => s + netSales(o), 0);
+    const shippingTotal = activeOrders.reduce((s, o) => s + (Number(o.total) - Number(o.subtotal || o.total)), 0);
     const returnedCount = returnedOrders.length;
-    const returnedRevenue = returnedOrders.reduce((s, o) => s + netTotal(o), 0);
+    const returnedRevenue = returnedOrders.reduce((s, o) => s + netSales(o), 0);
     const paidOrders    = activeOrders.filter(o => o.payment_status === 'paid').length;
-    const paidRevenue   = activeOrders.filter(o => o.payment_status === 'paid').reduce((s, o) => s + netTotal(o), 0);
+    const paidRevenue   = activeOrders.filter(o => o.payment_status === 'paid').reduce((s, o) => s + netSales(o), 0);
 
     // Fetch Shopify refunds processed in this period (keyed by processed_at, not order date)
     // This matches Shopify's "Returns" metric which attributes refunds to when they were processed
@@ -101,7 +105,7 @@ router.get('/sales', authenticate, async (req, res) => {
     const refundsTotal = refundRows.reduce((s, r) => s + Number(r.amount), 0);
     const refundsCount = refundRows.length;
 
-    // Net revenue = GMV of active orders − refunds processed in the period
+    // Net revenue = subtotal of active orders − refunds processed in this period (matches Shopify Net Sales)
     const totalRevenue  = grossRevenue - refundsTotal;
     const avgOrderValue = totalOrders > 0 ? grossRevenue / totalOrders : 0;
 
@@ -173,7 +177,7 @@ router.get('/sales', authenticate, async (req, res) => {
       hourly[h].orders++;
     }
 
-    res.json({ totalOrders, grossRevenue, totalRevenue, avgOrderValue, paidOrders, paidRevenue, returnedCount, returnedRevenue, refundsTotal, refundsCount, heatmap, trend, categoryRevenue, hourly });
+    res.json({ totalOrders, grossRevenue, totalRevenue, shippingTotal, avgOrderValue, paidOrders, paidRevenue, returnedCount, returnedRevenue, refundsTotal, refundsCount, heatmap, trend, categoryRevenue, hourly });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
