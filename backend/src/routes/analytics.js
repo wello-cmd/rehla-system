@@ -81,17 +81,29 @@ router.get('/sales', authenticate, async (req, res) => {
     if (end)   ordersQ = ordersQ.lte('created_at', cairoEndUTC(end));
     const orders = await fetchAll(ordersQ);
 
-    const activeOrders  = (orders || []).filter(o => o.status !== 'returned');
+    const activeOrders   = (orders || []).filter(o => o.status !== 'returned');
     const returnedOrders = (orders || []).filter(o => o.status === 'returned');
     const netTotal = o => Number(o.total) - Number(o.total_refunded || 0);
 
     const totalOrders   = activeOrders.length;
-    const totalRevenue  = activeOrders.reduce((s, o) => s + netTotal(o), 0);
+    const grossRevenue  = activeOrders.reduce((s, o) => s + netTotal(o), 0);
     const returnedCount = returnedOrders.length;
     const returnedRevenue = returnedOrders.reduce((s, o) => s + netTotal(o), 0);
     const paidOrders    = activeOrders.filter(o => o.payment_status === 'paid').length;
     const paidRevenue   = activeOrders.filter(o => o.payment_status === 'paid').reduce((s, o) => s + netTotal(o), 0);
-    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    // Fetch Shopify refunds processed in this period (keyed by processed_at, not order date)
+    // This matches Shopify's "Returns" metric which attributes refunds to when they were processed
+    let refundsQ = supabase.from('shopify_refunds').select('amount, processed_at');
+    if (start) refundsQ = refundsQ.gte('processed_at', cairoStartUTC(start));
+    if (end)   refundsQ = refundsQ.lte('processed_at', cairoEndUTC(end));
+    const refundRows   = await fetchAll(refundsQ);
+    const refundsTotal = refundRows.reduce((s, r) => s + Number(r.amount), 0);
+    const refundsCount = refundRows.length;
+
+    // Net revenue = GMV of active orders − refunds processed in the period
+    const totalRevenue  = grossRevenue - refundsTotal;
+    const avgOrderValue = totalOrders > 0 ? grossRevenue / totalOrders : 0;
 
     // Day-of-week heatmap
     const dayMap = { 0:'Sun', 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat' };
@@ -161,7 +173,7 @@ router.get('/sales', authenticate, async (req, res) => {
       hourly[h].orders++;
     }
 
-    res.json({ totalOrders, totalRevenue, avgOrderValue, paidOrders, paidRevenue, returnedCount, returnedRevenue, heatmap, trend, categoryRevenue, hourly });
+    res.json({ totalOrders, grossRevenue, totalRevenue, avgOrderValue, paidOrders, paidRevenue, returnedCount, returnedRevenue, refundsTotal, refundsCount, heatmap, trend, categoryRevenue, hourly });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

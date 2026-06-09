@@ -573,6 +573,82 @@ class ShopifySync {
       .upsert(buildCustomerPayload(payload), { onConflict: 'shopify_customer_id' });
     if (error) throw error;
   }
+
+  /**
+   * Sync all Shopify refunds into `shopify_refunds` table.
+   * Refunds are keyed by processed_at so analytics can bucket them correctly
+   * (a May order refunded in June appears as a June return — matching Shopify analytics).
+   * Supports incremental sync via processedAtMin.
+   */
+  async syncRefunds(triggeredBy = 'auto', options = {}) {
+    if (!this.isConfigured()) return { synced: 0 };
+
+    const statuses = ['refunded', 'partially_refunded', 'voided'];
+    let totalSynced = 0;
+
+    for (const status of statuses) {
+      let pageInfo = null;
+      do {
+        // Shopify cursor pagination: page_info can only be combined with limit
+        const endpoint = pageInfo
+          ? `/orders.json?limit=250&page_info=${pageInfo}`
+          : `/orders.json?status=any&financial_status=${status}&limit=250&fields=id,name,refunds${options.processedAtMin ? `&updated_at_min=${options.processedAtMin}` : ''}`;
+        const { data, headers } = await this.shopifyRequest(endpoint);
+        const orders = data.orders || [];
+        pageInfo = this.extractPageInfo(headers.link);
+
+        for (const order of orders) {
+          if (!order.refunds?.length) continue;
+
+          const rows = order.refunds.map(refund => {
+            // Amount = sum of refund transactions (money actually returned to customer)
+            // For COD returns where no money was collected, fall back to line item subtotals
+            const txAmount = (refund.transactions || [])
+              .filter(t => t.kind === 'refund' && t.status === 'success')
+              .reduce((s, t) => s + parseFloat(t.amount || '0'), 0);
+
+            const lineAmount = (refund.refund_line_items || [])
+              .reduce((s, li) => s + parseFloat(li.subtotal || '0'), 0);
+
+            const amount = txAmount > 0 ? txAmount : lineAmount;
+            if (amount <= 0) return null;
+
+            return {
+              shopify_refund_id: String(refund.id),
+              shopify_order_id:  String(order.id),
+              order_name:        order.name,
+              processed_at:      refund.processed_at || refund.created_at,
+              amount,
+              reason:            refund.refund_line_items?.[0]?.restock_type || null,
+              note:              refund.note || null,
+              synced_at:         new Date().toISOString()
+            };
+          }).filter(Boolean);
+
+          if (!rows.length) continue;
+
+          // Link to our internal order_id
+          const shopifyOrderId = String(order.id);
+          const { data: matched } = await supabase
+            .from('orders').select('id').eq('shopify_order_id', shopifyOrderId).single();
+
+          const rowsWithId = rows.map(r => ({ ...r, order_id: matched?.id || null }));
+
+          const { error } = await supabase
+            .from('shopify_refunds')
+            .upsert(rowsWithId, { onConflict: 'shopify_refund_id' });
+
+          if (error) console.error('[syncRefunds] upsert error:', error.message);
+          else totalSynced += rowsWithId.length;
+        }
+
+        if (!orders.length) break;
+      } while (pageInfo);
+    }
+
+    console.log(`[syncRefunds] ${triggeredBy}: synced ${totalSynced} refund records`);
+    return { synced: totalSynced };
+  }
 }
 
 function buildCustomerPayload(c) {

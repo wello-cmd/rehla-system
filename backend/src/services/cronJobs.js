@@ -50,6 +50,22 @@ function startCronJobs() {
     }
   });
 
+  // Refunds: every 6 hours — incremental by updated_at
+  let lastRefundSyncAt = null;
+  cron.schedule('0 */6 * * *', async () => {
+    const since = lastRefundSyncAt
+      ? new Date(lastRefundSyncAt - 5 * 60_000).toISOString()
+      : new Date(Date.now() - 7 * 24 * 60 * 60_000).toISOString();  // 7-day window on first run
+    const syncedAt = new Date();
+    try {
+      const result = await shopifySync.syncRefunds('cron', { processedAtMin: since });
+      lastRefundSyncAt = syncedAt;
+      if (result.synced > 0) console.log(`[Cron] Refunds synced: ${result.synced}`);
+    } catch (err) {
+      console.error('[Cron] Refund sync failed:', err.message);
+    }
+  });
+
   // Overdue invoices: daily at midnight Cairo time
   cron.schedule('0 0 * * *', async () => {
     try {
@@ -69,6 +85,7 @@ function startCronJobs() {
   console.log('  → Order sync:    every 5 minutes (incremental)');
   console.log('  → Product sync:  every 30 minutes');
   console.log('  → Customer sync: every 15 minutes (incremental)');
+  console.log('  → Refund sync:   every 6 hours (incremental)');
   console.log('  → Overdue check: daily at midnight (Cairo)');
 }
 

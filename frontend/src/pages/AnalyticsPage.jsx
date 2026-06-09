@@ -125,16 +125,26 @@ export default function AnalyticsPage() {
 
                 {/* KPI cards */}
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(190px,1fr))', gap:12 }}>
-                  <KpiCard label="Total Revenue"    value={formatEGP(salesData.totalRevenue)}   sub={`${salesData.totalOrders} orders (incl. COD)`} />
-                  <KpiCard label="Paid / Collected" value={formatEGP(salesData.paidRevenue || 0)} sub={`${salesData.paidOrders || 0} paid orders`} />
-                  {(salesData.returnedCount > 0) && (
+                  <KpiCard
+                    label="GMV"
+                    value={formatEGP(salesData.grossRevenue || salesData.totalRevenue)}
+                    sub={`${salesData.totalOrders} orders (before returns)`}
+                  />
+                  {(salesData.refundsTotal > 0) && (
                     <KpiCard
-                      label="Returns (RTO)"
-                      value={`−${formatEGP(salesData.returnedRevenue || 0)}`}
-                      sub={`${salesData.returnedCount} returned orders`}
+                      label="Returns"
+                      value={`−${formatEGP(salesData.refundsTotal)}`}
+                      sub={`${salesData.refundsCount} refund events`}
                       color="var(--color-error)"
                     />
                   )}
+                  <KpiCard
+                    label="Net Revenue"
+                    value={formatEGP(salesData.totalRevenue)}
+                    sub="matches Shopify Total sales"
+                    color="var(--color-success)"
+                  />
+                  <KpiCard label="Paid / Collected" value={formatEGP(salesData.paidRevenue || 0)} sub={`${salesData.paidOrders || 0} paid orders`} />
                   <KpiCard label="Avg Order Value"  value={formatEGP(salesData.avgOrderValue)}  />
                   {finTotal.revenue > 0 && (
                     <KpiCard
