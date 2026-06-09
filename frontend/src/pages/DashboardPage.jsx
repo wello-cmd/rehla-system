@@ -109,8 +109,12 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Auto-load on mount with current month
-  useEffect(() => { fetchDashboard(period); }, []);
+  // Auto-load on mount + refresh every 5 minutes
+  useEffect(() => {
+    fetchDashboard(period);
+    const interval = setInterval(() => fetchDashboard(period), 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   function handlePeriod(p) {
     setPeriod(p);
