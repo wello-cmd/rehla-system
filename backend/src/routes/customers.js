@@ -1,8 +1,13 @@
 // Customers Routes — customers table linked to orders for enriched profiles
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const { parse } = require('csv-parse/sync');
 const { supabase, fetchAll } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
+const authorize = require('../middleware/authorize');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // GET /api/customers
 router.get('/', authenticate, async (req, res) => {
@@ -152,6 +157,70 @@ router.get('/:id', authenticate, async (req, res) => {
     res.json({ ...customer, name, phone, email, orders });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/customers/import-csv — Import customer names/phones/emails from Shopify CSV export
+router.post('/import-csv', authenticate, authorize('admin', 'ceo'), upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
+
+  try {
+    const records = parse(req.file.buffer.toString('utf8'), {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+    });
+
+    let updated = 0;
+    let skipped = 0;
+
+    for (const row of records) {
+      // Shopify CSV columns (case-insensitive normalisation)
+      const normalised = {};
+      for (const [k, v] of Object.entries(row)) {
+        normalised[k.toLowerCase().replace(/\s+/g, '_')] = v;
+      }
+
+      // Shopify exports "Id" as the customer ID
+      const shopifyId  = String(normalised['id'] || normalised['customer_id'] || '').trim();
+      const email      = normalised['email']      || normalised['email_address'] || '';
+      const firstName  = normalised['first_name'] || '';
+      const lastName   = normalised['last_name']  || '';
+      const phone      = normalised['phone']       || normalised['phone_number'] || '';
+      const address1   = normalised['address1']    || normalised['address_1'] || '';
+      const city       = normalised['city']        || '';
+      const province   = normalised['province']    || '';
+      const country    = normalised['country']     || '';
+
+      if (!shopifyId) { skipped++; continue; }
+
+      const updates = {};
+      if (firstName)  updates.first_name = firstName;
+      if (lastName)   updates.last_name  = lastName;
+      if (email)      updates.email      = email;
+      if (phone)      updates.phone      = phone;
+      if (address1)   updates.address    = address1;
+      if (city)       updates.city       = city;
+      if (province)   updates.province   = province;
+      if (country)    updates.country    = country;
+
+      if (Object.keys(updates).length === 0) { skipped++; continue; }
+
+      updates.last_synced_at = new Date().toISOString();
+
+      const { error } = await supabase
+        .from('customers')
+        .update(updates)
+        .eq('shopify_customer_id', shopifyId);
+
+      if (!error) updated++;
+      else skipped++;
+    }
+
+    res.json({ success: true, updated, skipped, total: records.length });
+  } catch (err) {
+    console.error('[CSV Import]', err.message);
+    res.status(500).json({ error: 'Failed to parse CSV: ' + err.message });
   }
 });
 

@@ -18,6 +18,7 @@ export default function CustomersPage() {
   const [anonymousRevenue, setAnonRev]    = useState(0);
   const [loading, setLoading]             = useState(true);
   const [syncing, setSyncing]             = useState(false);
+  const [importing, setImporting]         = useState(false);
   const [search, setSearch]               = useState('');
   const [expanded, setExpanded]           = useState(null);
   const [sortBy, setSortBy]               = useState('total_spent');
@@ -37,6 +38,32 @@ export default function CustomersPage() {
   }
 
   useEffect(() => { load(); }, []);
+
+  async function handleCsvImport(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    const t = toast.loading('Importing customer data from CSV...');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const token = localStorage.getItem('rehla_token');
+      const res = await fetch('/api/customers/import-csv', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Import failed');
+      toast.success(`Imported ${data.updated} customers (${data.skipped} skipped)`, { id: t });
+      load();
+    } catch (err) {
+      toast.error(err.message || 'Import failed', { id: t });
+    } finally {
+      setImporting(false);
+      e.target.value = '';
+    }
+  }
 
   async function triggerSync() {
     setSyncing(true);
@@ -130,6 +157,19 @@ export default function CustomersPage() {
 
       {/* Search + Sort */}
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
+        <label
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, cursor: importing ? 'not-allowed' : 'pointer',
+            padding: '6px 12px', borderRadius: 4, border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-elevated)', fontSize: 12, color: 'var(--color-text-muted)',
+            opacity: importing ? 0.6 : 1,
+          }}
+          title="Export customers from Shopify Admin → Customers → Export, then upload the CSV here"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>upload_file</span>
+          {importing ? 'Importing…' : 'Import Shopify CSV'}
+          <input type="file" accept=".csv" style={{ display: 'none' }} onChange={handleCsvImport} disabled={importing} />
+        </label>
         <input
           className="input"
           placeholder="Search by name, phone, or email..."

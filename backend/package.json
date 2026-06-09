@@ -16,10 +16,12 @@
     "bcryptjs": "^2.4.3",
     "bwip-js": "^4.5.0",
     "cors": "^2.8.5",
+    "csv-parse": "^6.2.1",
     "csv-stringify": "^6.5.0",
     "dotenv": "^16.4.0",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.1.1",
     "node-cron": "^3.0.3",
     "pdfkit": "^0.15.0",
     "uuid": "^10.0.0"
