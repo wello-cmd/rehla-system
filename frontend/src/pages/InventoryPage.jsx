@@ -302,13 +302,23 @@ export default function InventoryPage() {
     }
   }
 
+  const [sortBy, setSortBy] = useState('stock_asc');
+
   const filtered = useMemo(() => {
-    return products.filter(p =>
+    const list = products.filter(p =>
       p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [products, searchTerm]);
+    return [...list].sort((a, b) => {
+      if (sortBy === 'stock_asc')   return a.stock_quantity - b.stock_quantity;
+      if (sortBy === 'stock_desc')  return b.stock_quantity - a.stock_quantity;
+      if (sortBy === 'price_asc')   return a.price - b.price;
+      if (sortBy === 'price_desc')  return b.price - a.price;
+      if (sortBy === 'name')        return a.name.localeCompare(b.name);
+      return 0;
+    });
+  }, [products, searchTerm, sortBy]);
 
   const lowStockCount = useMemo(() => {
     return products.filter(p => p.stock_quantity < 10).length;
@@ -353,6 +363,29 @@ export default function InventoryPage() {
           value={searchTerm}
           onChange={handleSearchChange}
         />
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[
+            { id: 'stock_asc',  label: 'Stock ↑' },
+            { id: 'stock_desc', label: 'Stock ↓' },
+            { id: 'price_asc',  label: 'Price ↑' },
+            { id: 'price_desc', label: 'Price ↓' },
+            { id: 'name',       label: 'Name'    },
+          ].map(s => (
+            <button
+              key={s.id}
+              onClick={() => setSortBy(s.id)}
+              className="btn btn-sm"
+              style={{
+                background:  sortBy === s.id ? 'var(--color-bg-active)' : 'transparent',
+                borderColor: sortBy === s.id ? 'var(--color-border)'    : 'transparent',
+                color:       sortBy === s.id ? 'var(--color-text)'      : 'var(--color-text-muted)',
+                fontSize: 11,
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <input type="date" className="input" value={startDate} onChange={e => setStartDate(e.target.value)} title="Start Date" />
           <span style={{ color: 'var(--color-text-dim)' }}>—</span>
