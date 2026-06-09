@@ -23,11 +23,16 @@ router.post('/login', rateLimit(20, 15 * 60 * 1000), async (req, res) => {
     }
 
     // Fetch user profile
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('id', data.user.id)
-      .single();
+      .maybeSingle();
+
+    if (profileError) throw profileError;
+    if (!profile) {
+      return res.status(403).json({ error: 'User profile not found. Contact your administrator.' });
+    }
 
     res.json({
       token: data.session.access_token,
@@ -50,6 +55,24 @@ router.post('/login', rateLimit(20, 15 * 60 * 1000), async (req, res) => {
 // GET /api/auth/me — Get current user profile
 router.get('/me', authenticate, (req, res) => {
   res.json({ user: req.user });
+});
+
+// POST /api/auth/refresh — Exchange refresh token for a new access token
+router.post('/refresh', async (req, res) => {
+  const { refresh_token } = req.body;
+  if (!refresh_token) return res.status(400).json({ error: 'refresh_token required.' });
+
+  try {
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+    if (error || !data.session) return res.status(401).json({ error: 'Invalid or expired refresh token.' });
+
+    res.json({
+      token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error.' });
+  }
 });
 
 // POST /api/auth/register — Admin creates new user (NFR-SC-06)
