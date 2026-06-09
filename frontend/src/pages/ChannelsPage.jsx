@@ -11,8 +11,6 @@ import {
 
 const TT = { background:'#1e1e1e', border:'1px solid #333030', color:'#ede9e8', fontSize:12, borderRadius:6 };
 
-const TT = { background:'#1e1e1e', border:'1px solid #333030', color:'#ede9e8', fontSize:12, borderRadius:6 };
-
 export default function ChannelsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
