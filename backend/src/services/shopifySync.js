@@ -6,8 +6,9 @@ const axios = require('axios');
 const { supabase } = require('../db/supabase');
 
 
-const SHOPIFY_STORE = process.env.SHOPIFY_STORE_URL;
-const SHOPIFY_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
+const SHOPIFY_STORE = process.env.SHOPIFY_STORE_URL?.trim();
+const SHOPIFY_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN?.trim();
+console.log(`[Shopify] store=${SHOPIFY_STORE} token_len=${SHOPIFY_TOKEN?.length} token_prefix=${SHOPIFY_TOKEN?.slice(0,10)}`);
 const RATE_LIMIT_DELAY = 500; // 2 requests per second max (FR-SH-08)
 
 class ShopifySync {
