@@ -559,7 +559,7 @@ class ShopifySync {
         hasNext = !!pageInfo;
       }
 
-      await supabase.from('sync_log').insert({ triggered_by: triggeredBy, status: 'success', error_details: `customers:${synced}` });
+      await supabase.from('sync_log').insert({ triggered_by: triggeredBy, status: 'success', customers_synced: synced, error_details: '' });
       return { success: true, synced };
     } catch (err) {
       console.error('[Shopify] Customer sync failed:', err.message);

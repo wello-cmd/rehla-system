@@ -325,13 +325,14 @@ export default function ShopifyPage() {
                     <th>Products Created</th>
                     <th>Products Skipped</th>
                     <th>Orders Synced</th>
+                    <th>Customers Synced</th>
                     <th>Duration</th>
                     <th>Error</th>
                   </tr>
                 </thead>
                 <tbody>
                   {syncLog.length === 0 ? (
-                    <tr><td colSpan="9" style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-dim)' }}>No sync history.</td></tr>
+                    <tr><td colSpan="10" style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-dim)' }}>No sync history.</td></tr>
                   ) : syncLog.map(log => (
                     <tr key={log.id}>
                       <td style={{ fontSize: 12 }} title={formatDateTime(log.synced_at)}>{timeAgo(log.synced_at)}</td>
@@ -341,6 +342,7 @@ export default function ShopifyPage() {
                       <td className="font-mono">{log.products_created ?? '—'}</td>
                       <td className="font-mono">{log.products_skipped ?? '—'}</td>
                       <td className="font-mono">{log.orders_synced ?? '—'}</td>
+                      <td className="font-mono">{log.customers_synced ?? '—'}</td>
                       <td className="font-mono" style={{ fontSize: 12 }}>{log.duration_ms ? `${(log.duration_ms / 1000).toFixed(1)}s` : '—'}</td>
                       <td style={{ fontSize: 11, color: 'var(--color-error)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {log.error_details || '—'}
