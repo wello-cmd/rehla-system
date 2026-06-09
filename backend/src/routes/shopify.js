@@ -102,12 +102,14 @@ router.get('/analytics', authenticate, async (req, res) => {
 router.post('/sync', authenticate, authorize('admin', 'ceo'), async (req, res) => {
   try {
     const result = await shopifySync.syncProducts('manual');
-    if (result.success) {
-      const orderResult = await shopifySync.syncOrders('manual');
-      res.json({ ...result, orders: orderResult });
-    } else {
-      res.json(result);
-    }
+    if (!result.success) return res.json(result);
+
+    const [orderResult, customerResult] = await Promise.all([
+      shopifySync.syncOrders('manual'),
+      shopifySync.syncCustomers('manual'),
+    ]);
+
+    res.json({ ...result, orders: orderResult, customers: customerResult });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

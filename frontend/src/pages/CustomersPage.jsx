@@ -192,11 +192,18 @@ export default function CustomersPage() {
                 {/* Name */}
                 <div>
                   <p style={{ fontWeight: 600, fontSize: 14 }}>{c.name || '(No name)'}</p>
-                  {c.order_count > 1 && (
-                    <span style={{ fontSize: 10, color: 'var(--color-success)', fontWeight: 500 }}>
-                      Repeat customer
-                    </span>
-                  )}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 2 }}>
+                    {c.order_count > 1 && (
+                      <span style={{ fontSize: 10, color: 'var(--color-success)', fontWeight: 500 }}>
+                        Repeat customer
+                      </span>
+                    )}
+                    {(c.city || c.province) && (
+                      <span style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>
+                        {[c.city, c.province].filter(Boolean).join(', ')}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Phone */}
@@ -298,6 +305,14 @@ export default function CustomersPage() {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Address */}
+                  {(c.address || c.city) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, fontSize: 12, color: 'var(--color-text-dim)' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>location_on</span>
+                      {[c.address, c.city, c.province, c.country].filter(Boolean).join(', ')}
+                    </div>
+                  )}
 
                   {/* Contact quick-actions */}
                   <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
