@@ -394,7 +394,7 @@ export default function InvoicesPage() {
       {show3PLModal && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '400px' }}>
-            <p className="text-title" style={{ marginBottom: '16px' }}>Generate 3PL Invoices</p>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Generate 3PL Invoices</p>
             <p className="text-body" style={{ color: 'var(--color-text-dim)', marginBottom: '24px' }}>
               This will automatically calculate monthly rent and sales commissions for all 3PL clients for the selected period, generating draft invoices.
             </p>

@@ -9,6 +9,10 @@ import {
 } from 'recharts';
 
 
+const TT = { background:'#1e1e1e', border:'1px solid #333030', color:'#ede9e8', fontSize:12, borderRadius:6 };
+
+const TT = { background:'#1e1e1e', border:'1px solid #333030', color:'#ede9e8', fontSize:12, borderRadius:6 };
+
 export default function ChannelsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +67,7 @@ export default function ChannelsPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 16, alignItems: 'start' }}>
           <ChannelCard
             label="Shopify"
-            color="#22c55e"
+            color="#3fb950"
             icon="shopping_bag"
             metrics={[
               ['Total Orders', sh.total_orders ?? 0],
@@ -85,7 +89,7 @@ export default function ChannelsPage() {
 
           <ChannelCard
             label="Bosta"
-            color="#8b5cf6"
+            color="#a371f7"
             icon="deployed_code"
             metrics={[
               ['Total Shipments', bo.total_shipments ?? 0],
@@ -101,15 +105,15 @@ export default function ChannelsPage() {
         {/* ── Key Metrics Table ── */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--color-border-light)' }}>
-            <p className="text-title">Key Metrics Side-by-Side</p>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Key Metrics Side-by-Side</p>
           </div>
           <div className="table-container">
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Metric</th>
-                  <th style={{ color: '#22c55e' }}>Shopify</th>
-                  <th style={{ color: '#8b5cf6' }}>Bosta</th>
+                  <th style={{ color: '#3fb950' }}>Shopify</th>
+                  <th style={{ color: '#a371f7' }}>Bosta</th>
                   <th>Insight</th>
                 </tr>
               </thead>
@@ -165,7 +169,7 @@ export default function ChannelsPage() {
 
         {/* ── Daily Volume Timeline ── */}
         <div className="card">
-          <p className="text-title" style={{ marginBottom: 16 }}>Daily Volume — Last 30 Days</p>
+          <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Daily Volume — Last 30 Days</p>
           <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 16 }}>
             Shopify orders placed vs Bosta shipments created per day — shows lag between order placement and fulfilment dispatch.
           </p>
@@ -175,10 +179,10 @@ export default function ChannelsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
                 <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                <Tooltip labelFormatter={l => `Date: ${l}`} />
+                <Tooltip contentStyle={TT} labelFormatter={l => `Date: ${l}`} />
                 <Legend />
-                <Bar dataKey="shopify" name="Shopify Orders" fill="#22c55e" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="bosta" name="Bosta Shipments" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="shopify" name="Shopify Orders" fill="#3fb950" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="bosta" name="Bosta Shipments" fill="#a371f7" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -187,7 +191,7 @@ export default function ChannelsPage() {
         {/* ── Fulfillment Mix + Outcome ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
           <div className="card">
-            <p className="text-title" style={{ marginBottom: 6 }}>Fulfillment Channel Mix</p>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Fulfillment Channel Mix</p>
             <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 16 }}>
               How Shopify orders are distributed across delivery channels.
             </p>
@@ -207,10 +211,10 @@ export default function ChannelsPage() {
                         labelLine={false}
                       >
                         {fulfillmentMixData.map((entry) => (
-                          <Cell key={entry.channel} fill={entry.color || '#6b6365'} />
+                          <Cell key={entry.channel} fill={entry.color || '#6366f1'} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(v, name) => [`${v} orders`, name]} />
+                      <Tooltip contentStyle={TT} formatter={(v, name) => [`${v} orders`, name]} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -218,7 +222,7 @@ export default function ChannelsPage() {
                   {fulfillmentMixData.map(d => (
                     <div key={d.channel} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: d.color || '#6b6365' }} />
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: d.color || '#6366f1' }} />
                         <span>{d.channel}</span>
                       </div>
                       <span className="font-mono" style={{ fontWeight: 700 }}>
@@ -235,7 +239,7 @@ export default function ChannelsPage() {
           </div>
 
           <div className="card">
-            <p className="text-title" style={{ marginBottom: 6 }}>Delivery Outcome by Channel</p>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Delivery Outcome by Channel</p>
             <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 16 }}>
               Delivered vs failed for Shopify orders, split by fulfilment method.
             </p>
@@ -249,11 +253,11 @@ export default function ChannelsPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
                       <XAxis dataKey="channel" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                      <Tooltip />
+                      <Tooltip contentStyle={TT} />
                       <Legend />
-                      <Bar dataKey="delivered" name="Delivered" fill="#22c55e" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="in_transit" name="In Transit" fill="#f59e0b" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="failed" name="Failed" fill="#ef4444" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="delivered" name="Delivered" fill="#3fb950" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="in_transit" name="In Transit" fill="#f0883e" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="failed" name="Failed" fill="#f85149" radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -280,7 +284,7 @@ export default function ChannelsPage() {
 
         {/* ── Financial Bridge ── */}
         <div className="card">
-          <p className="text-title" style={{ marginBottom: 6 }}>Financial Bridge</p>
+          <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Financial Bridge</p>
           <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 16 }}>
             Shopify revenue (paid) vs what was collected and what remains outstanding through Bosta COD.
           </p>
@@ -290,7 +294,7 @@ export default function ChannelsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
                 <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
                 <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} width={170} />
-                <Tooltip formatter={v => formatEGP(v)} />
+                <Tooltip contentStyle={TT} formatter={v => [formatEGP(v), "Revenue"]} />
                 <Bar dataKey="value" radius={[0, 2, 2, 0]}>
                   {(data?.financialBridge || []).map((entry) => (
                     <Cell key={entry.label} fill={entry.color} />

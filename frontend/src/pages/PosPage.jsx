@@ -352,7 +352,7 @@ export default function PosPage() {
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '420px', textAlign: 'center' }}>
             <div className="pulse-dot" style={{ background: 'var(--color-success)', margin: '0 auto 12px' }}></div>
-            <p className="text-title" style={{ color: 'var(--color-success)', marginBottom: '8px' }}>Payment Received</p>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Payment Received</p>
             <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '24px' }}>
               Invoice <strong>{checkoutResult.invoice_number}</strong> generated successfully.
             </p>

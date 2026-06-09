@@ -183,7 +183,7 @@ export default function DriverPage() {
       {showStatusModal && selectedDelivery && (
         <div className="modal-overlay" style={{ padding: '16px' }}>
           <div className="modal-content" style={{ maxWidth: '400px', width: '100%', padding: '24px' }}>
-            <p className="text-title" style={{ marginBottom: '20px' }}>Update Delivery Status</p>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Update Delivery Status</p>
             <form onSubmit={handleStatusUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Status</label>

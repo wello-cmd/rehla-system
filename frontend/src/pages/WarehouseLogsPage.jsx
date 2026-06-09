@@ -191,7 +191,7 @@ export default function WarehouseLogsPage() {
       {activeTab === 'restock' && (
         <div style={{ display: 'grid', gap: 24, maxWidth: 700 }}>
           <div className="card">
-            <p className="text-title" style={{ marginBottom: 4 }}>Receive Stock Inbound</p>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Receive Stock Inbound</p>
             <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 20 }}>
               Scan a barcode or enter a SKU to add stock. Every restock is logged to the audit trail.
             </p>
@@ -248,7 +248,7 @@ export default function WarehouseLogsPage() {
           {restockHistory.length > 0 && (
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
               <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--color-border-light)' }}>
-                <p className="text-title">This Session — Received</p>
+                <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>This Session — Received</p>
               </div>
               <table className="data-table">
                 <thead>

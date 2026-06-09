@@ -209,7 +209,7 @@ export default function ClientsPage() {
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '500px' }}>
-            <p className="text-title" style={{ marginBottom: '24px' }}>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>
               {editingClient ? 'Edit B2B Client' : 'Register New B2B Client'}
             </p>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

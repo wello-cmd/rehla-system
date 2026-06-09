@@ -10,7 +10,8 @@ import {
 
 const STATUS_OPTIONS = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
 const PAYMENT_STATUS_OPTIONS = ['paid', 'pending', 'failed', 'refunded'];
-const CHART_COLORS = ['#e5e2e1', '#988e90', '#6b6365', '#4c4546', '#8b5cf6', '#ef4444', '#22c55e'];
+const CHART_COLORS = ['#6366f1','#3fb950','#f0883e','#58a6ff','#f85149','#a371f7','#38bdf8'];
+const TT = { background:'#1e1e1e', border:'1px solid #333030', color:'#ede9e8', fontSize:12, borderRadius:6 };
 
 export default function ShopifyPage() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -91,19 +92,28 @@ export default function ShopifyPage() {
 
   return (
     <DashboardShell title="Shopify Channel">
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
-        {['overview', 'orders', 'sync'].map(tab => (
+      <div style={{ display:'flex', gap:4, borderBottom:'1px solid var(--color-border-light)', paddingBottom:4, marginBottom:24 }}>
+        {[
+          { id:'overview', label:'Overview' },
+          { id:'orders',   label:'Orders'   },
+          { id:'sync',     label:'Sync Log' },
+        ].map(tab => (
           <button
-            key={tab}
-            className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-            onClick={() => setActiveTab(tab)}
-            style={{ textTransform: 'capitalize' }}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className="btn btn-sm"
+            style={{
+              background:  activeTab === tab.id ? 'var(--color-bg-active)' : 'transparent',
+              borderColor: activeTab === tab.id ? 'var(--color-border)'    : 'transparent',
+              color:       activeTab === tab.id ? 'var(--color-text)'      : 'var(--color-text-muted)',
+            }}
           >
-            {tab === 'sync' ? 'Sync Log' : tab}
+            {tab.label}
           </button>
         ))}
-        <button className="btn btn-primary btn-sm" onClick={triggerSync} disabled={syncing} style={{ marginLeft: 'auto' }}>
-          {syncing ? 'Syncing...' : 'Sync Now'}
+        <button className="btn btn-primary btn-sm" onClick={triggerSync} disabled={syncing} style={{ marginLeft:'auto' }}>
+          <span className="material-symbols-outlined" style={{ fontSize:15 }}>{syncing ? 'hourglass_top' : 'sync'}</span>
+          {syncing ? 'Syncing…' : 'Sync Now'}
         </button>
       </div>
 
@@ -114,30 +124,30 @@ export default function ShopifyPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16 }}>
               <div className="card">
-                <p className="text-title" style={{ marginBottom: 16 }}>Revenue — Last 30 Days</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Revenue — Last 30 Days</p>
                 <div style={{ height: 240 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={analytics?.revenueChart || []}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
                       <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-                      <Tooltip formatter={(v) => formatEGP(v)} labelFormatter={l => `Date: ${l}`} />
-                      <Bar dataKey="revenue" name="Revenue" fill="#988e90" radius={[2, 2, 0, 0]} />
+                      <Tooltip contentStyle={TT} formatter={(v) => [formatEGP(v), 'Revenue']} />
+                      <Bar dataKey="revenue" name="Revenue" fill="#6366f1" opacity={0.9} radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               <div className="card">
-                <p className="text-title" style={{ marginBottom: 16 }}>Orders per Day — Last 30 Days</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Orders per Day — Last 30 Days</p>
                 <div style={{ height: 240 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={analytics?.revenueChart || []}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
                       <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                      <Tooltip />
-                      <Bar dataKey="orders" name="Orders" fill="#e5e2e1" radius={[2, 2, 0, 0]} />
+                      <Tooltip contentStyle={TT} />
+                      <Bar dataKey="orders" name="Orders" fill="#3fb950" opacity={0.85} radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -146,29 +156,30 @@ export default function ShopifyPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
               <div className="card">
-                <p className="text-title" style={{ marginBottom: 16 }}>Order Status Breakdown</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Order Status Breakdown</p>
                 <div style={{ height: 220 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={statusChartData} dataKey="value" nameKey="name" outerRadius={80} label={({ name, value }) => `${name} (${value})`} labelLine={false}>
+                      <Pie data={statusChartData} dataKey="value" nameKey="name" outerRadius={80} innerRadius={40} paddingAngle={2}
+                        label={({ name, value }) => `${name} (${value})`} labelLine={false}>
                         {statusChartData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip contentStyle={TT} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               <div className="card">
-                <p className="text-title" style={{ marginBottom: 16 }}>Payment Method Breakdown</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Payment Method Breakdown</p>
                 <div style={{ height: 220 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={paymentMethodData} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
-                      <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
-                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
-                      <Tooltip />
-                      <Bar dataKey="value" name="Orders" fill="#6b6365" radius={[0, 2, 2, 0]} />
+                      <XAxis type="number" tick={{ fill:'var(--color-text-muted)', fontSize: 10 }} allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" tick={{ fill:'var(--color-text-muted)', fontSize: 11 }} width={80} />
+                      <Tooltip contentStyle={TT} />
+                      <Bar dataKey="value" name="Orders" fill="#58a6ff" radius={[0, 2, 2, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -176,7 +187,7 @@ export default function ShopifyPage() {
             </div>
 
             <div className="card">
-              <p className="text-title" style={{ marginBottom: 16 }}>Top 10 Products by Revenue</p>
+              <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Top 10 Products by Revenue</p>
               <div className="table-container">
                 <table className="data-table">
                   <thead>
@@ -289,7 +300,7 @@ export default function ShopifyPage() {
         <div style={{ display: 'grid', gap: 16 }}>
           <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ flex: 1 }}>
-              <p className="text-title">Manual Sync</p>
+              <p className="text-label" style={{ color:'var(--color-text-dim)' }}>Manual Sync</p>
               <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 4 }}>
                 Pull latest products and orders from Shopify. Rate-limited to 2 req/s with exponential backoff.
               </p>
@@ -301,7 +312,7 @@ export default function ShopifyPage() {
 
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border-light)' }}>
-              <p className="text-title">Sync History</p>
+              <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Sync History</p>
             </div>
             <div className="table-container">
               <table className="data-table">

@@ -103,7 +103,7 @@ export default function ProfitLossPage() {
           {plData && (
             <div className="card" style={{ marginBottom: '32px' }}>
               <div style={{ borderBottom: '1px solid var(--color-border-light)', paddingBottom: '16px', marginBottom: '24px' }}>
-                <p className="text-title">Income Statement</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)' }}>Income Statement</p>
                 <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px' }}>Reporting Period: {plData.period}</p>
               </div>
 
@@ -192,12 +192,11 @@ export default function ProfitLossPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
                   <XAxis dataKey="month" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
                   <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
-                  <Tooltip contentStyle={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }} />
+                  <Tooltip contentStyle={{ background:'#1e1e1e', border:'1px solid #333030', color:'#ede9e8', fontSize:12, borderRadius:6 }} />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  <Bar dataKey="profit" name="Net Profit (EGP)" fill="#e5e2e1">
-                    {/* Render different color bar based on sign */}
+                  <Bar dataKey="profit" name="Net Profit (EGP)" radius={[2,2,0,0]}>
                     {trendData.map((entry, index) => (
-                      <cell key={`cell-${index}`} fill={entry.profit >= 0 ? 'var(--color-success)' : 'var(--color-error)'} />
+                      <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? '#3fb950' : '#f85149'} />
                     ))}
                   </Bar>
                 </BarChart>

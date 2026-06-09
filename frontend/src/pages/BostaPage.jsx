@@ -9,10 +9,11 @@ import {
 } from 'recharts';
 
 const BOSTA_STATUSES = ['pending', 'assigned', 'out_for_delivery', 'delivered', 'failed', 'returned'];
-const CHART_COLORS = ['#e5e2e1', '#988e90', '#6b6365', '#22c55e', '#ef4444', '#8b5cf6'];
+const CHART_COLORS = ['#6366f1','#58a6ff','#f0883e','#3fb950','#f85149','#a371f7'];
+const TT = { background:'#1e1e1e', border:'1px solid #333030', color:'#ede9e8', fontSize:12, borderRadius:6 };
 const STATUS_COLORS = {
-  pending: '#e5e2e1', assigned: '#988e90', out_for_delivery: '#f59e0b',
-  delivered: '#22c55e', failed: '#ef4444', returned: '#8b5cf6'
+  pending: '#6366f1', assigned: '#58a6ff', out_for_delivery: '#f0883e',
+  delivered: '#3fb950', failed: '#f85149', returned: '#a371f7'
 };
 
 export default function BostaPage() {
@@ -98,7 +99,7 @@ export default function BostaPage() {
 
   const statusChartData = useMemo(() =>
     Object.entries(analytics?.statusBreakdown || {}).map(([name, value]) => ({
-      name: name.replace(/_/g, ' '), value, color: STATUS_COLORS[name] || '#988e90'
+      name: name.replace(/_/g, ' '), value, color: STATUS_COLORS[name] || '#6366f1'
     })),
     [analytics]
   );
@@ -112,19 +113,28 @@ export default function BostaPage() {
 
   return (
     <DashboardShell title="Bosta Channel">
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
-        {['overview', 'shipments', 'sync'].map(tab => (
+      <div style={{ display:'flex', gap:4, borderBottom:'1px solid var(--color-border-light)', paddingBottom:4, marginBottom:24 }}>
+        {[
+          { id:'overview',  label:'Overview'  },
+          { id:'shipments', label:'Shipments' },
+          { id:'sync',      label:'Sync Log'  },
+        ].map(tab => (
           <button
-            key={tab}
-            className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-            onClick={() => setActiveTab(tab)}
-            style={{ textTransform: 'capitalize' }}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className="btn btn-sm"
+            style={{
+              background:  activeTab === tab.id ? 'var(--color-bg-active)' : 'transparent',
+              borderColor: activeTab === tab.id ? 'var(--color-border)'    : 'transparent',
+              color:       activeTab === tab.id ? 'var(--color-text)'      : 'var(--color-text-muted)',
+            }}
           >
-            {tab}
+            {tab.label}
           </button>
         ))}
-        <button className="btn btn-primary btn-sm" onClick={triggerSync} disabled={syncing} style={{ marginLeft: 'auto' }}>
-          {syncing ? 'Syncing...' : 'Sync Tracking'}
+        <button className="btn btn-primary btn-sm" onClick={triggerSync} disabled={syncing} style={{ marginLeft:'auto' }}>
+          <span className="material-symbols-outlined" style={{ fontSize:15 }}>{syncing ? 'hourglass_top' : 'sync'}</span>
+          {syncing ? 'Syncing…' : 'Sync Tracking'}
         </button>
       </div>
 
@@ -135,14 +145,14 @@ export default function BostaPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
               <div className="card">
-                <p className="text-title" style={{ marginBottom: 16 }}>Shipment Status Distribution</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Shipment Status Distribution</p>
                 <div style={{ height: 240 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={statusChartData} dataKey="value" nameKey="name" outerRadius={90} label={({ name, value }) => `${name} (${value})`} labelLine={false}>
                         {statusChartData.map((entry, i) => <Cell key={i} fill={entry.color || CHART_COLORS[i % CHART_COLORS.length]} />)}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip contentStyle={TT} />
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
@@ -150,7 +160,7 @@ export default function BostaPage() {
               </div>
 
               <div className="card">
-                <p className="text-title" style={{ marginBottom: 16 }}>COD Overview</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>COD Overview</p>
                 <div style={{ display: 'grid', gap: 16 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div style={{ padding: 16, border: '1px solid var(--color-border-light)', borderRadius: 4 }}>
@@ -171,7 +181,7 @@ export default function BostaPage() {
                       <BarChart data={analytics?.codBreakdown || []}>
                         <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                         <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-                        <Tooltip formatter={v => formatEGP(v)} />
+                        <Tooltip contentStyle={TT} formatter={v => [formatEGP(v), 'Revenue']} />
                         <Bar dataKey="value" radius={[2, 2, 0, 0]}>
                           {(analytics?.codBreakdown || []).map((entry) => (
                             <Cell key={entry.name} fill={entry.color} />
@@ -186,25 +196,25 @@ export default function BostaPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
               <div className="card">
-                <p className="text-title" style={{ marginBottom: 16 }}>Daily Volume — Last 30 Days</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Daily Volume — Last 30 Days</p>
                 <div style={{ height: 240 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={analytics?.dailyVolume || []}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
                       <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                      <Tooltip />
+                      <Tooltip contentStyle={TT} />
                       <Legend />
-                      <Bar dataKey="total" name="Total" fill="#e5e2e1" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="delivered" name="Delivered" fill="#22c55e" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="failed" name="Failed" fill="#ef4444" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="total" name="Total" fill="#6366f1" opacity={0.5} radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="delivered" name="Delivered" fill="#3fb950" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="failed" name="Failed" fill="#f85149" radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               <div className="card">
-                <p className="text-title" style={{ marginBottom: 16 }}>Failure Reasons</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Failure Reasons</p>
                 {failureChartData.length === 0 ? (
                   <p style={{ color: 'var(--color-text-dim)', fontSize: 13 }}>No failed shipments.</p>
                 ) : (
@@ -214,7 +224,7 @@ export default function BostaPage() {
                         <Pie data={failureChartData} dataKey="value" nameKey="name" outerRadius={80} label={({ name, value }) => `${name} (${value})`} labelLine={false}>
                           {failureChartData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                         </Pie>
-                        <Tooltip />
+                        <Tooltip contentStyle={TT} />
                         <Legend />
                       </PieChart>
                     </ResponsiveContainer>
@@ -338,7 +348,7 @@ export default function BostaPage() {
         <div style={{ display: 'grid', gap: 16 }}>
           <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ flex: 1 }}>
-              <p className="text-title">Tracking Sync</p>
+              <p className="text-label" style={{ color:'var(--color-text-dim)' }}>Tracking Sync</p>
               <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 4 }}>
                 Fetches live status from Bosta API for all active shipments (not yet delivered or failed) and updates their status in the system.
               </p>
@@ -350,7 +360,7 @@ export default function BostaPage() {
 
           {syncResult && (
             <div className="card" style={{ borderLeft: `4px solid ${syncResult.success ? 'var(--color-success)' : 'var(--color-error)'}` }}>
-              <p className="text-title" style={{ marginBottom: 8 }}>Last Sync Result</p>
+              <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 8 }}>Last Sync Result</p>
               <p style={{ fontSize: 13 }}>
                 <span className={`badge badge-${syncResult.success ? 'success' : 'error'}`}>
                   {syncResult.success ? 'Success' : 'Failed'}
@@ -369,7 +379,7 @@ export default function BostaPage() {
           )}
 
           <div className="card">
-            <p className="text-title" style={{ marginBottom: 12 }}>How Tracking Sync Works</p>
+            <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 12 }}>How Tracking Sync Works</p>
             <ol style={{ paddingLeft: 20, fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 2 }}>
               <li>Finds all Bosta shipments with status not in <em>delivered</em> or <em>failed</em></li>
               <li>Calls the Bosta tracking API for each shipment&apos;s tracking number</li>

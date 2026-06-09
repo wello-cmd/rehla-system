@@ -156,7 +156,7 @@ export default function UsersPage() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-content" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
-            <p className="text-title" style={{ marginBottom: '24px' }}>Register Staff User</p>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Register Staff User</p>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Full Name</label>

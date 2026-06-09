@@ -252,7 +252,7 @@ export default function ExpensesPage() {
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '460px' }}>
-            <p className="text-title" style={{ marginBottom: '24px' }}>Log New Expense</p>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Log New Expense</p>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Expense Title</label>

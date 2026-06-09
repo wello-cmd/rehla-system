@@ -24,7 +24,8 @@ const FAILURE_REASONS = [
   ['refused', 'Refused'],
   ['postponed', 'Postponed']
 ];
-const CHART_COLORS = ['#e5e2e1', '#988e90', '#6b6365', '#4c4546', '#8b5cf6', '#ef4444'];
+const CHART_COLORS = ['#6366f1','#3fb950','#f0883e','#58a6ff','#f85149','#a371f7'];
+const TT = { background:'#1e1e1e', border:'1px solid #333030', color:'#ede9e8', fontSize:12, borderRadius:6 };
 
 export default function DeliveryPage() {
   const [activeTab, setActiveTab] = useState('dispatcher');
@@ -565,7 +566,7 @@ function DriversPanel({ drivers, openDriverModal, deleteDriver, toggleAvailabili
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
-        <p className="text-title">Drivers</p>
+        <p className="text-label" style={{ color:'var(--color-text-dim)' }}>Drivers</p>
         <button className="btn btn-primary" onClick={() => openDriverModal()}>Add Driver</button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
@@ -625,15 +626,15 @@ function AnalyticsPanel({ analytics, failureChart, costComparison }) {
       </div>
 
       <div className="card">
-        <p className="text-title" style={{ marginBottom: 16 }}>Average Delivery Time per Driver</p>
+        <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Average Delivery Time per Driver</p>
         <div style={{ height: 280 }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={analytics?.driverAnalytics || []}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="avg_delivery_time_hrs" name="Avg hours" fill="#e5e2e1" />
+              <XAxis dataKey="name" tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
+              <YAxis tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
+              <Tooltip contentStyle={TT} />
+              <Bar dataKey="avg_delivery_time_hrs" name="Avg hours" fill="#6366f1" opacity={0.85} radius={[2,2,0,0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -641,33 +642,33 @@ function AnalyticsPanel({ analytics, failureChart, costComparison }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
         <div className="card">
-          <p className="text-title" style={{ marginBottom: 16 }}>Failed Delivery Rate by Reason</p>
+          <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Failed Delivery Rate by Reason</p>
           <div style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={failureChart} dataKey="value" nameKey="name" outerRadius={90} label>
+                <Pie data={failureChart} dataKey="value" nameKey="name" outerRadius={90} innerRadius={40} paddingAngle={2} label>
                   {failureChart.map((entry, index) => <Cell key={entry.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip contentStyle={TT} />
+                <Legend wrapperStyle={{ fontSize:11 }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="card">
-          <p className="text-title" style={{ marginBottom: 16 }}>Bosta vs Own Driver</p>
+          <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Bosta vs Own Driver</p>
           <div style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={costComparison}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
-                <XAxis dataKey="type" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="total" fill="#988e90" />
-                <Bar dataKey="delivered" fill="#22c55e" />
-                <Bar dataKey="failed" fill="#ef4444" />
+                <XAxis dataKey="type" tick={{ fill:'var(--color-text-muted)', fontSize:11 }} />
+                <YAxis tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
+                <Tooltip contentStyle={TT} />
+                <Legend wrapperStyle={{ fontSize:11 }} />
+                <Bar dataKey="total"     fill="#6366f1" opacity={0.5} radius={[2,2,0,0]} />
+                <Bar dataKey="delivered" fill="#3fb950" radius={[2,2,0,0]} />
+                <Bar dataKey="failed"    fill="#f85149" radius={[2,2,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -682,7 +683,7 @@ function Modal({ title, children, onClose }) {
     <div className="modal-overlay">
       <div className="modal-content" style={{ maxWidth: 520, width: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', marginBottom: 18 }}>
-          <p className="text-title">{title}</p>
+          <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>{title}</p>
           <button className="btn btn-secondary btn-sm" onClick={onClose}>Close</button>
         </div>
         {children}

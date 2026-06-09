@@ -9,8 +9,8 @@ import {
   Legend, LineChart, Line, PieChart, Pie, Cell, ComposedChart
 } from 'recharts';
 
-const COLORS = ['#e5e2e1','#988e90','#6b6365','#4c4546','#c4a8a8','#a88c8c','#8c7070','#705454'];
-const TT = { background:'var(--color-bg-elevated)', border:'1px solid var(--color-border)', color:'var(--color-text)', fontSize:'12px' };
+const COLORS = ['#6366f1','#3fb950','#f0883e','#58a6ff','#f85149','#a371f7','#38bdf8','#fbbf24'];
+const TT = { background:'#1e1e1e', border:'1px solid #333030', color:'#ede9e8', fontSize:12, borderRadius:6 };
 const egp = v => `EGP ${Number(v).toLocaleString('en-EG', { minimumFractionDigits:0, maximumFractionDigits:0 })}`;
 const kTick = v => `${(v/1000).toFixed(0)}k`;
 
@@ -176,9 +176,9 @@ export default function AnalyticsPage() {
                         <YAxis yAxisId="right" orientation="right"   tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
                         <Tooltip contentStyle={TT} formatter={(v, n) => [n === 'Revenue' ? egp(v) : v, n]} />
                         <Legend wrapperStyle={{ fontSize:11 }} />
-                        <Bar      yAxisId="left"  dataKey="revenue" name="Revenue" fill="#e5e2e1" radius={[2,2,0,0]} />
+                        <Bar      yAxisId="left"  dataKey="revenue" name="Revenue" fill="#6366f1" opacity={0.9} radius={[2,2,0,0]} />
                         <Line     yAxisId="right" type="monotone" dataKey="orders" name="Orders"
-                          stroke="#988e90" strokeWidth={2} dot={{ r:3, fill:'#988e90' }} />
+                          stroke="#3fb950" strokeWidth={2} dot={{ r:3, fill:'#3fb950' }} />
                       </ComposedChart>
                     </ResponsiveContainer>
                   ) : (
@@ -215,8 +215,8 @@ export default function AnalyticsPage() {
                         <YAxis yAxisId="r" orientation="right" tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
                         <Tooltip contentStyle={TT} formatter={(v, n) => [n==='Revenue (EGP)' ? egp(v) : v, n]} />
                         <Legend wrapperStyle={{ fontSize:11 }} />
-                        <Bar yAxisId="l" dataKey="revenue" name="Revenue (EGP)" fill="#e5e2e1" radius={[2,2,0,0]} />
-                        <Bar yAxisId="r" dataKey="orders"  name="Orders"        fill="#988e90" radius={[2,2,0,0]} />
+                        <Bar yAxisId="l" dataKey="revenue" name="Revenue (EGP)" fill="#6366f1" opacity={0.9} radius={[2,2,0,0]} />
+                        <Bar yAxisId="r" dataKey="orders"  name="Orders"        fill="#3fb950" opacity={0.8} radius={[2,2,0,0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -232,7 +232,7 @@ export default function AnalyticsPage() {
                         <XAxis dataKey="hour" tick={{ fill:'var(--color-text-muted)', fontSize:9 }} />
                         <YAxis tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
                         <Tooltip contentStyle={TT} />
-                        <Bar dataKey="orders" fill="#6b6365" radius={[2,2,0,0]} />
+                        <Bar dataKey="orders" fill="#58a6ff" radius={[2,2,0,0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -253,7 +253,7 @@ export default function AnalyticsPage() {
                           <XAxis type="number" tickFormatter={kTick} tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
                           <YAxis dataKey="name" type="category" width={120} tick={{ fill:'var(--color-text-muted)', fontSize:9 }} />
                           <Tooltip contentStyle={TT} formatter={v => [egp(v), 'Revenue']} />
-                          <Bar dataKey="revenue" fill="#e5e2e1" radius={[0,2,2,0]} />
+                          <Bar dataKey="revenue" fill="#6366f1" radius={[0,2,2,0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
@@ -270,7 +270,7 @@ export default function AnalyticsPage() {
                           <XAxis type="number" tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
                           <YAxis dataKey="name" type="category" width={120} tick={{ fill:'var(--color-text-muted)', fontSize:9 }} />
                           <Tooltip contentStyle={TT} />
-                          <Bar dataKey="units" fill="#988e90" radius={[0,2,2,0]} />
+                          <Bar dataKey="units" fill="#3fb950" radius={[0,2,2,0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
@@ -387,9 +387,9 @@ export default function AnalyticsPage() {
                         <YAxis tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
                         <Tooltip contentStyle={TT} />
                         <Legend wrapperStyle={{ fontSize:11 }} />
-                        <Bar dataKey="delivered" name="Delivered" fill="#4caf50" radius={[2,2,0,0]} />
-                        <Bar dataKey="failed"    name="Failed"    fill="#ef5350" radius={[2,2,0,0]} />
-                        <Bar dataKey="total"     name="Total"     fill="#c6c6c6" radius={[2,2,0,0]} />
+                        <Bar dataKey="delivered" name="Delivered" fill="#3fb950" radius={[2,2,0,0]} />
+                        <Bar dataKey="failed"    name="Failed"    fill="#f85149" radius={[2,2,0,0]} />
+                        <Bar dataKey="total"     name="Total"     fill="#6366f1" opacity={0.5} radius={[2,2,0,0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -487,9 +487,9 @@ export default function AnalyticsPage() {
                         <YAxis tickFormatter={kTick} tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
                         <Tooltip contentStyle={TT} formatter={(v, n) => [egp(v), n]} />
                         <Legend wrapperStyle={{ fontSize:11 }} />
-                        <Bar  dataKey="revenue"  name="Revenue"  fill="#e5e2e1" radius={[2,2,0,0]} />
-                        <Bar  dataKey="expenses" name="Expenses" fill="#ef5350" opacity={0.75} radius={[2,2,0,0]} />
-                        <Line dataKey="profit"   name="Profit"   stroke="#4caf50" strokeWidth={2} dot={{ r:3 }} type="monotone" />
+                        <Bar  dataKey="revenue"  name="Revenue"  fill="#6366f1" opacity={0.9} radius={[2,2,0,0]} />
+                        <Bar  dataKey="expenses" name="Expenses" fill="#f85149" opacity={0.75} radius={[2,2,0,0]} />
+                        <Line dataKey="profit"   name="Profit"   stroke="#3fb950" strokeWidth={2.5} dot={{ r:3, fill:'#3fb950' }} type="monotone" />
                       </ComposedChart>
                     </ResponsiveContainer>
                   ) : (
@@ -507,7 +507,7 @@ export default function AnalyticsPage() {
                         <XAxis dataKey="period" tick={{ fill:'var(--color-text-muted)', fontSize:10 }} angle={-20} textAnchor="end" height={45} interval="preserveStartEnd" />
                         <YAxis tick={{ fill:'var(--color-text-muted)', fontSize:10 }} unit="%" />
                         <Tooltip contentStyle={TT} formatter={v => [`${v}%`, 'Margin']} />
-                        <Line dataKey="profit_margin" name="Profit Margin" stroke="#4caf50" strokeWidth={2} dot={{ r:3 }} type="monotone" />
+                        <Line dataKey="profit_margin" name="Profit Margin" stroke="#3fb950" strokeWidth={2.5} dot={{ r:3, fill:'#3fb950' }} type="monotone" />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
