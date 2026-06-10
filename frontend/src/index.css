@@ -621,3 +621,71 @@ body {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* =============================================
+   CUSTOMER ROW — responsive 8→5→4 column grid
+   ============================================= */
+.customer-row {
+  display: grid;
+  grid-template-columns: 2fr 1.4fr 1.6fr 80px 100px 110px 90px 32px;
+  gap: 12px;
+  padding: 12px 16px;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.customer-row > .cr-name   { grid-column: 1; min-width: 0; }
+.customer-row > .cr-phone  { grid-column: 2; min-width: 0; }
+.customer-row > .cr-email  { grid-column: 3; min-width: 0; overflow: hidden; }
+.customer-row > .cr-orders { grid-column: 4; }
+.customer-row > .cr-spent  { grid-column: 5; }
+.customer-row > .cr-last   { grid-column: 6; }
+.customer-row > .cr-avg    { grid-column: 7; }
+.customer-row > .cr-expand { grid-column: 8; }
+
+/* Tablet — hide email, last-order, avg */
+@media (max-width: 900px) {
+  .customer-row {
+    grid-template-columns: 2fr 1.4fr 72px 96px 32px;
+  }
+  .customer-row > .cr-email  { display: none; }
+  .customer-row > .cr-last   { display: none; }
+  .customer-row > .cr-avg    { display: none; }
+  .customer-row > .cr-orders { grid-column: 3; }
+  .customer-row > .cr-spent  { grid-column: 4; }
+  .customer-row > .cr-expand { grid-column: 5; }
+}
+
+/* Mobile — also hide phone */
+@media (max-width: 540px) {
+  .customer-row {
+    grid-template-columns: 1fr 72px 96px 32px;
+  }
+  .customer-row > .cr-phone  { display: none; }
+  .customer-row > .cr-email  { display: none; }
+  .customer-row > .cr-last   { display: none; }
+  .customer-row > .cr-avg    { display: none; }
+  .customer-row > .cr-orders { grid-column: 2; }
+  .customer-row > .cr-spent  { grid-column: 3; }
+  .customer-row > .cr-expand { grid-column: 4; }
+}
+
+/* =============================================
+   ACTIONS BAR — wraps on small screens
+   ============================================= */
+.actions-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.actions-bar .sort-group {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* Clickable product name — opens edit */
+.link-name { cursor: pointer; transition: color 0.12s; }
+.link-name:hover { color: var(--color-brand); text-decoration: underline; }

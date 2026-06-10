@@ -28,6 +28,9 @@ export default function InventoryPage() {
   const [bulkBarcodeProducts, setBulkBarcodeProducts] = useState([]);
   const [bulkVariantSelections, setBulkVariantSelections] = useState({});
   const [selectedBarcodeVariant, setSelectedBarcodeVariant] = useState('');
+  const [bulkCopies, setBulkCopies] = useState(1);
+  const [bulkUseStock, setBulkUseStock] = useState(false);
+  const [bulkSearch, setBulkSearch] = useState('');
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -50,8 +53,21 @@ export default function InventoryPage() {
 
   function openBarcode(product) {
     setSelectedProductForBarcode(product);
-    setSelectedBarcodeVariant(''); // reset to product-level
+    // Pre-select the variant with the most stock; fall back to product-level if none
+    const pvs = product.product_variants || [];
+    if (pvs.length > 0) {
+      const top = pvs.reduce((a, b) => (Number(b.stock_quantity) || 0) > (Number(a.stock_quantity) || 0) ? b : a);
+      setSelectedBarcodeVariant(top.id);
+    } else {
+      setSelectedBarcodeVariant('');
+    }
     setShowBarcodeModal(true);
+  }
+
+  function openVariantsFromBarcode() {
+    const product = selectedProductForBarcode;
+    setShowBarcodeModal(false);
+    if (product) openVariants(product);
   }
 
   function closeBarcodeModal() {
@@ -114,6 +130,20 @@ export default function InventoryPage() {
   }
 
   useEffect(() => { fetchProducts(); fetchClients(); }, [startDate, endDate]);
+
+  // Press Esc to dismiss whichever modal is open
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        setShowBulkBarcodeModal(false);
+        setShowBarcodeModal(false);
+        setShowVariantsModal(false);
+        setShowModal(false);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   async function fetchClients() {
     try {
@@ -291,6 +321,9 @@ export default function InventoryPage() {
       }
     }
     setBulkVariantSelections(selections);
+    setBulkCopies(1);
+    setBulkUseStock(false);
+    setBulkSearch('');
     setShowBulkBarcodeModal(true);
   }
 
@@ -333,31 +366,61 @@ export default function InventoryPage() {
     }
     try {
       const result = await api.post('/inventory/barcode/bulk-variants', { items });
+
+      // Resolve how many copies to print per label.
+      // "Match stock" prints one sticker per physical unit; otherwise use the global copies count.
+      const stockByVariant = {};
+      const stockByProduct = {};
+      for (const p of bulkBarcodeProducts) {
+        stockByProduct[p.id] = Number(p.stock_quantity) || 0;
+        for (const v of (p.variants || [])) stockByVariant[v.id] = Number(v.stock_quantity) || 0;
+      }
+      const PER_LABEL_CAP = 200; // guard against runaway print jobs
+      const copiesFor = (item) => {
+        const n = bulkUseStock
+          ? (item.variant_id ? stockByVariant[item.variant_id] : stockByProduct[item.id]) ?? 0
+          : Number(bulkCopies) || 1;
+        return Math.max(0, Math.min(n, PER_LABEL_CAP));
+      };
+
+      const printable = result.filter(i => i.barcode_image);
+      const totalLabels = printable.reduce((s, i) => s + copiesFor(i), 0);
+      if (totalLabels === 0) {
+        toast.error('Nothing to print — selected items have 0 copies (check stock or copies count).');
+        return;
+      }
+
       setShowBulkBarcodeModal(false);
       const printWindow = window.open('', '_blank');
       if (printWindow) {
-        let html = `<html><head><title>Print Barcodes</title><style>
+        let html = `<html><head><title>Print Barcodes (${totalLabels})</title><style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: Arial, sans-serif; background: #fff; }
-          .labels-grid { display: flex; flex-wrap: wrap; padding: 20px; gap: 12px; }
-          .label { text-align: center; padding: 12px 16px; border: 1px dashed #999; width: 240px; }
-          .product-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+          .labels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px; padding: 16px;
+          }
+          .label { text-align: center; padding: 12px 14px; border: 1px dashed #999; break-inside: avoid; }
+          .product-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; line-height: 1.25; }
           .variant-info { font-size: 11px; color: #666; margin-bottom: 8px; }
           .barcode-img { width: 100%; display: block; }
           .ref1, .ref2 { font-size: 10px; font-family: monospace; letter-spacing: 0.04em; margin-top: 3px; }
-          @media print { .label { border: 1px dashed #ccc; break-inside: avoid; } }
+          @media print {
+            .label { border: 1px dashed #ccc; }
+            @page { margin: 8mm; }
+          }
         </style></head><body><div class="labels-grid">`;
-        result.forEach(item => {
-          if (item.barcode_image) {
-            const variantInfo = [item.size, item.color].filter(Boolean).join(' / ');
-            html += `<div class="label">
+        printable.forEach(item => {
+          const variantInfo = [item.size, item.color].filter(Boolean).join(' / ');
+          const labelHtml = `<div class="label">
               <p class="product-name">${item.name}</p>
               ${variantInfo ? `<p class="variant-info">${variantInfo}</p>` : ''}
               <img class="barcode-img" src="data:image/png;base64,${item.barcode_image}" />
               <p class="ref1">${item.line1}</p>
               <p class="ref2">${item.line2}</p>
             </div>`;
-          }
+          html += labelHtml.repeat(copiesFor(item));
         });
         html += '</div></body></html>';
         printWindow.document.write(html);
@@ -387,6 +450,24 @@ export default function InventoryPage() {
       return 0;
     });
   }, [products, searchTerm, sortBy]);
+
+  // Live count of physical labels that will print, given current variant + copies selections
+  const bulkLabelTotal = useMemo(() => {
+    let total = 0;
+    for (const p of bulkBarcodeProducts) {
+      const sel = bulkVariantSelections[p.id] || [];
+      const realVariantIds = sel.filter(v => v !== '__product__');
+      if (sel.includes('__product__') || realVariantIds.length === 0) {
+        total += bulkUseStock ? (Number(p.stock_quantity) || 0) : Number(bulkCopies) || 1;
+      } else {
+        for (const vid of realVariantIds) {
+          const v = (p.variants || []).find(x => x.id === vid);
+          total += bulkUseStock ? (Number(v?.stock_quantity) || 0) : Number(bulkCopies) || 1;
+        }
+      }
+    }
+    return total;
+  }, [bulkBarcodeProducts, bulkVariantSelections, bulkCopies, bulkUseStock]);
 
   const lowStockCount = useMemo(() => {
     return products.filter(p => p.stock_quantity < 10).length;
@@ -512,7 +593,14 @@ export default function InventoryPage() {
                       {product.image_url && (
                         <img src={product.image_url} alt="" style={STYLES.productImage} />
                       )}
-                      <span style={STYLES.productName}>{product.name}</span>
+                      <span
+                        style={STYLES.productName}
+                        className="link-name"
+                        onClick={() => openEdit(product)}
+                        title="Click to edit"
+                      >
+                        {product.name}
+                      </span>
                     </div>
                   </td>
                   <td>
@@ -697,11 +785,52 @@ export default function InventoryPage() {
         <div className="modal-overlay" onClick={() => setShowBulkBarcodeModal(false)}>
           <div className="modal-content" style={{ maxWidth: 700, width: '95%', maxHeight: '80vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
             <h2 className="text-title" style={{ marginBottom: 4 }}>Select Variants for Barcodes</h2>
-            <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 20 }}>
+            <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 16 }}>
               Choose which size / color variants to include in the barcode labels.
             </p>
 
-            {bulkBarcodeProducts.map(product => (
+            {/* Copies controls */}
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 14,
+              padding: '12px 14px', marginBottom: 18, borderRadius: 8,
+              background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <label className="text-label" style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>Copies per label</label>
+                <input
+                  className="input"
+                  type="number"
+                  min="1"
+                  max="200"
+                  value={bulkCopies}
+                  disabled={bulkUseStock}
+                  onChange={e => setBulkCopies(Math.max(1, Math.min(200, Number(e.target.value) || 1)))}
+                  style={{ width: 80, opacity: bulkUseStock ? 0.5 : 1 }}
+                />
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12 }}>
+                <input type="checkbox" checked={bulkUseStock} onChange={e => setBulkUseStock(e.target.checked)} />
+                <span>Match stock qty <span style={{ color: 'var(--color-text-dim)' }}>(one label per unit)</span></span>
+              </label>
+            </div>
+
+            {bulkBarcodeProducts.length > 4 && (
+              <input
+                className="input"
+                placeholder="Filter products by name or SKU…"
+                value={bulkSearch}
+                onChange={e => setBulkSearch(e.target.value)}
+                style={{ marginBottom: 14 }}
+              />
+            )}
+
+            {bulkBarcodeProducts
+              .filter(product => {
+                const q = bulkSearch.trim().toLowerCase();
+                if (!q) return true;
+                return product.name.toLowerCase().includes(q) || product.sku.toLowerCase().includes(q);
+              })
+              .map(product => (
               <div key={product.id} style={{ marginBottom: 20, padding: '16px', background: 'var(--color-bg-inset)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                   <div>
@@ -720,7 +849,16 @@ export default function InventoryPage() {
                 </div>
 
                 {product.variants.length === 0 ? (
-                  <p style={{ fontSize: 12, color: 'var(--color-text-muted)', fontStyle: 'italic' }}>No variants — will use product-level barcode</p>
+                  <p style={{ fontSize: 12, color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                    No variants — will use product-level barcode.{' '}
+                    <button
+                      type="button"
+                      onClick={() => { setShowBulkBarcodeModal(false); openVariants(product); }}
+                      style={{ background: 'none', border: 'none', color: 'var(--color-primary, #4f46e5)', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'underline', fontStyle: 'normal' }}
+                    >
+                      Add variants
+                    </button>
+                  </p>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
                     {product.variants.map(v => {
@@ -757,10 +895,10 @@ export default function InventoryPage() {
               </div>
             ))}
 
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'flex-end', marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>
               <button className="btn btn-secondary btn-sm" onClick={() => setShowBulkBarcodeModal(false)}>Cancel</button>
-              <button className="btn btn-primary btn-sm" onClick={handleBulkPrintBarcodes}>
-                🖨️ Generate & Print
+              <button className="btn btn-primary btn-sm" onClick={handleBulkPrintBarcodes} disabled={bulkLabelTotal === 0}>
+                🖨️ Generate &amp; Print {bulkLabelTotal} {bulkLabelTotal === 1 ? 'Label' : 'Labels'}
               </button>
             </div>
           </div>
@@ -797,10 +935,22 @@ export default function InventoryPage() {
                   <option value="">Product Level ({selectedProductForBarcode.sku})</option>
                   {pvs.map(v => (
                     <option key={v.id} value={v.id}>
-                      {[v.size, v.color].filter(Boolean).join(' / ') || v.sku} — SKU: {v.sku}
+                      {[v.size, v.color].filter(Boolean).join(' / ') || v.sku} — SKU: {v.sku} · Stock: {v.stock_quantity}
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+            {pvs.length === 0 && (
+              <div style={{ marginBottom: 16, fontSize: 12, color: 'var(--color-text-dim)' }}>
+                No size / color variants for this product yet.{' '}
+                <button
+                  type="button"
+                  onClick={openVariantsFromBarcode}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-primary, #4f46e5)', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'underline' }}
+                >
+                  Add variants
+                </button>
               </div>
             )}
             
