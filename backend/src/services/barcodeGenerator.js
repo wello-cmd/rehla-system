@@ -83,7 +83,9 @@ function formatLabelLines(product) {
  */
 async function generateLabelHtml(product) {
   const { barcodeText, line1, line2 } = formatLabelLines(product);
-  const png = await generateBarcode(barcodeText);
+  // Burn size/color into the barcode's human-readable line (product.size holds "size / color")
+  const alttext = product.size ? `${barcodeText}  ${product.size}` : barcodeText;
+  const png = await generateBarcode(barcodeText, { alttext });
   const base64 = png.toString('base64');
   const productName = [product.name, product.size].filter(Boolean).join(' - ');
 

@@ -5,7 +5,7 @@ const { supabase } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const rateLimit = require('../middleware/rateLimiter');
-const { generateBulkBarcodes, generateLabelHtml, formatLabelLines } = require('../services/barcodeGenerator');
+const { generateBarcode, generateBulkBarcodes, generateLabelHtml, formatLabelLines } = require('../services/barcodeGenerator');
 const { stringify } = require('csv-stringify/sync');
 
 // Apply rate limiting to all inventory routes (FR-WH-01 through FR-WH-15)
@@ -215,6 +215,17 @@ router.get('/:id/barcode', async (req, res) => {
       }
     }
 
+    // ?format=png → return just the barcode image (used for the in-app preview).
+    // Default → return a print-ready HTML label (product name + size/color + refs).
+    if (req.query.format === 'png') {
+      const { barcodeText } = formatLabelLines(labelProduct);
+      // labelProduct.size holds "size / color" when a variant is selected
+      const alttext = labelProduct.size ? `${barcodeText}  ${labelProduct.size}` : barcodeText;
+      const png = await generateBarcode(barcodeText, { alttext });
+      res.set('Content-Type', 'image/png');
+      return res.send(png);
+    }
+
     const html = await generateLabelHtml(labelProduct);
     res.set('Content-Type', 'text/html');
     res.send(html);
@@ -340,8 +351,18 @@ router.post('/barcode/bulk-variants', authenticate, async (req, res) => {
       }
     }
 
-    const barcodeTexts = labelItems.map(l => l.barcodeText);
-    const barcodes = await generateBulkBarcodes(barcodeTexts);
+    // Generate each barcode with size/color burned into the human-readable line
+    const barcodes = [];
+    for (const l of labelItems) {
+      const variantLabel = [l.size, l.color].filter(Boolean).join(' / ');
+      const alttext = variantLabel ? `${l.barcodeText}  ${variantLabel}` : l.barcodeText;
+      try {
+        const image = await generateBarcode(l.barcodeText, { alttext });
+        barcodes.push({ image, success: true });
+      } catch (e) {
+        barcodes.push({ image: null, success: false });
+      }
+    }
 
     const results = labelItems.map((l, i) => {
       const { line1, line2 } = formatLabelLines({ ...l.product, barcode: l.barcodeText, sku: l.sku });

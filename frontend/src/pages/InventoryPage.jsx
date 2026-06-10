@@ -87,7 +87,11 @@ export default function InventoryPage() {
   }
 
   function handlePrintBarcode() {
-    const printWindow = window.open(`/api/inventory/${selectedProductForBarcode.id}/barcode`, '_blank');
+    // Respect the variant chosen in the dropdown so size/color print on the label
+    const pvs = selectedProductForBarcode.product_variants || [];
+    const activeVariant = pvs.find(v => v.id === selectedBarcodeVariant);
+    const url = `/api/inventory/${selectedProductForBarcode.id}/barcode${activeVariant ? `?variant_id=${activeVariant.id}` : ''}`;
+    const printWindow = window.open(url, '_blank');
     if (printWindow) {
       printWindow.focus();
       printWindow.onload = () => {
@@ -955,10 +959,10 @@ export default function InventoryPage() {
             )}
             
             <div style={STYLES.barcodeImageWrapper}>
-              <img 
-                src={`/api/inventory/${selectedProductForBarcode.id}/barcode${activeVariant ? `?variant_id=${activeVariant.id}` : ''}`} 
-                alt="Barcode" 
-                style={STYLES.barcodeImage} 
+              <img
+                src={`/api/inventory/${selectedProductForBarcode.id}/barcode?format=png${activeVariant ? `&variant_id=${activeVariant.id}` : ''}`}
+                alt="Barcode"
+                style={STYLES.barcodeImage}
               />
             </div>
 
