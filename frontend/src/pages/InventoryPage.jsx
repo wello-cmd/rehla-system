@@ -24,6 +24,10 @@ export default function InventoryPage() {
   const [variants, setVariants] = useState([]);
   const [variantForm, setVariantForm] = useState({ sku: '', size: '', color: '', stock_quantity: '', price: '' });
   const [editingVariant, setEditingVariant] = useState(null);
+  const [showBulkBarcodeModal, setShowBulkBarcodeModal] = useState(false);
+  const [bulkBarcodeProducts, setBulkBarcodeProducts] = useState([]);
+  const [bulkVariantSelections, setBulkVariantSelections] = useState({});
+  const [selectedBarcodeVariant, setSelectedBarcodeVariant] = useState('');
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -46,6 +50,7 @@ export default function InventoryPage() {
 
   function openBarcode(product) {
     setSelectedProductForBarcode(product);
+    setSelectedBarcodeVariant(''); // reset to product-level
     setShowBarcodeModal(true);
   }
 
@@ -262,13 +267,73 @@ export default function InventoryPage() {
     }
   }
 
-  async function handleBulkPrintBarcodes() {
+  async function handleBulkBarcodeStart() {
     if (selectedProducts.length === 0) {
       toast.error('Please select products first.');
       return;
     }
+    // Load variants for all selected products
+    const productsWithVariants = [];
+    for (const pid of selectedProducts) {
+      const product = products.find(p => p.id === pid);
+      if (!product) continue;
+      const pvs = product.product_variants || [];
+      productsWithVariants.push({ ...product, variants: pvs });
+    }
+    setBulkBarcodeProducts(productsWithVariants);
+    // Default: select ALL variants for each product, or product-level if none
+    const selections = {};
+    for (const p of productsWithVariants) {
+      if (p.variants.length > 0) {
+        selections[p.id] = p.variants.map(v => v.id);
+      } else {
+        selections[p.id] = ['__product__']; // flag for product-level
+      }
+    }
+    setBulkVariantSelections(selections);
+    setShowBulkBarcodeModal(true);
+  }
+
+  function toggleBulkVariant(productId, variantId) {
+    setBulkVariantSelections(prev => {
+      const current = prev[productId] || [];
+      if (current.includes(variantId)) {
+        return { ...prev, [productId]: current.filter(v => v !== variantId) };
+      } else {
+        return { ...prev, [productId]: [...current, variantId] };
+      }
+    });
+  }
+
+  function toggleAllVariantsForProduct(productId, allVariantIds) {
+    setBulkVariantSelections(prev => {
+      const current = prev[productId] || [];
+      if (current.length === allVariantIds.length) {
+        return { ...prev, [productId]: [] };
+      } else {
+        return { ...prev, [productId]: [...allVariantIds] };
+      }
+    });
+  }
+
+  async function handleBulkPrintBarcodes() {
+    // Build items payload from selections
+    const items = [];
+    for (const [productId, variantIds] of Object.entries(bulkVariantSelections)) {
+      const filtered = variantIds.filter(v => v !== '__product__');
+      if (variantIds.includes('__product__') || filtered.length === 0) {
+        items.push({ product_id: productId, variant_ids: [] });
+      } else {
+        items.push({ product_id: productId, variant_ids: filtered });
+      }
+    }
+    if (items.length === 0) {
+      toast.error('No products/variants selected for barcodes.');
+      return;
+    }
     try {
-      const result = await api.post('/inventory/barcode/bulk', { product_ids: selectedProducts });
+      const result = await api.post('/inventory/barcode/bulk-variants', { items });
+      setShowBulkBarcodeModal(false);
       const printWindow = window.open('', '_blank');
       if (printWindow) {
         let html = `<html><head><title>Print Barcodes</title><style>
@@ -276,15 +341,18 @@ export default function InventoryPage() {
           body { font-family: Arial, sans-serif; background: #fff; }
           .labels-grid { display: flex; flex-wrap: wrap; padding: 20px; gap: 12px; }
           .label { text-align: center; padding: 12px 16px; border: 1px dashed #999; width: 240px; }
-          .product-name { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+          .product-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+          .variant-info { font-size: 11px; color: #666; margin-bottom: 8px; }
           .barcode-img { width: 100%; display: block; }
           .ref1, .ref2 { font-size: 10px; font-family: monospace; letter-spacing: 0.04em; margin-top: 3px; }
           @media print { .label { border: 1px dashed #ccc; break-inside: avoid; } }
         </style></head><body><div class="labels-grid">`;
         result.forEach(item => {
           if (item.barcode_image) {
+            const variantInfo = [item.size, item.color].filter(Boolean).join(' / ');
             html += `<div class="label">
               <p class="product-name">${item.name}</p>
+              ${variantInfo ? `<p class="variant-info">${variantInfo}</p>` : ''}
               <img class="barcode-img" src="data:image/png;base64,${item.barcode_image}" />
               <p class="ref1">${item.line1}</p>
               <p class="ref2">${item.line2}</p>
@@ -401,8 +469,8 @@ export default function InventoryPage() {
           ↓ Export CSV
         </button>
         {selectedProducts.length > 0 && (
-          <button className="btn btn-primary btn-sm" onClick={handleBulkPrintBarcodes}>
-            Print {selectedProducts.length} Barcodes
+          <button className="btn btn-primary btn-sm" onClick={handleBulkBarcodeStart}>
+            🏷️ Print {selectedProducts.length} Barcodes
           </button>
         )}
       </div>
@@ -624,19 +692,121 @@ export default function InventoryPage() {
         </div>
       )}
 
+      {/* Bulk Barcode Variant Selection Modal */}
+      {showBulkBarcodeModal && (
+        <div className="modal-overlay" onClick={() => setShowBulkBarcodeModal(false)}>
+          <div className="modal-content" style={{ maxWidth: 700, width: '95%', maxHeight: '80vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
+            <h2 className="text-title" style={{ marginBottom: 4 }}>Select Variants for Barcodes</h2>
+            <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 20 }}>
+              Choose which size / color variants to include in the barcode labels.
+            </p>
+
+            {bulkBarcodeProducts.map(product => (
+              <div key={product.id} style={{ marginBottom: 20, padding: '16px', background: 'var(--color-bg-inset)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <div>
+                    <span style={{ fontWeight: 600, fontSize: 14 }}>{product.name}</span>
+                    <span className="font-mono" style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-text-dim)' }}>{product.sku}</span>
+                  </div>
+                  {product.variants.length > 0 && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '3px 10px', fontSize: 10 }}
+                      onClick={() => toggleAllVariantsForProduct(product.id, product.variants.map(v => v.id))}
+                    >
+                      {(bulkVariantSelections[product.id] || []).length === product.variants.length ? 'Deselect All' : 'Select All'}
+                    </button>
+                  )}
+                </div>
+
+                {product.variants.length === 0 ? (
+                  <p style={{ fontSize: 12, color: 'var(--color-text-muted)', fontStyle: 'italic' }}>No variants — will use product-level barcode</p>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+                    {product.variants.map(v => {
+                      const isSelected = (bulkVariantSelections[product.id] || []).includes(v.id);
+                      const label = [v.size, v.color].filter(Boolean).join(' / ') || v.sku;
+                      return (
+                        <label
+                          key={v.id}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '8px 12px', borderRadius: 6,
+                            cursor: 'pointer',
+                            background: isSelected ? 'var(--color-bg-active)' : 'var(--color-bg-surface)',
+                            border: `1px solid ${isSelected ? 'var(--color-primary, #4f46e5)' : 'var(--color-border)'}`,
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleBulkVariant(product.id, v.id)}
+                          />
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 500 }}>{label}</div>
+                            <div className="font-mono" style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>
+                              {v.sku} · Stock: {v.stock_quantity}
+                            </div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowBulkBarcodeModal(false)}>Cancel</button>
+              <button className="btn btn-primary btn-sm" onClick={handleBulkPrintBarcodes}>
+                🖨️ Generate & Print
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Barcode View Modal */}
-      {showBarcodeModal && selectedProductForBarcode && (
+      {showBarcodeModal && selectedProductForBarcode && (() => {
+        const pvs = selectedProductForBarcode.product_variants || [];
+        const activeVariant = pvs.find(v => v.id === selectedBarcodeVariant);
+        const displayBarcode = activeVariant ? (activeVariant.barcode || activeVariant.sku) : (selectedProductForBarcode.barcode || selectedProductForBarcode.sku);
+        const displaySku = activeVariant ? activeVariant.sku : selectedProductForBarcode.sku;
+        const variantLabel = activeVariant ? [activeVariant.size, activeVariant.color].filter(Boolean).join(' / ') : '';
+        return (
         <div className="modal-overlay" onClick={closeBarcodeModal}>
-          <div className="modal-content" style={STYLES.barcodeModalContent} onClick={handleModalContentClick}>
+          <div className="modal-content" style={{ ...STYLES.barcodeModalContent, maxWidth: 440 }} onClick={handleModalContentClick}>
             <h2 className="text-title" style={STYLES.barcodeModalTitle}>Product Barcode</h2>
             <p style={STYLES.barcodeModalProduct}>{selectedProductForBarcode.name}</p>
+            {variantLabel && <p style={{ fontSize: 12, color: 'var(--color-primary, #4f46e5)', marginBottom: 4 }}>{variantLabel}</p>}
             <p className="font-mono" style={STYLES.barcodeModalMeta}>
-              SKU: {selectedProductForBarcode.sku} | Barcode: {selectedProductForBarcode.barcode || selectedProductForBarcode.sku}
+              SKU: {displaySku} | Barcode: {displayBarcode}
             </p>
+
+            {/* Variant selector */}
+            {pvs.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <label className="text-label" style={{ display: 'block', fontSize: 10, marginBottom: 6, color: 'var(--color-text-dim)' }}>Select Variant</label>
+                <select
+                  className="input"
+                  value={selectedBarcodeVariant}
+                  onChange={e => setSelectedBarcodeVariant(e.target.value)}
+                  style={{ width: '100%' }}
+                >
+                  <option value="">Product Level ({selectedProductForBarcode.sku})</option>
+                  {pvs.map(v => (
+                    <option key={v.id} value={v.id}>
+                      {[v.size, v.color].filter(Boolean).join(' / ') || v.sku} — SKU: {v.sku}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             
             <div style={STYLES.barcodeImageWrapper}>
               <img 
-                src={`/api/inventory/${selectedProductForBarcode.id}/barcode`} 
+                src={`/api/inventory/${selectedProductForBarcode.id}/barcode${activeVariant ? `?variant_id=${activeVariant.id}` : ''}`} 
                 alt="Barcode" 
                 style={STYLES.barcodeImage} 
               />
@@ -659,7 +829,8 @@ export default function InventoryPage() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </DashboardShell>
   );
 }

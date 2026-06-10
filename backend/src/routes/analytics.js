@@ -114,7 +114,7 @@ router.get('/sales', authenticate, async (req, res) => {
     const heatmap = Array(7).fill(null).map((_, i) => ({ day: dayMap[i], revenue: 0, orders: 0 }));
     for (const o of activeOrders) {
       const idx = new Date(o.created_at).getDay();
-      heatmap[idx].revenue += netTotal(o);
+      heatmap[idx].revenue += netSales(o);
       heatmap[idx].orders++;
     }
 

@@ -11,50 +11,53 @@ const { stringify } = require('csv-stringify/sync');
 // Apply rate limiting to all inventory routes (FR-WH-01 through FR-WH-15)
 router.use(rateLimit(300, 15 * 60 * 1000)); // Max 300 requests per 15 mins per IP
 
-// GET /api/inventory — List all products (FR-WH-01)
-router.get('/', async (req, res) => {
+// GET /api/inventory — List all products with nested variants (FR-WH-01)
+router.get('/', authenticate, async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
     const { data, error } = await supabase
       .from('products')
-      .select('*, warehouses(name, code), clients(company_name)')
+      .select('*, warehouses(name, code), clients(company_name), product_variants(id, sku, variant_name, size, color, price, cost_per_unit, stock_quantity, barcode, shopify_variant_id)')
       .order('name');
 
     if (error) throw error;
 
-    // FR-WH-10: Calculate 4-state stock for each product
+    // Aggregate inventory_log by product_id (cleaner than per-SKU now that products are parents)
+    let exitsQuery = supabase
+      .from('inventory_log')
+      .select('product_id, quantity_changed')
+      .eq('event_type', 'warehouse_exit');
+    let soldQuery = supabase
+      .from('inventory_log')
+      .select('product_id, quantity_changed')
+      .eq('event_type', 'sold');
+
+    if (start_date) {
+      exitsQuery = exitsQuery.gte('created_at', start_date);
+      soldQuery  = soldQuery.gte('created_at', start_date);
+    }
+    if (end_date) {
+      exitsQuery = exitsQuery.lte('created_at', end_date);
+      soldQuery  = soldQuery.lte('created_at', end_date);
+    }
+
+    const [{ data: allExits }, { data: allSold }] = await Promise.all([exitsQuery, soldQuery]);
+
+    const exitsByProduct = {};
+    for (const e of allExits || []) {
+      if (e.product_id) exitsByProduct[e.product_id] = (exitsByProduct[e.product_id] || 0) + Math.abs(e.quantity_changed);
+    }
+    const soldByProduct = {};
+    for (const s of allSold || []) {
+      if (s.product_id) soldByProduct[s.product_id] = (soldByProduct[s.product_id] || 0) + Math.abs(s.quantity_changed);
+    }
+
     for (const product of data) {
-      let exitsQuery = supabase
-        .from('inventory_log')
-        .select('quantity_changed')
-        .eq('sku', product.sku)
-        .eq('event_type', 'warehouse_exit');
-
-      let soldQuery = supabase
-        .from('inventory_log')
-        .select('quantity_changed')
-        .eq('sku', product.sku)
-        .eq('event_type', 'sold');
-
-      if (start_date) {
-        exitsQuery = exitsQuery.gte('created_at', start_date);
-        soldQuery = soldQuery.gte('created_at', start_date);
-      }
-      if (end_date) {
-        exitsQuery = exitsQuery.lte('created_at', end_date);
-        soldQuery = soldQuery.lte('created_at', end_date);
-      }
-
-      const { data: exits } = await exitsQuery;
-      const { data: sold } = await soldQuery;
-
-      product.left_warehouse = (exits || []).reduce((sum, e) => sum + Math.abs(e.quantity_changed), 0);
-      product.total_sold = (sold || []).reduce((sum, e) => sum + Math.abs(e.quantity_changed), 0);
-      
-      // In Warehouse = Starting Stock for the period = Current Stock + Exits + Sold
-      product.in_warehouse = product.stock_quantity + product.left_warehouse + product.total_sold;
-      product.current_stock = product.stock_quantity;
-      product.low_stock = product.stock_quantity < 10; // FR-WH-11
+      product.left_warehouse = exitsByProduct[product.id] || 0;
+      product.total_sold     = soldByProduct[product.id]  || 0;
+      product.in_warehouse   = product.stock_quantity + product.left_warehouse + product.total_sold;
+      product.current_stock  = product.stock_quantity;
+      product.low_stock      = product.stock_quantity < 10; // FR-WH-11
     }
 
     res.json(data);
@@ -183,15 +186,36 @@ router.delete('/:id', authenticate, authorize('admin', 'ceo'), async (req, res) 
 // GET /api/inventory/:id/barcode — Print-ready label HTML (FR-WH-02, FR-WH-03)
 router.get('/:id/barcode', async (req, res) => {
   try {
-    const { data: product } = await supabase
+    const { variant_id } = req.query;
+    const { data: product, error: productErr } = await supabase
       .from('products')
       .select('id, sku, name, barcode, category')
       .eq('id', req.params.id)
-      .single();
+      .maybeSingle();
 
+    if (productErr) throw productErr;
     if (!product) return res.status(404).json({ error: 'Product not found.' });
 
-    const html = await generateLabelHtml(product);
+    let labelProduct = product;
+    // If a variant_id is specified, use the variant's barcode/sku instead
+    if (variant_id) {
+      const { data: variant } = await supabase
+        .from('product_variants')
+        .select('id, sku, barcode, size, color')
+        .eq('id', variant_id)
+        .eq('product_id', req.params.id)
+        .maybeSingle();
+      if (variant) {
+        labelProduct = {
+          ...product,
+          sku: variant.sku,
+          barcode: variant.barcode || variant.sku,
+          size: [variant.size, variant.color].filter(Boolean).join(' / ')
+        };
+      }
+    }
+
+    const html = await generateLabelHtml(labelProduct);
     res.set('Content-Type', 'text/html');
     res.send(html);
   } catch (err) {
@@ -251,6 +275,95 @@ router.post('/barcode/bulk', authenticate, async (req, res) => {
   }
 });
 
+// POST /api/inventory/barcode/bulk-variants — Bulk barcode print with variant selection
+router.post('/barcode/bulk-variants', authenticate, async (req, res) => {
+  const { items } = req.body; // items: [{ product_id, variant_ids: [id1, id2] }]
+  if (!items || !items.length) {
+    return res.status(400).json({ error: 'items array required. Each item: { product_id, variant_ids? }' });
+  }
+
+  try {
+    const productIds = items.map(i => i.product_id);
+    const { data: products } = await supabase
+      .from('products')
+      .select('id, sku, name, barcode, category')
+      .in('id', productIds);
+
+    const productMap = Object.fromEntries((products || []).map(p => [p.id, p]));
+
+    // Collect all variant IDs needed
+    const allVariantIds = items.flatMap(i => i.variant_ids || []);
+    let variantMap = {};
+    if (allVariantIds.length > 0) {
+      const { data: variants } = await supabase
+        .from('product_variants')
+        .select('id, product_id, sku, size, color, barcode, variant_name, stock_quantity, price')
+        .in('id', allVariantIds);
+      variantMap = Object.fromEntries((variants || []).map(v => [v.id, v]));
+    }
+
+    const labelItems = [];
+    for (const item of items) {
+      const product = productMap[item.product_id];
+      if (!product) continue;
+
+      if (item.variant_ids && item.variant_ids.length > 0) {
+        // Generate one barcode per selected variant
+        for (const vid of item.variant_ids) {
+          const variant = variantMap[vid];
+          if (!variant) continue;
+          const barcodeText = variant.barcode || variant.sku;
+          const variantLabel = [variant.size, variant.color].filter(Boolean).join(' / ');
+          labelItems.push({
+            barcodeText,
+            name: `${product.name}${variantLabel ? ` — ${variantLabel}` : ''}`,
+            sku: variant.sku,
+            product_id: product.id,
+            variant_id: variant.id,
+            size: variant.size || '',
+            color: variant.color || '',
+            product
+          });
+        }
+      } else {
+        // No variants selected — use product-level barcode
+        labelItems.push({
+          barcodeText: product.barcode || product.sku,
+          name: product.name,
+          sku: product.sku,
+          product_id: product.id,
+          variant_id: null,
+          size: '',
+          color: '',
+          product
+        });
+      }
+    }
+
+    const barcodeTexts = labelItems.map(l => l.barcodeText);
+    const barcodes = await generateBulkBarcodes(barcodeTexts);
+
+    const results = labelItems.map((l, i) => {
+      const { line1, line2 } = formatLabelLines({ ...l.product, barcode: l.barcodeText, sku: l.sku });
+      return {
+        id: l.product_id,
+        variant_id: l.variant_id,
+        sku: l.sku,
+        name: l.name,
+        size: l.size,
+        color: l.color,
+        barcode_image: barcodes[i].success ? barcodes[i].image.toString('base64') : null,
+        line1,
+        line2
+      };
+    });
+
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/inventory/export/csv — CSV export (FR-WH-14)
 router.get('/export/csv', authenticate, async (req, res) => {
   try {
@@ -293,57 +406,61 @@ router.post('/warehouse/exit', authenticate, async (req, res) => {
   }
 
   try {
-    // Look up product by SKU or barcode
-    const { data: product, error: lookupErr } = await supabase
-      .from('products')
-      .select('*')
+    // Look up variant by SKU or barcode, join parent product for name + warehouse
+    const { data: variant, error: lookupErr } = await supabase
+      .from('product_variants')
+      .select('*, products(id, name, warehouse_id, brand)')
       .or(`sku.eq.${searchValue},barcode.eq.${searchValue}`)
-      .single();
+      .maybeSingle();
 
-    if (lookupErr || !product) {
-      return res.status(404).json({ error: `Product not found: ${searchValue}` });
-    }
+    if (lookupErr) throw lookupErr;
+    if (!variant) return res.status(404).json({ error: `Product not found: ${searchValue}` });
 
-    // FR-WH-09: Block if stock is 0
-    if (product.stock_quantity < qty) {
+    const parent = variant.products;
+    const displayName = `${parent?.name || ''}${variant.variant_name ? ` - ${variant.variant_name}` : ''}`;
+
+    // FR-WH-09: Block if stock is insufficient
+    if (variant.stock_quantity < qty) {
       return res.status(400).json({
-        error: `Insufficient stock for ${product.name}. Available: ${product.stock_quantity}`,
-        product
+        error: `Insufficient stock for ${displayName}. Available: ${variant.stock_quantity}`
       });
     }
 
-    // NFR-RL-04: Atomic update
-    const newQty = product.stock_quantity - qty;
-    const { error: updateErr } = await supabase
-      .from('products')
-      .update({ stock_quantity: newQty })
-      .eq('id', product.id);
+    const prevQty = variant.stock_quantity;
+    const newQty = prevQty - qty;
 
-    if (updateErr) throw updateErr;
+    // Update variant stock
+    await supabase.from('product_variants').update({ stock_quantity: newQty }).eq('id', variant.id);
+
+    // Recalculate and sync parent total stock
+    const { data: siblings } = await supabase
+      .from('product_variants').select('stock_quantity').eq('product_id', parent.id);
+    const parentTotal = (siblings || []).reduce((s, v) => s + (v.stock_quantity || 0), 0);
+    await supabase.from('products').update({ stock_quantity: parentTotal }).eq('id', parent.id);
 
     // FR-WH-08: Log warehouse exit
     await supabase.from('inventory_log').insert({
-      product_id: product.id,
-      sku: product.sku,
+      product_id: parent.id,
+      sku: variant.sku,
       event_type: 'warehouse_exit',
       quantity_changed: -qty,
-      previous_quantity: product.stock_quantity,
+      previous_quantity: prevQty,
       new_quantity: newQty,
-      notes: `Warehouse exit scan`,
+      notes: 'Warehouse exit scan',
       handler_id: req.user.id,
       handler_name: req.user.name,
-      warehouse_id: product.warehouse_id
+      warehouse_id: parent.warehouse_id
     });
 
-    // FR-WH-07: Return confirmation card data
     res.json({
       success: true,
       product: {
-        id: product.id,
-        name: product.name,
-        sku: product.sku,
-        barcode: product.barcode,
-        previous_stock: product.stock_quantity,
+        id: parent.id,
+        variant_id: variant.id,
+        name: displayName,
+        sku: variant.sku,
+        barcode: variant.barcode,
+        previous_stock: prevQty,
         current_stock: newQty,
         quantity_exited: qty,
         low_stock: newQty < 10
@@ -376,42 +493,49 @@ router.post('/warehouse/restock', authenticate, authorize('admin', 'ceo', 'worke
     return res.status(400).json({ error: 'SKU and a positive quantity are required.' });
   }
   try {
-    const { data: product, error: findErr } = await supabase
-      .from('products')
-      .select('id, name, sku, stock_quantity, barcode')
-      .or(`sku.eq.${sku.toUpperCase()},barcode.eq.${sku}`)
-      .single();
+    const searchValue = sku.toUpperCase();
+    const { data: variant, error: findErr } = await supabase
+      .from('product_variants')
+      .select('*, products(id, name, warehouse_id)')
+      .or(`sku.eq.${searchValue},barcode.eq.${sku}`)
+      .maybeSingle();
 
-    if (findErr || !product) return res.status(404).json({ error: `Product not found: ${sku}` });
+    if (findErr) throw findErr;
+    if (!variant) return res.status(404).json({ error: `Product not found: ${sku}` });
 
+    const parent = variant.products;
     const qty = parseInt(quantity, 10);
-    const newQty = product.stock_quantity + qty;
+    const prevQty = variant.stock_quantity;
+    const newQty = prevQty + qty;
 
-    const { error: updateErr } = await supabase
-      .from('products')
-      .update({ stock_quantity: newQty })
-      .eq('id', product.id);
+    await supabase.from('product_variants').update({ stock_quantity: newQty }).eq('id', variant.id);
 
-    if (updateErr) throw updateErr;
+    // Recalculate parent total
+    const { data: siblings } = await supabase
+      .from('product_variants').select('stock_quantity').eq('product_id', parent.id);
+    const parentTotal = (siblings || []).reduce((s, v) => s + (v.stock_quantity || 0), 0);
+    await supabase.from('products').update({ stock_quantity: parentTotal }).eq('id', parent.id);
 
     await supabase.from('inventory_log').insert({
-      product_id: product.id,
-      sku: product.sku,
+      product_id: parent.id,
+      sku: variant.sku,
       event_type: 'restock',
       quantity_changed: qty,
-      previous_quantity: product.stock_quantity,
+      previous_quantity: prevQty,
       new_quantity: newQty,
       notes: notes || 'Manual restock',
       handler_name: req.user?.name || 'system'
     });
 
+    const displayName = `${parent?.name || ''}${variant.variant_name ? ` - ${variant.variant_name}` : ''}`;
     res.json({
       product: {
-        id: product.id,
-        name: product.name,
-        sku: product.sku,
-        barcode: product.barcode,
-        previous_stock: product.stock_quantity,
+        id: parent.id,
+        variant_id: variant.id,
+        name: displayName,
+        sku: variant.sku,
+        barcode: variant.barcode,
+        previous_stock: prevQty,
         current_stock: newQty,
         quantity_added: qty
       }
