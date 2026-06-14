@@ -11,6 +11,9 @@ import {
 const STATUS_OPTIONS = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
 const PAYMENT_STATUS_OPTIONS = ['paid', 'pending', 'failed', 'refunded'];
 const CHART_COLORS = ['#6366f1','#3fb950','#f0883e','#58a6ff','#f85149','#a371f7','#38bdf8'];
+// Card payments (incl. former "installment") are shown as Visa
+const PM_LABELS = { cash: 'Cash', card: 'Visa', installment: 'Visa', bank_transfer: 'Bank Transfer' };
+const pmLabel = (m) => PM_LABELS[m] || (m || '').replace('_', ' ');
 const TT = { background:'#1e1e1e', border:'1px solid #333030', color:'#ede9e8', fontSize:12, borderRadius:6 };
 
 export default function ShopifyPage() {
@@ -86,7 +89,7 @@ export default function ShopifyPage() {
     [analytics]
   );
   const paymentMethodData = useMemo(() =>
-    Object.entries(analytics?.paymentMethodBreakdown || {}).map(([name, value]) => ({ name: name.replace('_', ' '), value })),
+    Object.entries(analytics?.paymentMethodBreakdown || {}).map(([name, value]) => ({ name: pmLabel(name), value })),
     [analytics]
   );
 
@@ -285,7 +288,7 @@ export default function ShopifyPage() {
                       <td className="font-mono">{formatEGP(o.total)}</td>
                       <td><span className={`badge badge-${getStatusColor(o.status)}`}>{o.status}</span></td>
                       <td><span className={`badge badge-${getStatusColor(o.payment_status)}`}>{o.payment_status}</span></td>
-                      <td style={{ fontSize: 12 }}>{(o.payment_method || '').replace('_', ' ')}</td>
+                      <td style={{ fontSize: 12 }}>{pmLabel(o.payment_method)}</td>
                       <td style={{ fontSize: 12 }}>{formatDate(o.created_at)}</td>
                     </tr>
                   ))}

@@ -774,7 +774,7 @@ function mapShopifyPaymentMethod(shopifyOrder) {
 
   if (gateways.includes('cash') || gateways.includes('cod')) return 'cash';
   if (gateways.includes('bank')) return 'bank_transfer';
-  if (gateways.includes('install')) return 'installment';
+  // Installment plans (valU/Visa instalments etc.) settle to us via Visa/card — treat as card
   return 'card';
 }
 
