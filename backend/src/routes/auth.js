@@ -150,4 +150,57 @@ router.get('/users', authenticate, authorize('admin', 'ceo'), async (req, res) =
   }
 });
 
+// PATCH /api/auth/users/:id — Edit a user's profile (name, role, phone, staff_id)
+router.patch('/users/:id', authenticate, authorize('ceo', 'admin'), async (req, res) => {
+  const { name, role, phone, staff_id } = req.body;
+  const validRoles = ['ceo', 'admin', 'dispatcher', 'worker', 'driver', 'accountant'];
+  if (role && !validRoles.includes(role)) {
+    return res.status(400).json({ error: `Invalid role. Must be: ${validRoles.join(', ')}` });
+  }
+  const updates = {};
+  if (name      !== undefined) updates.name = name;
+  if (role      !== undefined) updates.role = role;
+  if (phone     !== undefined) updates.phone = phone;
+  if (staff_id  !== undefined) updates.staff_id = staff_id.toUpperCase();
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'No fields to update.' });
+  }
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/auth/users/:id — Delete a user (auth login + profile)
+router.delete('/users/:id', authenticate, authorize('ceo', 'admin'), async (req, res) => {
+  const targetId = req.params.id;
+  if (targetId === req.user?.id) {
+    return res.status(400).json({ error: 'You cannot delete your own account.' });
+  }
+  try {
+    // Remove the Supabase Auth login (requires service-role key)
+    const { error: authErr } = await supabase.auth.admin.deleteUser(targetId);
+    if (authErr && !/not found|user not found/i.test(authErr.message || '')) {
+      if (authErr.status === 403 || /not allowed|not_admin/i.test(authErr.message || '')) {
+        return res.status(500).json({ error: 'Server misconfigured: SUPABASE_SERVICE_ROLE_KEY is not a service-role key.' });
+      }
+      throw authErr;
+    }
+    // Remove the profile row
+    const { error: profErr } = await supabase.from('user_profiles').delete().eq('id', targetId);
+    if (profErr) throw profErr;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

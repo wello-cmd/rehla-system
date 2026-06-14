@@ -17,6 +17,7 @@ export default function UsersPage() {
   const [role, setRole] = useState('worker');
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
 
   async function fetchUsers() {
     try {
@@ -41,6 +42,7 @@ export default function UsersPage() {
   );
 
   function openCreateModal() {
+    setEditingUser(null);
     setEmail('');
     setPassword('');
     setName('');
@@ -50,8 +52,44 @@ export default function UsersPage() {
     setShowModal(true);
   }
 
+  function openEditModal(u) {
+    setEditingUser(u);
+    setEmail(u.email || '');
+    setPassword('');
+    setName(u.name || '');
+    setStaffId(u.staff_id || '');
+    setRole(u.role || 'worker');
+    setPhone(u.phone || '');
+    setShowModal(true);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
+
+    if (editingUser) {
+      if (!name.trim() || !staffId.trim() || !role) {
+        toast.error('Please fill in all required fields');
+        return;
+      }
+      setSaving(true);
+      try {
+        await api.patch(`/auth/users/${editingUser.id}`, {
+          name: name.trim(),
+          staff_id: staffId.trim().toUpperCase(),
+          role,
+          phone: phone.trim() || ''
+        });
+        toast.success('User updated');
+        setShowModal(false);
+        fetchUsers();
+      } catch (err) {
+        toast.error(err.message || 'Update failed');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     if (!email.trim() || !password.trim() || !name.trim() || !staffId.trim() || !role) {
       toast.error('Please fill in all required fields');
       return;
@@ -74,6 +112,17 @@ export default function UsersPage() {
       toast.error(err.message || 'Registration failed');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDelete(u) {
+    if (!window.confirm(`Delete user ${u.name} (${u.staff_id})? This permanently removes their login and cannot be undone.`)) return;
+    try {
+      await api.delete(`/auth/users/${u.id}`);
+      toast.success('User deleted');
+      fetchUsers();
+    } catch (err) {
+      toast.error(err.message || 'Delete failed');
     }
   }
 
@@ -114,6 +163,7 @@ export default function UsersPage() {
                     <th>Role</th>
                     <th>Phone</th>
                     <th>Registered At</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -136,11 +186,17 @@ export default function UsersPage() {
                       <td className="font-mono" style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
                         {new Date(u.created_at).toLocaleDateString()}
                       </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button className="btn btn-secondary btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => openEditModal(u)}>Edit</button>
+                          <button className="btn btn-secondary btn-sm" style={{ padding: '4px 10px', fontSize: '11px', color: 'var(--color-error)' }} onClick={() => handleDelete(u)}>Delete</button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                   {filteredUsers.length === 0 && (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-dim)' }}>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-dim)' }}>
                         No staff users found.
                       </td>
                     </tr>
@@ -156,7 +212,7 @@ export default function UsersPage() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-content" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
-            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Register Staff User</p>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>{editingUser ? 'Edit Staff User' : 'Register Staff User'}</p>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Full Name</label>
@@ -204,21 +260,25 @@ export default function UsersPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="e.g. user@rehla.com"
-                  required
+                  required={!editingUser}
+                  disabled={!!editingUser}
+                  title={editingUser ? 'Email cannot be changed' : undefined}
                 />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-                <div>
-                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Password</label>
-                  <input
-                    type="password"
-                    className="input"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Min 6 characters"
-                    required
-                  />
-                </div>
+                {!editingUser && (
+                  <div>
+                    <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Password</label>
+                    <input
+                      type="password"
+                      className="input"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Min 6 characters"
+                      required
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Phone Number (Optional)</label>
                   <input
@@ -240,7 +300,7 @@ export default function UsersPage() {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Registering...' : 'Register User'}
+                  {saving ? 'Saving...' : (editingUser ? 'Save Changes' : 'Register User')}
                 </button>
               </div>
             </form>
