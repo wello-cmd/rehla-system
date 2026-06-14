@@ -10,7 +10,7 @@ import {
 
 const BOSTA_STATUSES = ['pending', 'assigned', 'out_for_delivery', 'delivered', 'failed', 'returned'];
 const CHART_COLORS = ['#6366f1','#58a6ff','#f0883e','#3fb950','#f85149','#a371f7'];
-const TT = { background:'#1e1e1e', border:'1px solid #333030', color:'#ede9e8', fontSize:12, borderRadius:6 };
+const TT = { background:'var(--color-bg-elevated)', border:'1px solid var(--color-border)', color:'var(--color-text)', fontSize:12, borderRadius:6 };
 const STATUS_COLORS = {
   pending: '#6366f1', assigned: '#58a6ff', out_for_delivery: '#f0883e',
   delivered: '#3fb950', failed: '#f85149', returned: '#a371f7'

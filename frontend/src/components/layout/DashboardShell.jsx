@@ -56,16 +56,16 @@ export default function DashboardShell({ children, title, subtitle, actions }) {
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#1e1e1e',
-            color: '#ede9e8',
-            border: '1px solid #333030',
+            background: 'var(--color-bg-elevated)',
+            color: 'var(--color-text)',
+            border: '1px solid var(--color-border)',
             fontFamily: 'Inter, sans-serif',
             fontSize: '13px',
             borderRadius: '6px',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+            boxShadow: 'var(--shadow-lg)',
           },
-          success: { iconTheme: { primary: '#3fb950', secondary: '#1e1e1e' } },
-          error:   { iconTheme: { primary: '#f85149', secondary: '#1e1e1e' } },
+          success: { iconTheme: { primary: 'var(--color-success)', secondary: 'var(--color-bg-elevated)' } },
+          error:   { iconTheme: { primary: 'var(--color-error)', secondary: 'var(--color-bg-elevated)' } },
         }}
       />
     </div>

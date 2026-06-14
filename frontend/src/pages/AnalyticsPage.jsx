@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 
 const COLORS = ['#6366f1','#3fb950','#f0883e','#58a6ff','#f85149','#a371f7','#38bdf8','#fbbf24'];
-const TT = { background:'#1e1e1e', border:'1px solid #333030', color:'#ede9e8', fontSize:12, borderRadius:6 };
+const TT = { background:'var(--color-bg-elevated)', border:'1px solid var(--color-border)', color:'var(--color-text)', fontSize:12, borderRadius:6 };
 const egp = v => `EGP ${Number(v).toLocaleString('en-EG', { minimumFractionDigits:0, maximumFractionDigits:0 })}`;
 const kTick = v => `${(v/1000).toFixed(0)}k`;
 

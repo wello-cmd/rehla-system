@@ -25,7 +25,7 @@ const FAILURE_REASONS = [
   ['postponed', 'Postponed']
 ];
 const CHART_COLORS = ['#6366f1','#3fb950','#f0883e','#58a6ff','#f85149','#a371f7'];
-const TT = { background:'#1e1e1e', border:'1px solid #333030', color:'#ede9e8', fontSize:12, borderRadius:6 };
+const TT = { background:'var(--color-bg-elevated)', border:'1px solid var(--color-border)', color:'var(--color-text)', fontSize:12, borderRadius:6 };
 
 export default function DeliveryPage() {
   const [activeTab, setActiveTab] = useState('dispatcher');

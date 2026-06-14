@@ -192,7 +192,7 @@ export default function ProfitLossPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
                   <XAxis dataKey="month" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
                   <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
-                  <Tooltip contentStyle={{ background:'#1e1e1e', border:'1px solid #333030', color:'#ede9e8', fontSize:12, borderRadius:6 }} />
+                  <Tooltip contentStyle={{ background:'var(--color-bg-elevated)', border:'1px solid var(--color-border)', color:'var(--color-text)', fontSize:12, borderRadius:6 }} />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
                   <Bar dataKey="profit" name="Net Profit (EGP)" radius={[2,2,0,0]}>
                     {trendData.map((entry, index) => (
