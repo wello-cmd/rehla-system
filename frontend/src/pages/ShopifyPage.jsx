@@ -365,7 +365,7 @@ function SummaryCards({ analytics }) {
     ['Total Orders', s.total_orders ?? 0, ''],
     ['Total Revenue', formatEGP(s.total_revenue ?? 0), 'var(--color-success)'],
     ['Avg Order Value', formatEGP(s.avg_order_value ?? 0), ''],
-    ['Paid Orders', s.paid_orders ?? 0, 'var(--color-success)'],
+    ['Collected (incl. COD)', s.paid_orders ?? 0, 'var(--color-success)'],
     ['Pending Payment', s.pending_orders ?? 0, 'var(--color-warning)'],
     ['Delivered', s.delivered_orders ?? 0, 'var(--color-success)'],
     ['Fulfillment Rate', `${s.fulfillment_rate ?? 0}%`, s.fulfillment_rate >= 80 ? 'var(--color-success)' : 'var(--color-warning)'],

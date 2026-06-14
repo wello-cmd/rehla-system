@@ -54,13 +54,18 @@ router.get('/analytics', authenticate, async (req, res) => {
     const refundsTotal = refundRows.reduce((s, r) => s + Number(r.amount), 0);
     const totalRevenue = grossRevenue - refundsTotal;
 
-    const paidOrders = orders.filter(o => o.payment_status === 'paid');
+    // COD-aware: cash is collected when an order is delivered, even though Shopify
+    // keeps financial_status = "pending" for cash-on-delivery. So:
+    //   collected     = paid OR delivered (and not cancelled)
+    //   pendingPayment = not paid, not yet delivered, not cancelled (truly awaiting money)
+    const collectedOrders = orders.filter(o => o.status !== 'cancelled' && (o.payment_status === 'paid' || o.status === 'delivered'));
+    const pendingPayment  = orders.filter(o => o.status !== 'cancelled' && o.status !== 'delivered' && o.payment_status !== 'paid');
     const summary = {
       total_orders: orders.length,
       total_revenue: totalRevenue,
       avg_order_value: activeOrders.length > 0 ? totalRevenue / activeOrders.length : 0,
-      paid_orders: paidOrders.length,
-      pending_orders: orders.filter(o => o.payment_status === 'pending').length,
+      paid_orders: collectedOrders.length,
+      pending_orders: pendingPayment.length,
       delivered_orders: orders.filter(o => o.status === 'delivered').length,
       fulfillment_rate: orders.length > 0
         ? Number(((orders.filter(o => o.status === 'delivered').length / orders.length) * 100).toFixed(1))
