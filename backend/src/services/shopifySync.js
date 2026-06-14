@@ -799,6 +799,12 @@ function extractNotePhone(noteAttributes) {
 
 function buildOrderPayload(shopifyOrder, items) {
   const notePhone = extractNotePhone(shopifyOrder.note_attributes);
+  const status = shopifyOrder.cancelled_at ? 'cancelled'
+        : (shopifyOrder.returns?.length > 0 || shopifyOrder.financial_status === 'refunded') ? 'returned'
+        : mapShopifyStatus(shopifyOrder.fulfillment_status);
+  // Delivered (and not returned/cancelled) means the cash was collected — even for COD,
+  // where Shopify keeps financial_status = "pending". Treat delivered orders as paid.
+  const payment_status = status === 'delivered' ? 'paid' : mapShopifyPaymentStatus(shopifyOrder.financial_status);
   return {
     shopify_order_id: String(shopifyOrder.id),
     shopify_order_name: shopifyOrder.name || `#${shopifyOrder.order_number}`,
@@ -814,10 +820,8 @@ function buildOrderPayload(shopifyOrder, items) {
     subtotal: parseFloat(shopifyOrder.subtotal_price) || 0,
     total: parseFloat(shopifyOrder.total_price) || 0,
     total_refunded: parseFloat(shopifyOrder.total_refunded || '0') || 0,
-    status: shopifyOrder.cancelled_at ? 'cancelled'
-          : (shopifyOrder.returns?.length > 0 || shopifyOrder.financial_status === 'refunded') ? 'returned'
-          : mapShopifyStatus(shopifyOrder.fulfillment_status),
-    payment_status: mapShopifyPaymentStatus(shopifyOrder.financial_status),
+    status,
+    payment_status,
     payment_method: mapShopifyPaymentMethod(shopifyOrder),
     source: 'shopify',
     created_at: shopifyOrder.created_at || new Date().toISOString(),
