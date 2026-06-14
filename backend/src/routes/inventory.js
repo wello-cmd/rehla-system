@@ -7,6 +7,17 @@ const authorize = require('../middleware/authorize');
 const rateLimit = require('../middleware/rateLimiter');
 const { generateBarcode, generateBulkBarcodes, generateLabelHtml, formatLabelLines } = require('../services/barcodeGenerator');
 const { stringify } = require('csv-stringify/sync');
+const shopifySync = require('../services/shopifySync');
+
+// Fire-and-forget: mirror a stock change to Shopify without blocking the API response.
+// Items not linked to Shopify (no inventory_item_id) are skipped silently.
+function syncStockToShopify(kind, id) {
+  if (!id) return;
+  const op = kind === 'variant' ? shopifySync.pushVariantStock(id) : shopifySync.pushProductStock(id);
+  Promise.resolve(op)
+    .then(r => { if (r && r.ok) console.log(`[Shopify] stock pushed (${kind} ${id})`); })
+    .catch(err => console.error(`[Shopify] stock push failed (${kind} ${id}):`, err.message || err));
+}
 
 // Apply rate limiting to all inventory routes (FR-WH-01 through FR-WH-15)
 router.use(rateLimit(300, 15 * 60 * 1000)); // Max 300 requests per 15 mins per IP
@@ -152,6 +163,9 @@ router.put('/:id/stock', authenticate, authorize('admin', 'ceo', 'worker'), asyn
       .eq('id', req.params.id);
 
     if (updateErr) throw updateErr;
+
+    // Mirror the new level to Shopify
+    syncStockToShopify('product', req.params.id);
 
     // Log the adjustment
     await supabase.from('inventory_log').insert({
@@ -459,6 +473,9 @@ router.post('/warehouse/exit', authenticate, async (req, res) => {
     const parentTotal = (siblings || []).reduce((s, v) => s + (v.stock_quantity || 0), 0);
     await supabase.from('products').update({ stock_quantity: parentTotal }).eq('id', parent.id);
 
+    // Mirror the new variant level to Shopify
+    syncStockToShopify('variant', variant.id);
+
     // FR-WH-08: Log warehouse exit
     await supabase.from('inventory_log').insert({
       product_id: parent.id,
@@ -537,6 +554,9 @@ router.post('/warehouse/restock', authenticate, authorize('admin', 'ceo', 'worke
     const parentTotal = (siblings || []).reduce((s, v) => s + (v.stock_quantity || 0), 0);
     await supabase.from('products').update({ stock_quantity: parentTotal }).eq('id', parent.id);
 
+    // Mirror the new variant level to Shopify
+    syncStockToShopify('variant', variant.id);
+
     await supabase.from('inventory_log').insert({
       product_id: parent.id,
       sku: variant.sku,
@@ -593,6 +613,7 @@ router.post('/:productId/variants', authenticate, authorize('admin', 'ceo'), asy
       .insert({ product_id: req.params.productId, sku: sku.toUpperCase(), size: size || '', color: color || '', stock_quantity: parseInt(stock_quantity || 0), price: price ? parseFloat(price) : null, barcode: barcode || null })
       .select().single();
     if (error) throw error;
+    syncStockToShopify('variant', data.id);
     res.status(201).json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -613,6 +634,7 @@ router.patch('/:productId/variants/:variantId', authenticate, authorize('admin',
       .eq('product_id', req.params.productId)
       .select().single();
     if (error) throw error;
+    if (updates.stock_quantity !== undefined) syncStockToShopify('variant', req.params.variantId);
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });

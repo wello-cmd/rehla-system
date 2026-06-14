@@ -128,8 +128,16 @@ export default function AnalyticsPage() {
                   <KpiCard
                     label="GMV"
                     value={formatEGP(salesData.grossRevenue || salesData.totalRevenue)}
-                    sub={`${salesData.totalOrders} orders (before returns)`}
+                    sub={`${salesData.totalOrders} orders · incl. cancelled (matches Shopify)`}
                   />
+                  {(salesData.cancelledCount > 0) && (
+                    <KpiCard
+                      label="Cancelled (counted)"
+                      value={formatEGP(salesData.cancelledRevenue || 0)}
+                      sub={`${salesData.cancelledCount} orders included in sales`}
+                      color="var(--color-warning)"
+                    />
+                  )}
                   {(salesData.refundsTotal > 0) && (
                     <KpiCard
                       label="Returns"

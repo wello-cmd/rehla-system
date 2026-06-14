@@ -74,21 +74,26 @@ router.get('/sales', authenticate, async (req, res) => {
   try {
     const { start, end, groupBy = 'month' } = req.query;
 
-    // Fetch ALL orders (including returned) to compute both GMV and net revenue
+    // Fetch ALL orders (including cancelled & returned) — Shopify keeps cancelled
+    // orders in its Sales reports (only refunds reduce sales), so we count them too.
     // Dates are Cairo-local from frontend — shift to UTC so our stored timestamps align with Shopify
-    let ordersQ = supabase.from('orders').select('id, total, subtotal, total_refunded, created_at, status, payment_status').neq('status', 'cancelled');
+    let ordersQ = supabase.from('orders').select('id, total, subtotal, total_refunded, created_at, status, payment_status');
     if (start) ordersQ = ordersQ.gte('created_at', cairoStartUTC(start));
     if (end)   ordersQ = ordersQ.lte('created_at', cairoEndUTC(end));
     const orders = await fetchAll(ordersQ);
 
+    // "returned" (RTO) orders are excluded from revenue; cancelled orders ARE counted (matches Shopify Sales)
     const activeOrders   = (orders || []).filter(o => o.status !== 'returned');
     const returnedOrders = (orders || []).filter(o => o.status === 'returned');
+    const cancelledOrders = activeOrders.filter(o => o.status === 'cancelled');
 
     // Use subtotal (items after discounts, no shipping) to match Shopify's "Net Sales" metric.
     // total includes shipping (EGP 100/order) which inflates revenue vs Shopify dashboard.
     const netSales  = o => Number(o.subtotal  || o.total) - Number(o.total_refunded || 0);
 
     const totalOrders   = activeOrders.length;
+    const cancelledCount   = cancelledOrders.length;
+    const cancelledRevenue = cancelledOrders.reduce((s, o) => s + netSales(o), 0);
     const grossRevenue  = activeOrders.reduce((s, o) => s + netSales(o), 0);
     const shippingTotal = activeOrders.reduce((s, o) => s + (Number(o.total) - Number(o.subtotal || o.total)), 0);
     const returnedCount = returnedOrders.length;
@@ -177,7 +182,7 @@ router.get('/sales', authenticate, async (req, res) => {
       hourly[h].orders++;
     }
 
-    res.json({ totalOrders, grossRevenue, totalRevenue, shippingTotal, avgOrderValue, paidOrders, paidRevenue, returnedCount, returnedRevenue, refundsTotal, refundsCount, heatmap, trend, categoryRevenue, hourly });
+    res.json({ totalOrders, grossRevenue, totalRevenue, shippingTotal, avgOrderValue, paidOrders, paidRevenue, returnedCount, returnedRevenue, cancelledCount, cancelledRevenue, refundsTotal, refundsCount, heatmap, trend, categoryRevenue, hourly });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

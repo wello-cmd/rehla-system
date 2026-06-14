@@ -466,6 +466,74 @@ class ShopifySync {
   }
 
   /**
+   * Look up the primary Shopify location id (cached). Inventory writes need a location.
+   */
+  async getPrimaryLocationId() {
+    if (this._locationId) return this._locationId;
+    const { data } = await this.shopifyRequest('/locations.json');
+    const loc = (data.locations || []).find(l => l.active) || (data.locations || [])[0];
+    this._locationId = loc ? loc.id : null;
+    return this._locationId;
+  }
+
+  /**
+   * Push an absolute stock level to Shopify for one inventory item.
+   * Uses inventory_levels/set so Shopify always mirrors our value exactly.
+   */
+  async setInventoryLevel(inventoryItemId, available) {
+    if (!this.isConfigured() || !inventoryItemId) return { skipped: true };
+    const locationId = await this.getPrimaryLocationId();
+    if (!locationId) throw new Error('No Shopify location available for inventory write');
+    await this.shopifyRequest('/inventory_levels/set.json', 'POST', {
+      location_id: locationId,
+      inventory_item_id: Number(inventoryItemId),
+      available: Number(available) || 0
+    });
+    return { ok: true };
+  }
+
+  /**
+   * Push a single variant's current stock to Shopify (by its inventory_item_id).
+   */
+  async pushVariantStock(variantId) {
+    const { data: v } = await supabase
+      .from('product_variants')
+      .select('shopify_inventory_item_id, stock_quantity')
+      .eq('id', variantId)
+      .maybeSingle();
+    if (!v || !v.shopify_inventory_item_id) return { skipped: true };
+    return this.setInventoryLevel(v.shopify_inventory_item_id, v.stock_quantity);
+  }
+
+  /**
+   * Push a product's current stock to Shopify. Products with variants push each
+   * variant's level; simple products push the product's own inventory item.
+   */
+  async pushProductStock(productId) {
+    const { data: variants } = await supabase
+      .from('product_variants')
+      .select('shopify_inventory_item_id, stock_quantity')
+      .eq('product_id', productId);
+    if (variants && variants.length > 0) {
+      let pushed = 0;
+      for (const v of variants) {
+        if (v.shopify_inventory_item_id) {
+          await this.setInventoryLevel(v.shopify_inventory_item_id, v.stock_quantity);
+          pushed++;
+        }
+      }
+      return { ok: true, variants: pushed };
+    }
+    const { data: p } = await supabase
+      .from('products')
+      .select('shopify_inventory_item_id, stock_quantity')
+      .eq('id', productId)
+      .maybeSingle();
+    if (!p || !p.shopify_inventory_item_id) return { skipped: true };
+    return this.setInventoryLevel(p.shopify_inventory_item_id, p.stock_quantity);
+  }
+
+  /**
    * Handle product update webhook (Part 3)
    * Upserts parent product then syncs all variant rows.
    */
