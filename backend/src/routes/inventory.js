@@ -119,6 +119,10 @@ router.put('/:id', authenticate, authorize('admin', 'ceo'), async (req, res) => 
     for (const key of allowed) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
     }
+    // Empty strings aren't valid UUIDs — store NULL (e.g. "REHLA Internal" = no client)
+    for (const uuidField of ['client_id', 'warehouse_id']) {
+      if (updates[uuidField] === '') updates[uuidField] = null;
+    }
 
     const { data, error } = await supabase
       .from('products')

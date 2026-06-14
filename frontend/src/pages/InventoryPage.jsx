@@ -191,7 +191,7 @@ export default function InventoryPage() {
     e.preventDefault();
     try {
       if (selectedProduct) {
-        await api.put(`/inventory/${selectedProduct.id}`, form);
+        await api.put(`/inventory/${selectedProduct.id}`, { ...form, client_id: form.client_id || null });
         toast.success('Product updated');
       } else {
         await api.post('/inventory', { 
