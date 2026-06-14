@@ -2,6 +2,16 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
+  <script>
+    // Apply saved theme before paint to avoid a flash of the wrong theme
+    (function () {
+      try {
+        var t = localStorage.getItem('theme') || 'dark';
+        document.documentElement.classList.remove('dark', 'light');
+        document.documentElement.classList.add(t);
+      } catch (e) {}
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>REHLA — Management System</title>
   <meta name="description" content="Rehla Management System — Warehouse, Delivery & Financial Management for Egyptian Streetwear" />

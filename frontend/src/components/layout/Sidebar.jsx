@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, Link } from 'react-router-dom';
+import ThemeToggle from '../ui/ThemeToggle';
 
 const NAV_GROUPS = [
   {
@@ -103,7 +104,7 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
 
         {/* ── Navigation ── */}
-        <nav style={{ flex:1, padding:'8px 8px', overflowY:'auto' }}>
+        <nav style={{ flex:1, minHeight:0, padding:'8px 8px', overflowY:'auto' }}>
           {NAV_GROUPS.map(group => {
             const visible = group.items.filter(i => i.roles.includes(user?.role));
             if (!visible.length) return null;
@@ -177,6 +178,7 @@ export default function Sidebar({ isOpen, onClose }) {
               <p style={{ fontSize:10, color:'var(--color-text-dim)', textTransform:'uppercase', letterSpacing:'0.04em', marginTop:1 }}>{user?.role}</p>
             </div>
           </div>
+          <ThemeToggle />
           <button
             onClick={logout}
             className="btn btn-ghost btn-sm"

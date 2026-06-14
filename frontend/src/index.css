@@ -52,6 +52,33 @@
   --shadow-brand: 0 0 0 3px rgba(99,102,241,0.25);
 }
 
+/* =============================================
+   LIGHT THEME — active when <html class="light">
+   Overrides the dark @theme custom properties.
+   ============================================= */
+html.light {
+  --color-bg:           #f6f7f9;
+  --color-bg-elevated:  #ffffff;
+  --color-bg-card:      #ffffff;
+  --color-bg-hover:     #eef0f3;
+  --color-bg-active:    #e4e7eb;
+  --color-surface:      #f6f7f9;
+
+  --color-text:         #1a1d21;
+  --color-text-muted:   #5b636e;
+  --color-text-dim:     #9aa3af;
+
+  --color-border:       #d4d8de;
+  --color-border-light: #e6e9ee;
+
+  --color-brand-dim:    rgba(99,102,241,0.10);
+
+  --shadow-sm:  0 1px 2px rgba(16,24,40,0.06);
+  --shadow-md:  0 4px 12px rgba(16,24,40,0.10);
+  --shadow-lg:  0 8px 24px rgba(16,24,40,0.12);
+  --shadow-brand: 0 0 0 3px rgba(99,102,241,0.20);
+}
+
 /* ── Reset ── */
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 html { overscroll-behavior: none; }
@@ -515,7 +542,7 @@ body {
     justify-content: space-between;
     position: fixed; top:0; left:0; right:0;
     z-index: 45;
-    background: rgba(22,22,22,0.95);
+    background: var(--color-bg-elevated);
     border-bottom: 1px solid var(--color-border-light);
     padding: 12px 16px;
     height: 56px;

@@ -2,6 +2,16 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
+  <script>
+    // Apply saved theme before paint to avoid a flash of the wrong theme
+    (function () {
+      try {
+        var t = localStorage.getItem('theme') || 'dark';
+        document.documentElement.classList.remove('dark', 'light');
+        document.documentElement.classList.add(t);
+      } catch (e) {}
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>REHLA — Management System</title>
   <meta name="description" content="Rehla Management System — Warehouse, Delivery & Financial Management for Egyptian Streetwear" />
@@ -10,8 +20,8 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-  <script type="module" crossorigin src="/assets/index-Da-22z43.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-CPu4SX6o.css">
+  <script type="module" crossorigin src="/assets/index-BD2TjC7F.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DHPjrfdt.css">
 </head>
 <body>
   <div id="root"></div>
