@@ -40,16 +40,25 @@ router.get('/analytics', authenticate, async (req, res) => {
 
     const orders = await fetchAll(
       supabase.from('orders')
-        .select('id, total, status, payment_status, payment_method, created_at')
+        .select('id, total, subtotal, total_refunded, status, payment_status, payment_method, created_at')
         .eq('source', 'shopify')
     );
-    const paidOrders = orders.filter(o => o.payment_status === 'paid');
-    const totalRevenue = paidOrders.reduce((s, o) => s + Number(o.total), 0);
 
+    // Revenue = Shopify "Net Sales": subtotal (after discounts, no shipping) of all
+    // non-returned orders (cancelled INCLUDED, as Shopify keeps them), minus refunds.
+    const activeOrders = orders.filter(o => o.status !== 'returned');
+    const netSales = o => Number(o.subtotal || o.total) - Number(o.total_refunded || 0);
+    const grossRevenue = activeOrders.reduce((s, o) => s + netSales(o), 0);
+
+    const refundRows = await fetchAll(supabase.from('shopify_refunds').select('amount, processed_at'));
+    const refundsTotal = refundRows.reduce((s, r) => s + Number(r.amount), 0);
+    const totalRevenue = grossRevenue - refundsTotal;
+
+    const paidOrders = orders.filter(o => o.payment_status === 'paid');
     const summary = {
       total_orders: orders.length,
       total_revenue: totalRevenue,
-      avg_order_value: paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0,
+      avg_order_value: activeOrders.length > 0 ? totalRevenue / activeOrders.length : 0,
       paid_orders: paidOrders.length,
       pending_orders: orders.filter(o => o.payment_status === 'pending').length,
       delivered_orders: orders.filter(o => o.status === 'delivered').length,
@@ -64,7 +73,14 @@ router.get('/analytics', authenticate, async (req, res) => {
       const date = o.created_at.split('T')[0];
       if (!revenueByDay[date]) revenueByDay[date] = { date, revenue: 0, orders: 0 };
       revenueByDay[date].orders++;
-      if (o.payment_status === 'paid') revenueByDay[date].revenue += Number(o.total);
+      if (o.status !== 'returned') revenueByDay[date].revenue += netSales(o);
+    }
+    // Subtract refunds on the day they were processed, matching the net-revenue headline
+    for (const r of refundRows) {
+      if (!r.processed_at || new Date(r.processed_at) < thirtyDaysAgo) continue;
+      const date = r.processed_at.split('T')[0];
+      if (!revenueByDay[date]) revenueByDay[date] = { date, revenue: 0, orders: 0 };
+      revenueByDay[date].revenue -= Number(r.amount);
     }
     const revenueChart = Object.values(revenueByDay).sort((a, b) => a.date.localeCompare(b.date));
 
