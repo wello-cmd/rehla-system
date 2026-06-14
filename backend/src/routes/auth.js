@@ -96,6 +96,14 @@ router.post('/register', authenticate, authorize('admin', 'ceo'), async (req, re
     });
 
     if (authError) {
+      // "User not allowed" / 403 from the admin API means the backend isn't using a
+      // real service-role key (likely the anon/publishable key is set instead).
+      if (authError.status === 403 || /not allowed|not_admin/i.test(authError.message || '')) {
+        console.error('[Auth] admin.createUser rejected — SUPABASE_SERVICE_ROLE_KEY is not a service-role key:', authError.message);
+        return res.status(500).json({
+          error: 'Server misconfigured: the backend is not using a Supabase service-role key. Set SUPABASE_SERVICE_ROLE_KEY to the project\'s service_role secret and redeploy.'
+        });
+      }
       return res.status(400).json({ error: authError.message });
     }
 
