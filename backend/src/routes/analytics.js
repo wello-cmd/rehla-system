@@ -65,9 +65,6 @@ function cairoEndUTC(dateStr) {
   return new Date(new Date(dateStr + 'T23:59:59.999Z').getTime() - CAIRO_OFFSET_MS).toISOString();
 }
 
-function endParam(end) {
-  return end ? end + 'T23:59:59.999Z' : null;
-}
 
 // GET /api/analytics/sales?start&end&groupBy
 router.get('/sales', authenticate, async (req, res) => {
@@ -273,10 +270,22 @@ router.get('/products', authenticate, async (_req, res) => {
 router.get('/delivery', authenticate, async (req, res) => {
   try {
     const { start, end } = req.query;
-    let query = supabase.from('delivery_orders').select('status, cod_amount, assigned_at, delivered_at, failed_reason, created_at, drivers(name, zone)');
-    if (start) query = query.gte('created_at', start);
-    if (end)   query = query.lte('created_at', endParam(end));
-    const deliveries = await fetchAll(query);
+
+    // delivery_orders.created_at is the sync time (all recent), so filtering on it dumps
+    // every delivery into the current period. Attribute each delivery to its ORDER's date.
+    let allowedIds = null;
+    if (start || end) {
+      let oq = supabase.from('orders').select('id');
+      if (start) oq = oq.gte('created_at', cairoStartUTC(start));
+      if (end)   oq = oq.lte('created_at', cairoEndUTC(end));
+      const ords = await fetchAll(oq);
+      allowedIds = new Set(ords.map(o => o.id));
+    }
+
+    let deliveries = await fetchAll(
+      supabase.from('delivery_orders').select('order_id, status, cod_amount, assigned_at, delivered_at, failed_reason, created_at, drivers(name, zone)')
+    );
+    if (allowedIds) deliveries = deliveries.filter(d => allowedIds.has(d.order_id));
 
     const driverStats = {};
     for (const d of deliveries || []) {
@@ -323,10 +332,18 @@ router.get('/delivery', authenticate, async (req, res) => {
 router.get('/delivery/cost-comparison', authenticate, async (req, res) => {
   try {
     const { start, end } = req.query;
-    let query = supabase.from('delivery_orders').select('delivery_type, status, cod_amount');
-    if (start) query = query.gte('created_at', start);
-    if (end)   query = query.lte('created_at', endParam(end));
-    const deliveries = await fetchAll(query);
+
+    // Attribute deliveries to their ORDER's date (created_at on delivery_orders is sync time)
+    let allowedIds = null;
+    if (start || end) {
+      let oq = supabase.from('orders').select('id');
+      if (start) oq = oq.gte('created_at', cairoStartUTC(start));
+      if (end)   oq = oq.lte('created_at', cairoEndUTC(end));
+      const ords = await fetchAll(oq);
+      allowedIds = new Set(ords.map(o => o.id));
+    }
+    let deliveries = await fetchAll(supabase.from('delivery_orders').select('order_id, delivery_type, status, cod_amount'));
+    if (allowedIds) deliveries = deliveries.filter(d => allowedIds.has(d.order_id));
 
     const own   = deliveries.filter(d => d.delivery_type === 'own_driver');
     const bosta = deliveries.filter(d => d.delivery_type === 'bosta');

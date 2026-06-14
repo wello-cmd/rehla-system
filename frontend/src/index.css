@@ -479,7 +479,7 @@ body {
    ============================================= */
 .sidebar {
   width: 240px;
-  min-height: 100vh;
+  height: 100vh;
   background: var(--color-bg-elevated);
   border-right: 1px solid var(--color-border-light);
   position: fixed;
