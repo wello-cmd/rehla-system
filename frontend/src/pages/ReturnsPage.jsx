@@ -132,7 +132,7 @@ export default function ReturnsPage() {
           <div style={{ padding: 40 }}><div className="skeleton" style={{ height: 200 }} /></div>
         ) : (
           <div className="table-container">
-            <table className="data-table">
+            <table className="data-table t-returns">
               <thead>
                 <tr>
                   <th>Date</th>

@@ -201,7 +201,7 @@ export default function InvoicesPage() {
           {/* Invoices Table */}
           <div className="card" style={{ padding: '0px', overflow: 'hidden' }}>
             <div className="table-container">
-              <table className="data-table">
+              <table className="data-table t-invoices">
                 <thead>
                   <tr>
                     <th>Invoice Number</th>

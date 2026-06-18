@@ -252,7 +252,7 @@ export default function ShopifyPage() {
               </div>
             </div>
             <div className="table-container">
-              <table className="data-table">
+              <table className="data-table t-shopify-orders">
                 <thead>
                   <tr>
                     <th>Order</th>

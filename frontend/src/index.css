@@ -720,3 +720,48 @@ body {
 /* Responsive column hiding for wide tables on small screens */
 @media (max-width: 768px) { .hide-mobile { display: none !important; } }
 @media (max-width: 480px) { .hide-xs { display: none !important; } }
+
+/* Inventory actions bar — search caps on desktop, fills on mobile */
+.inv-search { max-width: 320px; }
+@media (max-width: 768px) {
+  .inv-search { max-width: 100%; flex-basis: 100%; }
+  .inv-actions { gap: 8px; }
+  .inv-actions input[type="date"] { flex: 1 1 0; min-width: 0; }
+}
+
+/* Per-table column hiding on mobile (keeps identity / total / status / actions) */
+@media (max-width: 768px) {
+  /* Clients: hide Email(3) Phone(4) Address(5) Tax(6) Rent(8) */
+  .t-clients th:nth-child(3), .t-clients td:nth-child(3),
+  .t-clients th:nth-child(4), .t-clients td:nth-child(4),
+  .t-clients th:nth-child(5), .t-clients td:nth-child(5),
+  .t-clients th:nth-child(6), .t-clients td:nth-child(6),
+  .t-clients th:nth-child(8), .t-clients td:nth-child(8) { display: none; }
+
+  /* Shopify orders: hide Items(3) Payment(6) Method(7) Date(8) */
+  .t-shopify-orders th:nth-child(3), .t-shopify-orders td:nth-child(3),
+  .t-shopify-orders th:nth-child(6), .t-shopify-orders td:nth-child(6),
+  .t-shopify-orders th:nth-child(7), .t-shopify-orders td:nth-child(7),
+  .t-shopify-orders th:nth-child(8), .t-shopify-orders td:nth-child(8) { display: none; }
+
+  /* Invoices: hide Issue Date(3) Due Date(4) */
+  .t-invoices th:nth-child(3), .t-invoices td:nth-child(3),
+  .t-invoices th:nth-child(4), .t-invoices td:nth-child(4) { display: none; }
+
+  /* Returns: hide Date(1) Items(4) Reason(5) */
+  .t-returns th:nth-child(1), .t-returns td:nth-child(1),
+  .t-returns th:nth-child(4), .t-returns td:nth-child(4),
+  .t-returns th:nth-child(5), .t-returns td:nth-child(5) { display: none; }
+
+  /* Warehouse logs: hide SKU(2) Stock(6) Operator(7) Notes(8) */
+  .t-whlogs th:nth-child(2), .t-whlogs td:nth-child(2),
+  .t-whlogs th:nth-child(6), .t-whlogs td:nth-child(6),
+  .t-whlogs th:nth-child(7), .t-whlogs td:nth-child(7),
+  .t-whlogs th:nth-child(8), .t-whlogs td:nth-child(8) { display: none; }
+
+  /* Delivery: hide Address(3) Type(4) Driver(5) Tracking(8) */
+  .t-delivery th:nth-child(3), .t-delivery td:nth-child(3),
+  .t-delivery th:nth-child(4), .t-delivery td:nth-child(4),
+  .t-delivery th:nth-child(5), .t-delivery td:nth-child(5),
+  .t-delivery th:nth-child(8), .t-delivery td:nth-child(8) { display: none; }
+}

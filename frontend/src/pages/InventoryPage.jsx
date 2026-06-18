@@ -508,9 +508,9 @@ export default function InventoryPage() {
       </div>
 
       {/* Actions Bar */}
-      <div style={STYLES.actionsBar}>
+      <div className="inv-actions" style={STYLES.actionsBar}>
         <input
-          className="input"
+          className="input inv-search"
           style={STYLES.searchInput}
           placeholder="Search by SKU, name, or category..."
           value={searchTerm}
@@ -996,7 +996,7 @@ const STYLES = {
   cardValueMono: { fontSize: '28px', fontWeight: 700 },
   cardValueRetail: { fontSize: '18px', fontWeight: 700 },
   actionsBar: { display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' },
-  searchInput: { maxWidth: '320px' },
+  searchInput: { flex: '1 1 240px', minWidth: 0 },
   tableContainer: { padding: 0 },
   skeletonContainer: { padding: '40px' },
   skeletonItem: { height: '40px', marginBottom: '8px' },

@@ -143,7 +143,7 @@ export default function ClientsPage() {
           {/* Table */}
           <div className="card" style={{ padding: '0px', overflow: 'hidden' }}>
             <div className="table-container">
-              <table className="data-table">
+              <table className="data-table t-clients">
                 <thead>
                   <tr>
                     <th>Company Name</th>

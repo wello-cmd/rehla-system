@@ -146,7 +146,7 @@ export default function WarehouseLogsPage() {
             </div>
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
               <div className="table-container">
-                <table className="data-table">
+                <table className="data-table t-whlogs">
                   <thead>
                     <tr>
                       <th>Timestamp</th>

@@ -271,7 +271,7 @@ export default function DeliveryPage() {
 
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <div className="table-container">
-              <table className="data-table">
+              <table className="data-table t-delivery">
                 <thead>
                   <tr>
                     <th>Order</th>
