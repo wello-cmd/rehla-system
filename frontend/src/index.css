@@ -453,6 +453,7 @@ body {
 .kpi-card {
   position: relative;
   overflow: hidden;
+  padding: 15px 16px;
 }
 .kpi-card::before {
   content: '';

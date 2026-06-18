@@ -29,7 +29,7 @@ function defaultPeriod() {
 function KpiCard({ label, value, sub, color, icon, loading }) {
   return (
     <div className="card kpi-card" style={{ '--kpi-accent': color || 'var(--color-border-light)' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6 }}>
         <p className="text-label" style={{ color:'var(--color-text-dim)' }}>{label}</p>
         {icon && (
           <span className="material-symbols-outlined" style={{ fontSize:18, color: color || 'var(--color-text-dim)', fontVariationSettings:"'FILL' 1", opacity:0.6 }}>
@@ -38,11 +38,11 @@ function KpiCard({ label, value, sub, color, icon, loading }) {
         )}
       </div>
       {loading
-        ? <div className="skeleton" style={{ height:36, width:'65%', marginBottom:6 }} />
-        : <p style={{ fontSize:28, fontWeight:800, letterSpacing:'-0.03em', fontFamily:'var(--font-mono)', color: color || 'inherit', lineHeight:1.1 }}>{value}</p>
+        ? <div className="skeleton" style={{ height:30, width:'65%', marginBottom:4 }} />
+        : <p style={{ fontSize:24, fontWeight:800, letterSpacing:'-0.03em', fontFamily:'var(--font-mono)', color: color || 'inherit', lineHeight:1.1, whiteSpace:'nowrap' }}>{value}</p>
       }
       {!loading && sub && (
-        <p style={{ fontSize:11, color:'var(--color-text-muted)', marginTop:6 }}>{sub}</p>
+        <p style={{ fontSize:11, color:'var(--color-text-muted)', marginTop:4 }}>{sub}</p>
       )}
     </div>
   );
@@ -121,10 +121,14 @@ export default function DashboardPage() {
     fetchDashboard(p);
   }
 
-  const totalRevenue  = finKpis.reduce((s, k) => s + (k.revenue  || 0), 0);
+  // Reconcile every money KPI to ONE revenue figure (the Net Revenue card value),
+  // so Profit ≤ Revenue and AOV = Revenue ÷ orders. Expenses come from finKpis.
+  const netRevenue    = salesData?.totalRevenue ?? 0;
+  const orderCount    = salesData?.totalOrders ?? 0;
   const totalExpenses = finKpis.reduce((s, k) => s + (k.expenses || 0), 0);
-  const totalProfit   = totalRevenue - totalExpenses;
-  const profitMargin  = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : '0.0';
+  const totalProfit   = netRevenue - totalExpenses;
+  const profitMargin  = netRevenue > 0 ? ((totalProfit / netRevenue) * 100).toFixed(1) : '0.0';
+  const avgOrderValue = orderCount > 0 ? netRevenue / orderCount : 0;
 
   const deliveryPieData = Object.entries(deliveryData?.statusBreakdown || {})
     .map(([name, value]) => ({ name: name.replace(/_/g,' '), value }));
@@ -148,14 +152,14 @@ export default function DashboardPage() {
           <KpiCard
             label="Net Profit"
             value={formatEGP(totalProfit)}
-            sub={`${profitMargin}% margin`}
+            sub={totalExpenses > 0 ? `${profitMargin}% margin` : 'No expenses recorded'}
             icon="trending_up"
             color={totalProfit >= 0 ? 'var(--color-success)' : 'var(--color-error)'}
             loading={loading}
           />
           <KpiCard
             label="Avg Order Value"
-            value={formatEGP(salesData?.avgOrderValue ?? 0)}
+            value={formatEGP(avgOrderValue)}
             icon="analytics"
             loading={loading}
           />
