@@ -1,14 +1,18 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { api } from '../lib/api';
 import { formatNumber } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
 import toast from 'react-hot-toast';
+
+// Lazy-loaded so the camera/zxing bundle only downloads when scanning is used
+const BarcodeScanner = lazy(() => import('../components/ui/BarcodeScanner'));
 
 export default function WarehouseExitPage() {
   const [scanInput, setScanInput] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
+  const [showScanner, setShowScanner] = useState(false);
   const searchInputRef = useRef(null);
 
   useEffect(() => {
@@ -17,13 +21,13 @@ export default function WarehouseExitPage() {
     }
   }, []);
 
-  async function handleScan(e) {
-    e.preventDefault();
-    if (!scanInput.trim()) return;
+  async function submitExit(code) {
+    const val = (code || '').trim();
+    if (!val) return;
 
     setLoading(true);
     try {
-      const data = await api.post('/inventory/warehouse/exit', { sku: scanInput.trim().toUpperCase() });
+      const data = await api.post('/inventory/warehouse/exit', { sku: val.toUpperCase() });
       setResult(data.product);
       setHistory(prev => [{ ...data.product, timestamp: new Date().toLocaleTimeString() }, ...prev]);
       toast.success(`✓ ${data.product.name} — Stock: ${data.product.current_stock}`);
@@ -42,6 +46,17 @@ export default function WarehouseExitPage() {
     }
   }
 
+  function handleScan(e) {
+    e.preventDefault();
+    submitExit(scanInput);
+  }
+
+  function handleDetected(text) {
+    setShowScanner(false);
+    setScanInput(text);
+    submitExit(text);
+  }
+
   return (
     <DashboardShell title="Warehouse Exit Scanner">
       {/* Scanner Input */}
@@ -49,7 +64,7 @@ export default function WarehouseExitPage() {
         <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '12px' }}>
           Scan Barcode or Enter SKU
         </p>
-        <form onSubmit={handleScan} style={{ display: 'flex', gap: '12px' }}>
+        <form onSubmit={handleScan} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <input
             ref={searchInputRef}
             className="input"
@@ -58,13 +73,23 @@ export default function WarehouseExitPage() {
             placeholder="Scan or type SKU..."
             autoFocus
             disabled={loading}
-            style={{ fontSize: '18px', fontFamily: 'var(--font-mono)', padding: '16px' }}
+            style={{ fontSize: '18px', fontFamily: 'var(--font-mono)', padding: '16px', flex: '1 1 180px', minWidth: 0 }}
           />
+          <button className="btn btn-secondary" type="button" onClick={() => setShowScanner(true)} disabled={loading} title="Scan with camera" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>photo_camera</span>
+            Scan
+          </button>
           <button className="btn btn-primary" type="submit" disabled={loading}>
             {loading ? '...' : 'EXIT'}
           </button>
         </form>
       </div>
+
+      {showScanner && (
+        <Suspense fallback={null}>
+          <BarcodeScanner onDetect={handleDetected} onClose={() => setShowScanner(false)} />
+        </Suspense>
+      )}
 
       {/* Last Scan Result Card (FR-WH-07) */}
       {result && (
