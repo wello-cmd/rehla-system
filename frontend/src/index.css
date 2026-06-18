@@ -721,6 +721,13 @@ body {
 @media (max-width: 768px) { .hide-mobile { display: none !important; } }
 @media (max-width: 480px) { .hide-xs { display: none !important; } }
 
+/* Inventory: table on desktop, stacked cards on mobile */
+.inv-cards { display: none; }
+@media (max-width: 768px) {
+  .inv-table-wrap { display: none; }
+  .inv-cards { display: flex; flex-direction: column; gap: 10px; }
+}
+
 /* Inventory actions bar — search caps on desktop, fills on mobile */
 .inv-search { max-width: 320px; }
 @media (max-width: 768px) {

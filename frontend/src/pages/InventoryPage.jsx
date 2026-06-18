@@ -560,8 +560,8 @@ export default function InventoryPage() {
         )}
       </div>
 
-      {/* Products Table */}
-      <div className="card table-container" style={STYLES.tableContainer}>
+      {/* Products Table (desktop) */}
+      <div className="card table-container inv-table-wrap" style={STYLES.tableContainer}>
         {loading ? (
           <div style={STYLES.skeletonContainer}>
             {[...Array(5)].map((_, i) => <div key={`skeleton-${i}`} className="skeleton" style={STYLES.skeletonItem}></div>)}
@@ -640,6 +640,43 @@ export default function InventoryPage() {
             </tbody>
           </table>
         )}
+      </div>
+
+      {/* Products Cards (mobile) */}
+      <div className="inv-cards">
+        {loading ? (
+          [...Array(5)].map((_, i) => <div key={`mc-skel-${i}`} className="skeleton" style={{ height: 96, borderRadius: 10 }} />)
+        ) : filtered.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: 30, color: 'var(--color-text-dim)' }}>No products found</div>
+        ) : filtered.map(product => (
+          <div key={product.id} className="card" style={{ padding: 14 }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <input type="checkbox" checked={selectedProducts.includes(product.id)} onChange={() => toggleSelection(product.id)} style={{ marginTop: 4, flexShrink: 0 }} />
+              {product.image_url && (
+                <img src={product.image_url} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
+                  <span className="link-name" style={{ fontWeight: 600, fontSize: 14 }} onClick={() => openEdit(product)}>{product.name}</span>
+                  <span className={`badge badge-${product.stock_quantity < 10 ? 'error' : product.stock_quantity < 25 ? 'warning' : 'success'}`} style={{ flexShrink: 0 }}>
+                    {product.stock_quantity < 10 ? 'Low' : product.stock_quantity < 25 ? 'Medium' : 'In Stock'}
+                  </span>
+                </div>
+                <p className="font-mono" style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>{product.sku}</p>
+                <div style={{ display: 'flex', gap: 18, marginTop: 8 }}>
+                  <span><span style={{ color: 'var(--color-text-dim)', fontSize: 10 }}>PRICE </span><span className="font-mono" style={{ fontSize: 13 }}>{formatEGP(product.price)}</span></span>
+                  <span><span style={{ color: 'var(--color-text-dim)', fontSize: 10 }}>STOCK </span><span className={`font-mono ${product.stock_quantity < 10 ? 'low-stock' : ''}`} style={{ fontSize: 13 }}>{formatNumber(product.stock_quantity)}</span></span>
+                </div>
+                <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                  <button className="btn btn-secondary btn-sm" style={STYLES.actionBtn} data-id={product.id} onClick={handleEditProduct}>Edit</button>
+                  <button className="btn btn-secondary btn-sm" style={STYLES.actionBtn} onClick={() => openVariants(product)}>Variants</button>
+                  <button className="btn btn-secondary btn-sm" style={STYLES.actionBtn} data-id={product.id} onClick={handleBarcodeClick}>Barcode</button>
+                  <button className="btn btn-secondary btn-sm" style={STYLES.actionBtn} data-id={product.id} onClick={handleDeleteProduct}>✕</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Add/Edit Modal */}
