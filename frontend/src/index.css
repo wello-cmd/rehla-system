@@ -716,3 +716,7 @@ body {
 /* Clickable product name — opens edit */
 .link-name { cursor: pointer; transition: color 0.12s; }
 .link-name:hover { color: var(--color-brand); text-decoration: underline; }
+
+/* Responsive column hiding for wide tables on small screens */
+@media (max-width: 768px) { .hide-mobile { display: none !important; } }
+@media (max-width: 480px) { .hide-xs { display: none !important; } }

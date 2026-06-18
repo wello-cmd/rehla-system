@@ -159,10 +159,10 @@ export default function UsersPage() {
                   <tr>
                     <th>Staff ID</th>
                     <th>Full Name</th>
-                    <th>Email Address</th>
+                    <th className="hide-mobile">Email Address</th>
                     <th>Role</th>
-                    <th>Phone</th>
-                    <th>Registered At</th>
+                    <th className="hide-mobile">Phone</th>
+                    <th className="hide-mobile">Registered At</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -171,7 +171,7 @@ export default function UsersPage() {
                     <tr key={u.id}>
                       <td className="font-mono" style={{ fontWeight: 600 }}>{u.staff_id}</td>
                       <td style={{ fontWeight: 500 }}>{u.name}</td>
-                      <td className="font-mono">{u.email}</td>
+                      <td className="font-mono hide-mobile">{u.email}</td>
                       <td>
                         <span className={`badge ${
                           u.role === 'ceo' ? 'badge-success' :
@@ -182,8 +182,8 @@ export default function UsersPage() {
                           {u.role.toUpperCase()}
                         </span>
                       </td>
-                      <td className="font-mono">{u.phone || '—'}</td>
-                      <td className="font-mono" style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                      <td className="font-mono hide-mobile">{u.phone || '—'}</td>
+                      <td className="font-mono hide-mobile" style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
                         {new Date(u.created_at).toLocaleDateString()}
                       </td>
                       <td>

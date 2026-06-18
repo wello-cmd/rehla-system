@@ -573,13 +573,13 @@ export default function InventoryPage() {
                 <th>
                   <input type="checkbox" onChange={toggleSelectAll} checked={selectedProducts.length === filtered.length && filtered.length > 0} />
                 </th>
-                <th>SKU</th>
+                <th className="hide-xs">SKU</th>
                 <th>Product</th>
-                <th>Owner (3PL)</th>
+                <th className="hide-mobile">Owner (3PL)</th>
                 <th style={STYLES.textRight}>Price</th>
-                <th style={STYLES.textRight}>In Warehouse</th>
-                <th style={STYLES.textRight}>Left Warehouse</th>
-                <th style={STYLES.textRight}>Sold</th>
+                <th style={STYLES.textRight} className="hide-mobile">In Warehouse</th>
+                <th style={STYLES.textRight} className="hide-mobile">Left Warehouse</th>
+                <th style={STYLES.textRight} className="hide-mobile">Sold</th>
                 <th style={STYLES.textRight}>Current Stock</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -591,7 +591,7 @@ export default function InventoryPage() {
                   <td>
                     <input type="checkbox" checked={selectedProducts.includes(product.id)} onChange={() => toggleSelection(product.id)} />
                   </td>
-                  <td className="font-mono" style={STYLES.skuCol}>{product.sku}</td>
+                  <td className="font-mono hide-xs" style={STYLES.skuCol}>{product.sku}</td>
                   <td>
                     <div style={STYLES.productCol}>
                       {product.image_url && (
@@ -607,15 +607,15 @@ export default function InventoryPage() {
                       </span>
                     </div>
                   </td>
-                  <td>
+                  <td className="hide-mobile">
                     <span className="badge" style={{fontSize: '10px', background: 'var(--color-bg-inset)', color: 'var(--color-text-dim)'}}>
                       {product.clients?.company_name || 'REHLA (Internal)'}
                     </span>
                   </td>
                   <td className="font-mono" style={STYLES.priceCol}>{formatEGP(product.price)}</td>
-                  <td className="font-mono" style={STYLES.priceCol}>{formatNumber(product.in_warehouse)}</td>
-                  <td className="font-mono" style={STYLES.priceCol}>{formatNumber(product.left_warehouse)}</td>
-                  <td className="font-mono" style={STYLES.priceCol}>{formatNumber(product.total_sold)}</td>
+                  <td className="font-mono hide-mobile" style={STYLES.priceCol}>{formatNumber(product.in_warehouse)}</td>
+                  <td className="font-mono hide-mobile" style={STYLES.priceCol}>{formatNumber(product.left_warehouse)}</td>
+                  <td className="font-mono hide-mobile" style={STYLES.priceCol}>{formatNumber(product.total_sold)}</td>
                   <td className={`font-mono ${product.stock_quantity < 10 ? 'low-stock' : ''}`} style={STYLES.priceCol}>
                     {formatNumber(product.stock_quantity)}
                   </td>
@@ -990,7 +990,7 @@ export default function InventoryPage() {
 }
 
 const STYLES = {
-  summaryGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' },
+  summaryGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' },
   summaryCard: { padding: '16px' },
   cardLabel: { color: 'var(--color-text-dim)', fontSize: '10px' },
   cardValueMono: { fontSize: '28px', fontWeight: 700 },
