@@ -51,6 +51,30 @@ export default function ReturnsPage() {
     setShowCreateModal(true);
   }
 
+  // When an order is picked, pull its line items so the right SKUs/variants are
+  // pre-filled — staff just adjust quantities / remove what didn't come back.
+  async function onSelectOrder(orderId) {
+    const selected = orders.find(o => o.id === orderId);
+    setForm(p => ({ ...p, order_id: orderId, customer_name: selected?.customer_name || p.customer_name }));
+    if (!orderId) {
+      setItems([{ sku: '', name: '', quantity: 1 }]);
+      return;
+    }
+    try {
+      const order = await api.get(`/orders/${orderId}`);
+      const lineItems = (order.items || []).map(it => ({
+        sku: it.sku || '',
+        name: it.name || '',
+        quantity: it.quantity || 1,
+        variant_id: it.variant_id || null,
+        product_id: it.product_id || null,
+      }));
+      setItems(lineItems.length ? lineItems : [{ sku: '', name: '', quantity: 1 }]);
+    } catch {
+      toast.error('Could not load order items — enter them manually.');
+    }
+  }
+
   function addItem() {
     setItems(prev => [...prev, { sku: '', name: '', quantity: 1 }]);
   }
@@ -200,7 +224,7 @@ export default function ReturnsPage() {
                 </div>
                 <div>
                   <label className="text-label" style={{ display: 'block', marginBottom: 6 }}>Linked Order (optional)</label>
-                  <select className="input" value={form.order_id} onChange={e => setForm(p => ({ ...p, order_id: e.target.value }))}>
+                  <select className="input" value={form.order_id} onChange={e => onSelectOrder(e.target.value)}>
                     <option value="">— No linked order —</option>
                     {orders.map(o => (
                       <option key={o.id} value={o.id}>{o.shopify_order_name || `#${o.order_number}`} — {o.customer_name}</option>
