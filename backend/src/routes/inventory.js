@@ -19,6 +19,93 @@ function syncStockToShopify(kind, id) {
     .catch(err => console.error(`[Shopify] stock push failed (${kind} ${id}):`, err.message || err));
 }
 
+// Resolve an order from a free-form identifier typed/scanned at the exit station.
+// Accepts the Shopify order name ("#1001" or "1001"), the internal order_number,
+// or the raw shopify_order_id. Returns the matched order row or null.
+async function resolveOrder(rawIdentifier) {
+  const id = (rawIdentifier || '').toString().trim();
+  if (!id) return null;
+  const bare = id.replace(/^#/, '');
+
+  // 1. Shopify order name — try the value as typed and with a leading '#'.
+  const { data: byName } = await supabase
+    .from('orders')
+    .select('id, order_number, shopify_order_name, shopify_order_id, customer_name, customer_phone, status')
+    .or(`shopify_order_name.eq.${id},shopify_order_name.eq.#${bare}`)
+    .limit(1)
+    .maybeSingle();
+  if (byName) return byName;
+
+  // 2. Raw Shopify order id.
+  const { data: byShopifyId } = await supabase
+    .from('orders')
+    .select('id, order_number, shopify_order_name, shopify_order_id, customer_name, customer_phone, status')
+    .eq('shopify_order_id', bare)
+    .limit(1)
+    .maybeSingle();
+  if (byShopifyId) return byShopifyId;
+
+  // 3. Internal sequential order_number (digits only).
+  if (/^\d+$/.test(bare)) {
+    const { data: byNum } = await supabase
+      .from('orders')
+      .select('id, order_number, shopify_order_name, shopify_order_id, customer_name, customer_phone, status')
+      .eq('order_number', Number(bare))
+      .limit(1)
+      .maybeSingle();
+    if (byNum) return byNum;
+  }
+
+  return null;
+}
+
+// Build the pack-progress view for an order: each line item with ordered qty
+// and how many units have already left the warehouse against this order.
+async function getOrderPackProgress(order) {
+  const { data: items } = await supabase
+    .from('order_items')
+    .select('sku, name, quantity')
+    .eq('order_id', order.id);
+
+  // Already-exited units per SKU for this order (sum of warehouse_exit log rows).
+  const { data: exits } = await supabase
+    .from('inventory_log')
+    .select('sku, quantity_changed')
+    .eq('order_id', order.id)
+    .eq('event_type', 'warehouse_exit');
+
+  const packedBySku = {};
+  for (const e of exits || []) {
+    const key = (e.sku || '').toUpperCase();
+    packedBySku[key] = (packedBySku[key] || 0) + Math.abs(e.quantity_changed || 0);
+  }
+
+  const lineItems = (items || []).map(it => {
+    const sku = (it.sku || '').toUpperCase();
+    const ordered = it.quantity || 0;
+    const packed = packedBySku[sku] || 0;
+    return { sku, name: it.name, ordered, packed, remaining: Math.max(0, ordered - packed) };
+  });
+
+  const totalOrdered = lineItems.reduce((s, i) => s + i.ordered, 0);
+  const totalPacked = lineItems.reduce((s, i) => s + Math.min(i.packed, i.ordered), 0);
+
+  return {
+    order: {
+      id: order.id,
+      order_number: order.order_number,
+      shopify_order_name: order.shopify_order_name,
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone,
+      status: order.status,
+    },
+    items: lineItems,
+    total_ordered: totalOrdered,
+    total_packed: totalPacked,
+    complete: totalOrdered > 0 && totalPacked >= totalOrdered,
+  };
+}
+
 // Apply rate limiting to all inventory routes (FR-WH-01 through FR-WH-15)
 router.use(rateLimit(300, 15 * 60 * 1000)); // Max 300 requests per 15 mins per IP
 
@@ -434,17 +521,41 @@ router.get('/export/csv', authenticate, async (req, res) => {
   }
 });
 
+// GET /api/inventory/warehouse/order/:identifier — Open an order at the exit station.
+// Resolves the order and returns its line items with ordered-vs-packed progress.
+router.get('/warehouse/order/:identifier', authenticate, async (req, res) => {
+  try {
+    const order = await resolveOrder(req.params.identifier);
+    if (!order) {
+      return res.status(404).json({ error: `Order not found: ${req.params.identifier}` });
+    }
+    const progress = await getOrderPackProgress(order);
+    res.json(progress);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/warehouse/exit — Warehouse exit scan (FR-WH-06 through FR-WH-09)
+// Every exit must be tied to an order so the item is traceable later.
 router.post('/warehouse/exit', authenticate, async (req, res) => {
-  const { sku, barcode, quantity } = req.body;
+  const { sku, barcode, quantity, order_identifier } = req.body;
   const searchValue = (sku || barcode || '').toUpperCase();
   const qty = quantity || 1;
 
   if (!searchValue) {
     return res.status(400).json({ error: 'SKU or barcode is required.' });
   }
+  if (!order_identifier) {
+    return res.status(400).json({ error: 'An order number is required for warehouse exit.' });
+  }
 
   try {
+    // Resolve and validate the order before touching stock.
+    const order = await resolveOrder(order_identifier);
+    if (!order) {
+      return res.status(404).json({ error: `Order not found: ${order_identifier}` });
+    }
     // Look up variant by SKU or barcode, join parent product for name + warehouse
     const { data: variant, error: lookupErr } = await supabase
       .from('product_variants')
@@ -457,6 +568,37 @@ router.post('/warehouse/exit', authenticate, async (req, res) => {
 
     const parent = variant.products;
     const displayName = `${parent?.name || ''}${variant.variant_name ? ` - ${variant.variant_name}` : ''}`;
+
+    // Validate the scanned SKU is actually part of this order, and that we are
+    // not packing more units than were ordered.
+    const { data: orderLine } = await supabase
+      .from('order_items')
+      .select('quantity')
+      .eq('order_id', order.id)
+      .ilike('sku', variant.sku)
+      .maybeSingle();
+
+    if (!orderLine) {
+      return res.status(409).json({
+        error: `${displayName} (${variant.sku}) is not on order ${order.shopify_order_name || order.order_number}.`,
+        code: 'NOT_ON_ORDER'
+      });
+    }
+
+    const { data: priorExits } = await supabase
+      .from('inventory_log')
+      .select('quantity_changed')
+      .eq('order_id', order.id)
+      .eq('event_type', 'warehouse_exit')
+      .ilike('sku', variant.sku);
+    const alreadyPacked = (priorExits || []).reduce((s, e) => s + Math.abs(e.quantity_changed || 0), 0);
+
+    if (alreadyPacked + qty > orderLine.quantity) {
+      return res.status(409).json({
+        error: `Over-packing ${variant.sku}: order ${order.shopify_order_name || order.order_number} needs ${orderLine.quantity}, already packed ${alreadyPacked}.`,
+        code: 'OVER_PACK'
+      });
+    }
 
     // FR-WH-09: Block if stock is insufficient
     if (variant.stock_quantity < qty) {
@@ -480,7 +622,9 @@ router.post('/warehouse/exit', authenticate, async (req, res) => {
     // Mirror the new variant level to Shopify
     syncStockToShopify('variant', variant.id);
 
-    // FR-WH-08: Log warehouse exit
+    const orderRef = order.shopify_order_name || (order.order_number != null ? `#${order.order_number}` : null);
+
+    // FR-WH-08: Log warehouse exit, tied to the order being fulfilled
     await supabase.from('inventory_log').insert({
       product_id: parent.id,
       sku: variant.sku,
@@ -488,14 +632,20 @@ router.post('/warehouse/exit', authenticate, async (req, res) => {
       quantity_changed: -qty,
       previous_quantity: prevQty,
       new_quantity: newQty,
-      notes: 'Warehouse exit scan',
+      notes: `Warehouse exit scan — order ${orderRef || order.id}`,
       handler_id: req.user.id,
       handler_name: req.user.name,
-      warehouse_id: parent.warehouse_id
+      warehouse_id: parent.warehouse_id,
+      order_id: order.id,
+      order_number: orderRef
     });
+
+    // Recompute pack progress so the UI can reflect order completion.
+    const progress = await getOrderPackProgress(order);
 
     res.json({
       success: true,
+      order: progress,
       product: {
         id: parent.id,
         variant_id: variant.id,

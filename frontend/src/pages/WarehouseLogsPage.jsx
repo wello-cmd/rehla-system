@@ -151,6 +151,7 @@ export default function WarehouseLogsPage() {
                     <tr>
                       <th>Timestamp</th>
                       <th>SKU</th>
+                      <th>Order</th>
                       <th>Product</th>
                       <th>Event</th>
                       <th style={{ textAlign: 'right' }}>Qty Change</th>
@@ -164,6 +165,7 @@ export default function WarehouseLogsPage() {
                       <tr key={log.id}>
                         <td className="font-mono" style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{new Date(log.created_at).toLocaleString()}</td>
                         <td className="font-mono" style={{ fontWeight: 600, fontSize: 12 }}>{log.sku}</td>
+                        <td className="font-mono" style={{ fontSize: 12, color: log.order_number ? 'var(--color-text)' : 'var(--color-text-dim)' }}>{log.order_number || '—'}</td>
                         <td style={{ fontWeight: 500, fontSize: 13 }}>{log.products?.name || 'Deleted Product'}</td>
                         <td><span className={`badge ${getEventBadgeClass(log.event_type)}`}>{getEventLabel(log.event_type)}</span></td>
                         <td className="font-mono" style={{ textAlign: 'right', fontWeight: 700, color: log.quantity_changed > 0 ? 'var(--color-success)' : 'var(--color-error)' }}>
@@ -177,7 +179,7 @@ export default function WarehouseLogsPage() {
                       </tr>
                     ))}
                     {filteredLogs.length === 0 && (
-                      <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-dim)' }}>No logs found.</td></tr>
+                      <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-dim)' }}>No logs found.</td></tr>
                     )}
                   </tbody>
                 </table>
