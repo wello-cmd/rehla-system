@@ -825,9 +825,13 @@ router.post('/:productId/variants', authenticate, authorize('admin', 'ceo'), asy
   const { sku, size, color, stock_quantity, price, barcode } = req.body;
   if (!sku) return res.status(400).json({ error: 'Variant SKU is required.' });
   try {
+    // Every variant gets a unique, scannable barcode so it can be picked/returned by scan
+    const variantBarcode = (barcode && barcode.trim())
+      ? barcode.trim().toUpperCase()
+      : require('../services/barcodeGenerator').generateBarcodeString();
     const { data, error } = await supabase
       .from('product_variants')
-      .insert({ product_id: req.params.productId, sku: sku.toUpperCase(), size: size || '', color: color || '', stock_quantity: parseInt(stock_quantity || 0), price: price ? parseFloat(price) : null, barcode: barcode || null })
+      .insert({ product_id: req.params.productId, sku: sku.toUpperCase(), size: size || '', color: color || '', stock_quantity: parseInt(stock_quantity || 0), price: price ? parseFloat(price) : null, barcode: variantBarcode })
       .select().single();
     if (error) throw error;
     syncStockToShopify('variant', data.id);
