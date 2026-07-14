@@ -59,6 +59,19 @@ async function resolveOrder(rawIdentifier) {
   return null;
 }
 
+// Resolve an order's delivery method (Bosta courier vs Rehla own-driver).
+// Lives on delivery_orders.delivery_type ('bosta' | 'own_driver'); newest wins.
+async function getOrderDeliveryMethod(orderId) {
+  const { data } = await supabase
+    .from('delivery_orders')
+    .select('delivery_type, created_at')
+    .eq('order_id', orderId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.delivery_type || null; // 'bosta' | 'own_driver' | null
+}
+
 // Build the pack-progress view for an order: each line item with ordered qty
 // and how many units have already left the warehouse against this order.
 async function getOrderPackProgress(order) {
@@ -89,6 +102,7 @@ async function getOrderPackProgress(order) {
 
   const totalOrdered = lineItems.reduce((s, i) => s + i.ordered, 0);
   const totalPacked = lineItems.reduce((s, i) => s + Math.min(i.packed, i.ordered), 0);
+  const deliveryMethod = await getOrderDeliveryMethod(order.id);
 
   return {
     order: {
@@ -98,6 +112,7 @@ async function getOrderPackProgress(order) {
       customer_name: order.customer_name,
       customer_phone: order.customer_phone,
       status: order.status,
+      delivery_method: deliveryMethod, // 'bosta' | 'own_driver' | null
     },
     items: lineItems,
     total_ordered: totalOrdered,
@@ -531,6 +546,54 @@ router.get('/warehouse/order/:identifier', authenticate, async (req, res) => {
     }
     const progress = await getOrderPackProgress(order);
     res.json(progress);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/inventory/warehouse/queue — Orders still needing packing (ready to ship).
+// Lets the exit station tap an order instead of typing its number. Oldest first (FIFO).
+router.get('/warehouse/queue', authenticate, async (req, res) => {
+  try {
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('id, order_number, shopify_order_name, customer_name, customer_phone, status, created_at')
+      .in('status', ['pending', 'confirmed', 'processing'])
+      .order('created_at', { ascending: true })
+      .limit(100);
+
+    const ids = (orders || []).map(o => o.id);
+    if (!ids.length) return res.json([]);
+
+    // Batch the line-item totals and already-packed totals for all orders at once.
+    const [{ data: items }, { data: exits }] = await Promise.all([
+      supabase.from('order_items').select('order_id, quantity').in('order_id', ids),
+      supabase.from('inventory_log').select('order_id, quantity_changed').in('order_id', ids).eq('event_type', 'warehouse_exit'),
+    ]);
+
+    const orderedByOrder = {};
+    for (const it of items || []) orderedByOrder[it.order_id] = (orderedByOrder[it.order_id] || 0) + (it.quantity || 0);
+    const packedByOrder = {};
+    for (const e of exits || []) packedByOrder[e.order_id] = (packedByOrder[e.order_id] || 0) + Math.abs(e.quantity_changed || 0);
+
+    const queue = (orders || [])
+      .map(o => {
+        const totalOrdered = orderedByOrder[o.id] || 0;
+        const totalPacked = Math.min(packedByOrder[o.id] || 0, totalOrdered);
+        return {
+          id: o.id,
+          order_number: o.order_number,
+          shopify_order_name: o.shopify_order_name,
+          customer_name: o.customer_name,
+          status: o.status,
+          total_ordered: totalOrdered,
+          total_packed: totalPacked,
+        };
+      })
+      // Only orders that have items and still need packing.
+      .filter(o => o.total_ordered > 0 && o.total_packed < o.total_ordered);
+
+    res.json(queue);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

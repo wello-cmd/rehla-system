@@ -18,11 +18,26 @@ export default function WarehouseExitPage() {
   const [history, setHistory] = useState([]);
   const [showScanner, setShowScanner] = useState(false);
 
+  const [queue, setQueue] = useState([]);
+  const [queueLoading, setQueueLoading] = useState(false);
+
   const orderInputRef = useRef(null);
   const scanInputRef = useRef(null);
 
+  async function loadQueue() {
+    setQueueLoading(true);
+    try {
+      setQueue(await api.get('/inventory/warehouse/queue'));
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setQueueLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (orderInputRef.current) orderInputRef.current.focus();
+    loadQueue();
   }, []);
 
   // Focus the SKU field once an order is open.
@@ -53,6 +68,7 @@ export default function WarehouseExitPage() {
     setOrderInput('');
     setResult(null);
     setScanInput('');
+    loadQueue(); // reflect packing done while the order was open
     setTimeout(() => orderInputRef.current?.focus(), 0);
   }
 
@@ -128,6 +144,49 @@ export default function WarehouseExitPage() {
         </div>
       )}
 
+      {/* Ready-to-ship queue — tap an order instead of typing its number */}
+      {!order && (
+        <div className="card" style={{ marginBottom: '24px', maxWidth: '600px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <p className="text-label" style={{ color: 'var(--color-text-dim)', margin: 0 }}>
+              Ready to ship {queue.length ? `(${queue.length})` : ''}
+            </p>
+            <button className="btn btn-secondary btn-sm" type="button" onClick={loadQueue} disabled={queueLoading}>
+              {queueLoading ? '...' : '⟲ Refresh'}
+            </button>
+          </div>
+          {queueLoading && queue.length === 0 ? (
+            <div className="skeleton" style={{ height: 120 }} />
+          ) : queue.length === 0 ? (
+            <p style={{ fontSize: '13px', color: 'var(--color-text-dim)', margin: 0 }}>No orders waiting to be packed.</p>
+          ) : (
+            queue.map((q, i) => (
+              <button
+                key={q.id}
+                type="button"
+                onClick={() => openOrder(q.shopify_order_name || q.order_number)}
+                disabled={openingOrder}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%',
+                  padding: '12px 0', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                  borderBottom: i < queue.length - 1 ? '1px solid var(--color-border-light)' : 'none',
+                }}
+              >
+                <div>
+                  <span className="font-mono" style={{ fontSize: '14px', fontWeight: 700, marginRight: '10px' }}>
+                    {q.shopify_order_name || `#${q.order_number}`}
+                  </span>
+                  <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>{q.customer_name}</span>
+                </div>
+                <span className={`badge badge-${q.total_packed > 0 ? 'warning' : 'neutral'}`} style={{ fontSize: '11px' }}>
+                  {q.total_packed} / {q.total_ordered}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+
       {/* Step 2 — Open order header + pack checklist */}
       {order && (
         <>
@@ -136,6 +195,11 @@ export default function WarehouseExitPage() {
               <div>
                 <h3 style={{ fontSize: '20px', fontWeight: 700 }}>{o.shopify_order_name || `#${o.order_number}`}</h3>
                 <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>{o.customer_name} · {o.customer_phone}</p>
+                <span className={`badge badge-${o.delivery_method === 'bosta' ? 'info' : o.delivery_method === 'own_driver' ? 'success' : 'neutral'}`} style={{ marginTop: 8, fontSize: '11px' }}>
+                  {o.delivery_method === 'bosta' ? '🚚 Bosta'
+                    : o.delivery_method === 'own_driver' ? '🏠 Rehla (own driver)'
+                    : 'Delivery not assigned'}
+                </span>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <span className={`badge badge-${order.complete ? 'success' : 'warning'}`}>

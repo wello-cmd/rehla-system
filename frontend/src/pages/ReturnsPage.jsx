@@ -1,8 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatDate } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
 import toast from 'react-hot-toast';
+
+// Lazy-loaded camera scanner (shared with Warehouse Exit)
+const BarcodeScanner = lazy(() => import('../components/ui/BarcodeScanner'));
 
 const STATUS_COLORS = {
   pending: '#f59e0b',
@@ -21,6 +24,46 @@ export default function ReturnsPage() {
   // Form state
   const [form, setForm] = useState({ order_id: '', customer_name: '', reason: '', notes: '' });
   const [items, setItems] = useState([{ sku: '', name: '', quantity: 1 }]);
+
+  // Scan-to-restock station state
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanMethod, setScanMethod] = useState('bosta'); // 'bosta' | 'own_driver'
+  const [scanInput, setScanInput] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [scanSession, setScanSession] = useState([]); // [{ name, sku, current_stock, delivery_method, ts }]
+  const [showScanner, setShowScanner] = useState(false);
+  const scanRef = useRef(null);
+
+  async function submitReturnScan(code) {
+    const val = (code || '').trim();
+    if (!val) return;
+    setScanning(true);
+    try {
+      const { item } = await api.post('/returns/scan-restock', {
+        sku: val.toUpperCase(),
+        delivery_method: scanMethod,
+      });
+      setScanSession(prev => [{ ...item, ts: new Date().toLocaleTimeString() }, ...prev]);
+      toast.success(`✓ ${item.name} restocked (${item.current_stock} in stock)`);
+    } catch (err) {
+      toast.error(err.message || 'Return scan failed');
+    } finally {
+      setScanning(false);
+      setScanInput('');
+      setTimeout(() => scanRef.current?.focus(), 0);
+    }
+  }
+
+  function handleReturnScan(e) {
+    e.preventDefault();
+    submitReturnScan(scanInput);
+  }
+
+  function handleReturnDetected(text) {
+    setShowScanner(false);
+    setScanInput(text);
+    submitReturnScan(text);
+  }
 
   const fetchReturns = useCallback(async () => {
     setLoading(true);
@@ -134,8 +177,94 @@ export default function ReturnsPage() {
           </select>
           <button className="btn btn-secondary btn-sm" onClick={fetchReturns}>⟲ Refresh</button>
         </div>
-        <button className="btn btn-primary btn-sm" onClick={openCreate}>+ New Return</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-secondary btn-sm" onClick={() => setScanOpen(v => !v)}>
+            {scanOpen ? '✕ Close Scanner' : '📷 Scan Returns'}
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={openCreate}>+ New Return</button>
+        </div>
       </div>
+
+      {/* Scan-to-restock station */}
+      {scanOpen && (
+        <div className="card" style={{ marginBottom: 20, maxWidth: 640 }}>
+          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 12 }}>
+            Scan returned items back into stock
+          </p>
+
+          {/* Delivery method that brought the items back */}
+          <div style={{ marginBottom: 14 }}>
+            <p style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 6 }}>Returned via</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[{ id: 'bosta', label: '🚚 Bosta' }, { id: 'own_driver', label: '🏠 Rehla' }].map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setScanMethod(m.id)}
+                  className="btn btn-sm"
+                  style={{
+                    background: scanMethod === m.id ? 'var(--color-brand-dim)' : 'transparent',
+                    borderColor: scanMethod === m.id ? 'var(--color-brand)' : 'var(--color-border)',
+                    color: scanMethod === m.id ? 'var(--color-text)' : 'var(--color-text-muted)',
+                  }}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <form onSubmit={handleReturnScan} style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <input
+              ref={scanRef}
+              className="input"
+              value={scanInput}
+              onChange={e => setScanInput(e.target.value)}
+              placeholder="Scan or type SKU..."
+              autoFocus
+              disabled={scanning}
+              style={{ fontSize: 18, fontFamily: 'var(--font-mono)', padding: 16, flex: '1 1 180px', minWidth: 0 }}
+            />
+            <button className="btn btn-secondary" type="button" onClick={() => setShowScanner(true)} disabled={scanning} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>photo_camera</span>
+              Scan
+            </button>
+            <button className="btn btn-primary" type="submit" disabled={scanning}>
+              {scanning ? '...' : 'RESTOCK'}
+            </button>
+          </form>
+
+          {/* Session list + running count */}
+          {scanSession.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span className="text-label" style={{ color: 'var(--color-text-dim)' }}>This session</span>
+                <span className="font-mono" style={{ fontSize: 13, fontWeight: 700 }}>{scanSession.length} item(s) restocked</span>
+              </div>
+              {scanSession.map((s, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < scanSession.length - 1 ? '1px solid var(--color-border-light)' : 'none' }}>
+                  <div>
+                    <span className="font-mono" style={{ fontSize: 12, marginRight: 8, color: 'var(--color-text-muted)' }}>{s.sku}</span>
+                    <span style={{ fontSize: 13 }}>{s.name}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <span className={`badge badge-${s.delivery_method === 'bosta' ? 'info' : 'success'}`} style={{ fontSize: 10 }}>
+                      {s.delivery_method === 'bosta' ? 'Bosta' : 'Rehla'}
+                    </span>
+                    <span className="font-mono" style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{s.current_stock} in stock</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {showScanner && (
+        <Suspense fallback={null}>
+          <BarcodeScanner onDetect={handleReturnDetected} onClose={() => setShowScanner(false)} />
+        </Suspense>
+      )}
 
       {/* Summary Chips */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>

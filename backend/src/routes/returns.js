@@ -182,6 +182,71 @@ router.patch('/:id/restock', authenticate, authorize('admin', 'ceo'), async (req
   }
 });
 
+// POST /api/returns/scan-restock — scan a returned item straight back into main
+// stock, recording which delivery method (Bosta / Rehla own-driver) brought it back.
+router.post('/scan-restock', authenticate, authorize('admin', 'ceo', 'dispatcher', 'worker'), async (req, res) => {
+  const { sku, barcode, delivery_method, quantity } = req.body;
+  const searchValue = (sku || barcode || '').toUpperCase();
+  const qty = parseInt(quantity || 1, 10);
+  const method = (delivery_method || '').toLowerCase();
+
+  if (!searchValue) return res.status(400).json({ error: 'SKU or barcode is required.' });
+  if (!['bosta', 'own_driver'].includes(method)) {
+    return res.status(400).json({ error: 'A delivery method (bosta or own_driver) is required.' });
+  }
+  if (qty <= 0) return res.status(400).json({ error: 'Quantity must be positive.' });
+
+  try {
+    const { data: variant } = await supabase
+      .from('product_variants')
+      .select('id, product_id, sku, variant_name, stock_quantity, products(id, name, warehouse_id)')
+      .or(`sku.eq.${searchValue},barcode.eq.${searchValue}`)
+      .maybeSingle();
+    if (!variant) return res.status(404).json({ error: `Product not found: ${searchValue}` });
+
+    const parent = variant.products;
+    const displayName = `${parent?.name || ''}${variant.variant_name ? ` - ${variant.variant_name}` : ''}`;
+    const prevQty = variant.stock_quantity || 0;
+    const newQty = prevQty + qty;
+
+    // Add back to variant, recompute parent total, mirror to Shopify
+    await supabase.from('product_variants').update({ stock_quantity: newQty }).eq('id', variant.id);
+    const { data: siblings } = await supabase
+      .from('product_variants').select('stock_quantity').eq('product_id', variant.product_id);
+    const parentTotal = (siblings || []).reduce((s, v) => s + (v.stock_quantity || 0), 0);
+    await supabase.from('products').update({ stock_quantity: parentTotal }).eq('id', variant.product_id);
+    syncStockToShopify('variant', variant.id);
+
+    const methodLabel = method === 'bosta' ? 'Bosta' : 'Rehla (own driver)';
+    await supabase.from('inventory_log').insert({
+      product_id: variant.product_id,
+      sku: variant.sku,
+      event_type: 'return',
+      quantity_changed: qty,
+      previous_quantity: prevQty,
+      new_quantity: newQty,
+      notes: `Return scan — via ${methodLabel}`,
+      handler_id: req.user?.id || null,
+      handler_name: req.user?.name || '',
+      warehouse_id: parent?.warehouse_id || null,
+    });
+
+    res.json({
+      success: true,
+      item: {
+        name: displayName,
+        sku: variant.sku,
+        previous_stock: prevQty,
+        current_stock: newQty,
+        quantity_returned: qty,
+        delivery_method: method,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PATCH /api/returns/:id/refund — mark as refunded
 router.patch('/:id/refund', authenticate, authorize('admin', 'ceo'), async (req, res) => {
   try {
