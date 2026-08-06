@@ -600,7 +600,8 @@ router.get('/warehouse/queue', authenticate, async (req, res) => {
 });
 
 // POST /api/warehouse/exit — Warehouse exit scan (FR-WH-06 through FR-WH-09)
-// Every exit must be tied to an order so the item is traceable later.
+// Primary: look the item up in stock and deduct it. Attaching a Shopify order is
+// OPTIONAL — when given, the exit is tagged to it and mismatches only WARN (never block).
 router.post('/warehouse/exit', authenticate, async (req, res) => {
   const { sku, barcode, quantity, order_identifier } = req.body;
   const searchValue = (sku || barcode || '').toUpperCase();
@@ -609,17 +610,9 @@ router.post('/warehouse/exit', authenticate, async (req, res) => {
   if (!searchValue) {
     return res.status(400).json({ error: 'SKU or barcode is required.' });
   }
-  if (!order_identifier) {
-    return res.status(400).json({ error: 'An order number is required for warehouse exit.' });
-  }
 
   try {
-    // Resolve and validate the order before touching stock.
-    const order = await resolveOrder(order_identifier);
-    if (!order) {
-      return res.status(404).json({ error: `Order not found: ${order_identifier}` });
-    }
-    // Look up variant by SKU or barcode, join parent product for name + warehouse
+    // Look up variant by SKU or barcode — this + the stock check are the real guards.
     const { data: variant, error: lookupErr } = await supabase
       .from('product_variants')
       .select('*, products(id, name, warehouse_id, brand)')
@@ -632,42 +625,44 @@ router.post('/warehouse/exit', authenticate, async (req, res) => {
     const parent = variant.products;
     const displayName = `${parent?.name || ''}${variant.variant_name ? ` - ${variant.variant_name}` : ''}`;
 
-    // Validate the scanned SKU is actually part of this order, and that we are
-    // not packing more units than were ordered.
-    const { data: orderLine } = await supabase
-      .from('order_items')
-      .select('quantity')
-      .eq('order_id', order.id)
-      .ilike('sku', variant.sku)
-      .maybeSingle();
-
-    if (!orderLine) {
-      return res.status(409).json({
-        error: `${displayName} (${variant.sku}) is not on order ${order.shopify_order_name || order.order_number}.`,
-        code: 'NOT_ON_ORDER'
-      });
-    }
-
-    const { data: priorExits } = await supabase
-      .from('inventory_log')
-      .select('quantity_changed')
-      .eq('order_id', order.id)
-      .eq('event_type', 'warehouse_exit')
-      .ilike('sku', variant.sku);
-    const alreadyPacked = (priorExits || []).reduce((s, e) => s + Math.abs(e.quantity_changed || 0), 0);
-
-    if (alreadyPacked + qty > orderLine.quantity) {
-      return res.status(409).json({
-        error: `Over-packing ${variant.sku}: order ${order.shopify_order_name || order.order_number} needs ${orderLine.quantity}, already packed ${alreadyPacked}.`,
-        code: 'OVER_PACK'
-      });
-    }
-
-    // FR-WH-09: Block if stock is insufficient
+    // FR-WH-09: the one hard block — never let stock go negative.
     if (variant.stock_quantity < qty) {
       return res.status(400).json({
         error: `Insufficient stock for ${displayName}. Available: ${variant.stock_quantity}`
       });
+    }
+
+    // Optional order tagging. Any mismatch becomes a warning, not a block.
+    let order = null;
+    let warning = null;
+    if (order_identifier) {
+      order = await resolveOrder(order_identifier);
+      if (!order) {
+        warning = `Order ${order_identifier} not found — exit not linked to an order.`;
+      } else {
+        const orderName = order.shopify_order_name || (order.order_number != null ? `#${order.order_number}` : '');
+        const { data: orderLine } = await supabase
+          .from('order_items')
+          .select('quantity')
+          .eq('order_id', order.id)
+          .ilike('sku', variant.sku)
+          .maybeSingle();
+
+        if (!orderLine) {
+          warning = `${displayName} (${variant.sku}) is not on order ${orderName} — deducted anyway.`;
+        } else {
+          const { data: priorExits } = await supabase
+            .from('inventory_log')
+            .select('quantity_changed')
+            .eq('order_id', order.id)
+            .eq('event_type', 'warehouse_exit')
+            .ilike('sku', variant.sku);
+          const alreadyPacked = (priorExits || []).reduce((s, e) => s + Math.abs(e.quantity_changed || 0), 0);
+          if (alreadyPacked + qty > orderLine.quantity) {
+            warning = `Over-packing ${variant.sku}: order ${orderName} needs ${orderLine.quantity}, already packed ${alreadyPacked}.`;
+          }
+        }
+      }
     }
 
     const prevQty = variant.stock_quantity;
@@ -685,9 +680,13 @@ router.post('/warehouse/exit', authenticate, async (req, res) => {
     // Mirror the new variant level to Shopify
     syncStockToShopify('variant', variant.id);
 
-    const orderRef = order.shopify_order_name || (order.order_number != null ? `#${order.order_number}` : null);
+    // Only tag the log to an order when we resolved a real one.
+    const linkedOrder = order || null;
+    const orderRef = linkedOrder
+      ? (linkedOrder.shopify_order_name || (linkedOrder.order_number != null ? `#${linkedOrder.order_number}` : null))
+      : null;
 
-    // FR-WH-08: Log warehouse exit, tied to the order being fulfilled
+    // FR-WH-08: Log the exit (order fields stay null for a free scan)
     await supabase.from('inventory_log').insert({
       product_id: parent.id,
       sku: variant.sku,
@@ -695,20 +694,21 @@ router.post('/warehouse/exit', authenticate, async (req, res) => {
       quantity_changed: -qty,
       previous_quantity: prevQty,
       new_quantity: newQty,
-      notes: `Warehouse exit scan — order ${orderRef || order.id}`,
+      notes: orderRef ? `Warehouse exit scan — order ${orderRef}` : 'Warehouse exit scan',
       handler_id: req.user.id,
       handler_name: req.user.name,
       warehouse_id: parent.warehouse_id,
-      order_id: order.id,
+      order_id: linkedOrder ? linkedOrder.id : null,
       order_number: orderRef
     });
 
-    // Recompute pack progress so the UI can reflect order completion.
-    const progress = await getOrderPackProgress(order);
+    // Recompute pack progress so the UI can reflect order completion (null for free scans).
+    const progress = linkedOrder ? await getOrderPackProgress(linkedOrder) : null;
 
     res.json({
       success: true,
       order: progress,
+      warning,
       product: {
         id: parent.id,
         variant_id: variant.id,
