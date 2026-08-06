@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import InventoryPage from './pages/InventoryPage';
 import WarehouseExitPage from './pages/WarehouseExitPage';
+import StockLookupPage from './pages/StockLookupPage';
 import DeliveryPage from './pages/DeliveryPage';
 import InvoicesPage from './pages/InvoicesPage';
 import InvoiceCreatePage from './pages/InvoiceCreatePage';
@@ -95,6 +96,12 @@ function AppContent() {
         <Route path="/warehouse/exit" element={
           <ProtectedRoute allowedRoles={['ceo', 'admin', 'worker']}>
             <WarehouseExitPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/stock-lookup" element={
+          <ProtectedRoute allowedRoles={['ceo', 'admin', 'worker', 'dispatcher']}>
+            <StockLookupPage />
           </ProtectedRoute>
         } />
 

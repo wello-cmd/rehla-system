@@ -17,6 +17,7 @@ const NAV_GROUPS = [
     items: [
       { path: '/inventory',       label: 'Inventory',       icon: 'inventory_2',      roles: ['ceo','admin'] },
       { path: '/warehouse/exit',  label: 'Warehouse Exit',  icon: 'barcode_scanner',  roles: ['ceo','admin','worker'] },
+      { path: '/stock-lookup',    label: 'Stock Lookup',    icon: 'search',           roles: ['ceo','admin','worker','dispatcher'] },
       { path: '/warehouse/logs',  label: 'Warehouse Logs',  icon: 'history',           roles: ['ceo','admin','worker'] },
       { path: '/delivery',        label: 'Delivery',         icon: 'local_shipping',   roles: ['ceo','admin','dispatcher','worker'] },
     ],

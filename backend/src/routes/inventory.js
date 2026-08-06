@@ -877,4 +877,61 @@ router.delete('/:productId/variants/:variantId', authenticate, authorize('admin'
   }
 });
 
+// GET /api/inventory/scan-lookup/:code — READ-ONLY stock inquiry by barcode or SKU.
+// Shows the scanned item plus the full variant breakdown for its product. No deduction.
+router.get('/scan-lookup/:code', authenticate, async (req, res) => {
+  try {
+    const searchValue = (req.params.code || '').toUpperCase();
+    if (!searchValue) return res.status(400).json({ error: 'A barcode or SKU is required.' });
+
+    // Try a variant first (that's what item labels encode)
+    const { data: variant } = await supabase
+      .from('product_variants')
+      .select('id, product_id, sku, variant_name, size, color, price, stock_quantity, barcode, products(id, name, sku, category, brand, stock_quantity, price, image_url, warehouses(name, code))')
+      .or(`sku.eq.${searchValue},barcode.eq.${searchValue}`)
+      .maybeSingle();
+
+    let product = variant?.products || null;
+    let scannedVariantId = variant?.id || null;
+
+    // Fall back to a product-level barcode/SKU
+    if (!product) {
+      const { data: prod } = await supabase
+        .from('products')
+        .select('id, name, sku, category, brand, stock_quantity, price, image_url, warehouses(name, code)')
+        .or(`sku.eq.${searchValue},barcode.eq.${searchValue}`)
+        .maybeSingle();
+      product = prod || null;
+    }
+
+    if (!product) return res.status(404).json({ error: `No stock item matches: ${searchValue}` });
+
+    const { data: variants } = await supabase
+      .from('product_variants')
+      .select('id, sku, variant_name, size, color, stock_quantity, price, barcode')
+      .eq('product_id', product.id)
+      .order('sku', { ascending: true });
+
+    res.json({
+      matched: scannedVariantId ? 'variant' : 'product',
+      scanned_variant_id: scannedVariantId,
+      product: {
+        id: product.id,
+        name: product.name,
+        sku: product.sku,
+        category: product.category,
+        brand: product.brand,
+        price: product.price,
+        total_stock: product.stock_quantity,
+        image_url: product.image_url,
+        warehouse: product.warehouses?.name || null,
+        warehouse_code: product.warehouses?.code || null,
+      },
+      variants: variants || [],
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
