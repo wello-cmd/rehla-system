@@ -1,9 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatNumber } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
 import PeriodSelector from '../components/PeriodSelector';
-import toast from 'react-hot-toast';
+import { loadDashboardPanels } from '../lib/dashboardPanels';
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, Legend, PieChart, Pie, Cell,
@@ -26,7 +26,7 @@ function defaultPeriod() {
   return { start, end, groupBy: 'day', label: `${monthName} ${y}` };
 }
 
-function KpiCard({ label, value, sub, color, icon, loading }) {
+function KpiCard({ label, value, sub, color, icon, loading, error }) {
   return (
     <div className="card kpi-card" style={{ '--kpi-accent': color || 'var(--color-border-light)' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6 }}>
@@ -39,16 +39,16 @@ function KpiCard({ label, value, sub, color, icon, loading }) {
       </div>
       {loading
         ? <div className="skeleton" style={{ height:30, width:'65%', marginBottom:4 }} />
-        : <p style={{ fontSize:24, fontWeight:800, letterSpacing:'-0.03em', fontFamily:'var(--font-mono)', color: color || 'inherit', lineHeight:1.1, whiteSpace:'nowrap' }}>{value}</p>
+        : <p style={{ fontSize:24, fontWeight:800, letterSpacing:'-0.03em', fontFamily:'var(--font-mono)', color: color || 'inherit', lineHeight:1.1, whiteSpace:'nowrap' }}>{error ? 'Unavailable' : value}</p>
       }
-      {!loading && sub && (
+      {!loading && !error && sub && (
         <p style={{ fontSize:11, color:'var(--color-text-muted)', marginTop:4 }}>{sub}</p>
       )}
     </div>
   );
 }
 
-function ChartCard({ title, loading, height = 260, children, extra }) {
+function ChartCard({ title, loading, height = 260, children, extra, error }) {
   return (
     <div className="card" style={{ display:'flex', flexDirection:'column', gap:14 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -57,7 +57,7 @@ function ChartCard({ title, loading, height = 260, children, extra }) {
       </div>
       {loading
         ? <div className="skeleton" style={{ height }} />
-        : children
+        : error ? <p role="status">This section is unavailable. Use Retry above to try again.</p> : children
       }
     </div>
   );
@@ -73,53 +73,31 @@ export default function DashboardPage() {
   const [invoiceSummary, setInvoiceSummary] = useState(null);
   const [inventoryValue, setInventoryValue] = useState(null);
 
+  const [panelErrors, setPanelErrors] = useState({});
+  const requestRef = useRef(0);
   const fetchDashboard = useCallback(async (p) => {
+    const request = ++requestRef.current;
     setLoading(true);
-    try {
-      const qs = [
-        p.start   ? `start=${p.start}`     : '',
-        p.end     ? `end=${p.end}`         : '',
-        p.groupBy ? `groupBy=${p.groupBy}` : '',
-      ].filter(Boolean).join('&');
-      const dateQs = [
-        p.start ? `start=${p.start}` : '',
-        p.end   ? `end=${p.end}`     : '',
-      ].filter(Boolean).join('&');
-
-      const [sales, fin, top, deliv, inv, invVal] = await Promise.all([
-        api.get(`/analytics/sales${qs ? `?${qs}` : ''}`),
-        api.get(`/analytics/financial-kpis${qs ? `?${qs}` : ''}`),
-        api.get(`/analytics/top-products${qs ? `?${qs}` : ''}`),
-        api.get(`/analytics/delivery${dateQs ? `?${dateQs}` : ''}`),
-        api.get('/invoices/summary'),
-        api.get('/financial/inventory-value'),
-      ]);
-
-      setSalesData(sales);
-      setFinKpis(fin);
-      setTopProducts(top.byRevenue || []);
-      setDeliveryData(deliv);
-      setInvoiceSummary(inv);
-      setInventoryValue(invVal);
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to load dashboard');
-    } finally {
-      setLoading(false);
-    }
+    const result = await loadDashboardPanels(endpoint => api.get(endpoint), p);
+    if (request !== requestRef.current) return;
+    const {data, errors} = result;
+    setSalesData(data.sales || null);
+    setFinKpis(data.finance || []);
+    setTopProducts(data.products?.byRevenue || []);
+    setDeliveryData(data.delivery || null);
+    setInvoiceSummary(data.invoices || null);
+    setInventoryValue(data.inventory || null);
+    setPanelErrors(errors);
+    setLoading(false);
   }, []);
 
-  // Auto-load on mount + refresh every 5 minutes
   useEffect(() => {
     fetchDashboard(period);
     const interval = setInterval(() => fetchDashboard(period), 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+    return () => { clearInterval(interval); requestRef.current++; };
+  }, [period, fetchDashboard]);
 
-  function handlePeriod(p) {
-    setPeriod(p);
-    fetchDashboard(p);
-  }
+  function handlePeriod(p) { setPeriod(p); }
 
   // Reconcile every money KPI to ONE revenue figure (the Net Revenue card value),
   // so Profit ≤ Revenue and AOV = Revenue ÷ orders. Expenses come from finKpis.
@@ -138,11 +116,18 @@ export default function DashboardPage() {
       <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
 
         <PeriodSelector onChange={handlePeriod} />
+        {Object.keys(panelErrors).length > 0 && (
+          <div role="status" style={{display:'flex', gap:12, alignItems:'center', flexWrap:'wrap'}}>
+            <p>Could not load: {Object.keys(panelErrors).join(', ')}. Available sections are shown below.</p>
+            <button className="btn btn-secondary" disabled={loading} onClick={() => fetchDashboard(period)}>Retry</button>
+          </div>
+        )}
 
         {/* KPI cards */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(190px,1fr))', gap:12 }}>
           <KpiCard
             label="Net Revenue"
+            error={panelErrors.sales}
             value={formatEGP(salesData?.totalRevenue ?? 0)}
             sub={`${formatNumber(salesData?.totalOrders ?? 0)} orders`}
             icon="payments"
@@ -151,6 +136,7 @@ export default function DashboardPage() {
           />
           <KpiCard
             label="Net Profit"
+            error={panelErrors.sales || panelErrors.finance}
             value={formatEGP(totalProfit)}
             sub={totalExpenses > 0 ? `${profitMargin}% margin` : 'No expenses recorded'}
             icon="trending_up"
@@ -159,12 +145,14 @@ export default function DashboardPage() {
           />
           <KpiCard
             label="Avg Order Value"
+            error={panelErrors.sales}
             value={formatEGP(avgOrderValue)}
             icon="analytics"
             loading={loading}
           />
           <KpiCard
             label="Outstanding"
+            error={panelErrors.invoices}
             value={formatEGP(invoiceSummary?.total_outstanding ?? 0)}
             sub={invoiceSummary?.total_overdue > 0 ? `${formatEGP(invoiceSummary.total_overdue)} overdue` : 'None overdue'}
             icon="receipt_long"
@@ -173,6 +161,7 @@ export default function DashboardPage() {
           />
           <KpiCard
             label="Deliveries"
+            error={panelErrors.delivery}
             value={formatNumber(deliveryData?.total ?? 0)}
             sub={`${formatNumber(deliveryData?.delivered ?? 0)} delivered · ${formatNumber(deliveryData?.failed ?? 0)} failed`}
             icon="local_shipping"
@@ -180,6 +169,7 @@ export default function DashboardPage() {
           />
           <KpiCard
             label="Inventory Value"
+            error={panelErrors.inventory}
             value={formatEGP(inventoryValue?.retail_value ?? 0)}
             sub={`${formatNumber(inventoryValue?.total_units ?? 0)} units`}
             icon="inventory_2"
@@ -192,6 +182,7 @@ export default function DashboardPage() {
           title={`Revenue · Expenses · Profit — ${period.label || 'All time'}`}
           loading={loading}
           height={280}
+          error={panelErrors.finance}
         >
           {finKpis.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
@@ -223,7 +214,7 @@ export default function DashboardPage() {
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(280px,1fr))', gap:16 }}>
 
           {/* Top products */}
-          <ChartCard title="Top Products by Revenue" loading={loading} height={200}>
+          <ChartCard title="Top Products by Revenue" error={panelErrors.products} loading={loading} height={200}>
             {topProducts.length > 0 ? (
               <div>
                 {topProducts.slice(0,6).map((p, i) => (
@@ -259,7 +250,7 @@ export default function DashboardPage() {
           </ChartCard>
 
           {/* Delivery donut */}
-          <ChartCard title="Delivery Status Breakdown" loading={loading} height={200}>
+          <ChartCard title="Delivery Status Breakdown" error={panelErrors.delivery} loading={loading} height={200}>
             {deliveryPieData.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height={170}>

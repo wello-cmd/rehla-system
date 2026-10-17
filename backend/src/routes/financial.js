@@ -3,10 +3,11 @@ const express = require('express');
 const router = express.Router();
 const { supabase, fetchAll } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
+const authorize = require('../middleware/authorize');
 const { generatePLReportPDF } = require('../services/pdfGenerator');
 
 // GET /api/financial/revenue — Revenue by period (FR-FN-01)
-router.get('/revenue', authenticate, async (req, res) => {
+router.get('/revenue', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     const { period, start, end } = req.query;
     let dateFilter = {};
@@ -43,7 +44,7 @@ router.get('/revenue', authenticate, async (req, res) => {
 });
 
 // GET /api/financial/pl — Profit & Loss (FR-FN-05 through FR-FN-08)
-router.get('/pl', authenticate, async (req, res) => {
+router.get('/pl', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     const { start, end } = req.query;
 
@@ -95,7 +96,7 @@ router.get('/pl', authenticate, async (req, res) => {
 });
 
 // GET /api/financial/pl/trend — Monthly P&L trend (FR-FN-09)
-router.get('/pl/trend', authenticate, async (req, res) => {
+router.get('/pl/trend', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     const [orders, expenses] = await Promise.all([
       fetchAll(supabase.from('orders').select('total, created_at').eq('payment_status', 'paid')),
@@ -133,7 +134,7 @@ router.get('/pl/trend', authenticate, async (req, res) => {
 });
 
 // GET /api/financial/cashflow — Cash flow chart (FR-FN-10)
-router.get('/cashflow', authenticate, async (req, res) => {
+router.get('/cashflow', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     const [orders, expenses] = await Promise.all([
       fetchAll(supabase.from('orders').select('total, created_at').eq('payment_status', 'paid')),
@@ -170,7 +171,7 @@ router.get('/cashflow', authenticate, async (req, res) => {
 });
 
 // GET /api/financial/inventory-value — Inventory valuation (FR-FN-11)
-router.get('/inventory-value', authenticate, async (req, res) => {
+router.get('/inventory-value', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     const { data: products } = await supabase.from('products').select('stock_quantity, price, cost_per_unit');
 
@@ -193,7 +194,7 @@ router.get('/inventory-value', authenticate, async (req, res) => {
 });
 
 // GET /api/financial/pl/pdf — P&L PDF export (FR-FN-12)
-router.get('/pl/pdf', authenticate, async (req, res) => {
+router.get('/pl/pdf', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     // Reuse P&L calculation — paginated to bypass PostgREST 1000-row cap
     const [orders, items, expenses] = await Promise.all([

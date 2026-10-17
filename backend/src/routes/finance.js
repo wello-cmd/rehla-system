@@ -12,7 +12,7 @@ const applyDateFilter = (query, start, end, dateColumn = 'created_at') => {
 };
 
 // Part 1: Revenue Tracking
-router.get('/revenue', authenticate, async (req, res) => {
+router.get('/revenue', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     const { start, end } = req.query;
 
@@ -86,7 +86,7 @@ router.get('/revenue', authenticate, async (req, res) => {
 });
 
 // Part 2: Expense Management - List & Analytics
-router.get('/expenses', authenticate, async (req, res) => {
+router.get('/expenses', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     const { start, end } = req.query;
 
@@ -136,7 +136,7 @@ router.get('/expenses', authenticate, async (req, res) => {
 });
 
 // Part 2: Expense Management - CRUD
-router.post('/expenses', authenticate, async (req, res) => {
+router.post('/expenses', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   const { description, category, amount, date } = req.body;
   if (!description || !category || amount === undefined || !date) {
     return res.status(400).json({ error: 'Description, category, amount, and date are required.' });
@@ -185,7 +185,7 @@ router.delete('/expenses/:id', authenticate, authorize('admin', 'ceo'), async (r
 });
 
 // Part 3: Profit & Loss
-router.get('/pnl', authenticate, async (req, res) => {
+router.get('/pnl', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     const { start, end } = req.query;
 
@@ -277,7 +277,7 @@ router.get('/pnl', authenticate, async (req, res) => {
 });
 
 // Part 4: Inventory Value
-router.get('/inventory-value', authenticate, async (req, res) => {
+router.get('/inventory-value', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     const { data: products } = await supabase.from('products').select('stock_quantity, price, cost_per_unit');
 
@@ -299,7 +299,7 @@ router.get('/inventory-value', authenticate, async (req, res) => {
 });
 
 // Part 5: Cash Flow Summary
-router.get('/cashflow', authenticate, async (req, res) => {
+router.get('/cashflow', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     const { start, end } = req.query;
 

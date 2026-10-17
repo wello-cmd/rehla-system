@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatNumber, getStatusColor } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
+import AccessibleDialog from '../components/ui/AccessibleDialog';
 import toast from 'react-hot-toast';
 
 export default function InventoryPage() {
@@ -129,25 +130,9 @@ export default function InventoryPage() {
     handleExportCSV();
   }
 
-  function handleModalContentClick(e) {
-    e.stopPropagation();
-  }
 
   useEffect(() => { fetchProducts(); fetchClients(); }, [startDate, endDate]);
 
-  // Press Esc to dismiss whichever modal is open
-  useEffect(() => {
-    function onKey(e) {
-      if (e.key === 'Escape') {
-        setShowBulkBarcodeModal(false);
-        setShowBarcodeModal(false);
-        setShowVariantsModal(false);
-        setShowModal(false);
-      }
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
 
   async function fetchClients() {
     try {
@@ -513,7 +498,7 @@ export default function InventoryPage() {
           className="input inv-search"
           style={STYLES.searchInput}
           placeholder="Search by SKU, name, or category..."
-          value={searchTerm}
+          aria-label="Search inventory" value={searchTerm}
           onChange={handleSearchChange}
         />
         <div style={{ display: 'flex', gap: 4 }}>
@@ -540,9 +525,9 @@ export default function InventoryPage() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <input type="date" className="input" value={startDate} onChange={e => setStartDate(e.target.value)} title="Start Date" />
+          <input type="date" className="input" value={startDate} onChange={e => setStartDate(e.target.value)} aria-label="Start date" title="Start Date" />
           <span style={{ color: 'var(--color-text-dim)' }}>—</span>
-          <input type="date" className="input" value={endDate} onChange={e => setEndDate(e.target.value)} title="End Date" />
+          <input type="date" className="input" value={endDate} onChange={e => setEndDate(e.target.value)} aria-label="End date" title="End Date" />
         </div>
         <button className="btn btn-primary btn-sm" onClick={openAdd}>
           + Add Product
@@ -571,7 +556,7 @@ export default function InventoryPage() {
             <thead>
               <tr>
                 <th>
-                  <input type="checkbox" onChange={toggleSelectAll} checked={selectedProducts.length === filtered.length && filtered.length > 0} />
+                  <input aria-label="Select all products" type="checkbox" onChange={toggleSelectAll} checked={selectedProducts.length === filtered.length && filtered.length > 0} />
                 </th>
                 <th className="hide-xs">SKU</th>
                 <th>Product</th>
@@ -589,7 +574,7 @@ export default function InventoryPage() {
               {filtered.map(product => (
                 <tr key={product.id}>
                   <td>
-                    <input type="checkbox" checked={selectedProducts.includes(product.id)} onChange={() => toggleSelection(product.id)} />
+                    <input aria-label={`Select ${product.name}`} type="checkbox" checked={selectedProducts.includes(product.id)} onChange={() => toggleSelection(product.id)} />
                   </td>
                   <td className="font-mono hide-xs" style={STYLES.skuCol}>{product.sku}</td>
                   <td>
@@ -651,7 +636,7 @@ export default function InventoryPage() {
         ) : filtered.map(product => (
           <div key={product.id} className="card" style={{ padding: 14 }}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <input type="checkbox" checked={selectedProducts.includes(product.id)} onChange={() => toggleSelection(product.id)} style={{ marginTop: 4, flexShrink: 0 }} />
+              <input aria-label={`Select ${product.name}`} type="checkbox" checked={selectedProducts.includes(product.id)} onChange={() => toggleSelection(product.id)} style={{ marginTop: 4, flexShrink: 0 }} />
               {product.image_url && (
                 <img src={product.image_url} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
               )}
@@ -681,40 +666,39 @@ export default function InventoryPage() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={closeFormModal}>
-          <div className="modal-content" onClick={handleModalContentClick}>
+        <AccessibleDialog title={selectedProduct ? 'Edit Product' : 'Add Product'} onClose={closeFormModal}>
             <h2 className="text-title" style={STYLES.modalTitle}>
               {selectedProduct ? 'Edit Product' : 'Add Product'}
             </h2>
             <form onSubmit={handleSaveProduct}>
               <div style={STYLES.modalGrid}>
                 <div>
-                  <label className="text-label" style={STYLES.modalLabel}>SKU</label>
-                  <input className="input" name="sku" value={form.sku} onChange={handleChange} required disabled={!!selectedProduct} />
+                  <label htmlFor="product-sku" className="text-label" style={STYLES.modalLabel}>SKU</label>
+                  <input className="input" id="product-sku" name="sku" value={form.sku} onChange={handleChange} required disabled={!!selectedProduct} />
                 </div>
                 <div>
-                  <label className="text-label" style={STYLES.modalLabel}>Name</label>
-                  <input className="input" name="name" value={form.name} onChange={handleChange} required />
+                  <label htmlFor="product-name" className="text-label" style={STYLES.modalLabel}>Name</label>
+                  <input className="input" id="product-name" name="name" value={form.name} onChange={handleChange} required />
                 </div>
                 <div>
-                  <label className="text-label" style={STYLES.modalLabel}>Price (EGP)</label>
-                  <input className="input" name="price" type="number" step="0.01" value={form.price} onChange={handleChange} required />
+                  <label htmlFor="product-price" className="text-label" style={STYLES.modalLabel}>Price (EGP)</label>
+                <input className="input" id="product-price" name="price" type="number" step="0.01" value={form.price} onChange={handleChange} required />
                 </div>
                 <div>
-                  <label className="text-label" style={STYLES.modalLabel}>Cost/Unit (EGP)</label>
-                  <input className="input" name="cost_per_unit" type="number" step="0.01" value={form.cost_per_unit} onChange={handleChange} />
+                  <label htmlFor="product-cost_per_unit" className="text-label" style={STYLES.modalLabel}>Cost/Unit (EGP)</label>
+                  <input className="input" id="product-cost_per_unit" name="cost_per_unit" type="number" step="0.01" value={form.cost_per_unit} onChange={handleChange} />
                 </div>
                 <div>
-                  <label className="text-label" style={STYLES.modalLabel}>Stock Quantity</label>
-                  <input className="input" name="stock_quantity" type="number" value={form.stock_quantity} onChange={handleChange} />
+                  <label htmlFor="product-stock_quantity" className="text-label" style={STYLES.modalLabel}>Stock Quantity</label>
+                  <input className="input" id="product-stock_quantity" name="stock_quantity" type="number" value={form.stock_quantity} onChange={handleChange} />
                 </div>
                 <div>
-                  <label className="text-label" style={STYLES.modalLabel}>Category</label>
-                  <input className="input" name="category" value={form.category} onChange={handleChange} />
+                  <label htmlFor="product-category" className="text-label" style={STYLES.modalLabel}>Category</label>
+                  <input className="input" id="product-category" name="category" value={form.category} onChange={handleChange} />
                 </div>
                 <div>
-                  <label className="text-label" style={STYLES.modalLabel}>Product Owner (3PL)</label>
-                  <select className="input" name="client_id" value={form.client_id} onChange={handleChange}>
+                  <label htmlFor="product-client_id" className="text-label" style={STYLES.modalLabel}>Product Owner (3PL)</label>
+                  <select className="input" id="product-client_id" name="client_id" value={form.client_id} onChange={handleChange}>
                     <option value="">REHLA (Internal)</option>
                     {clients.map(c => (
                       <option key={c.id} value={c.id}>{c.company_name}</option>
@@ -722,10 +706,10 @@ export default function InventoryPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-label" style={STYLES.modalLabel}>Barcode</label>
+                  <label htmlFor="product-barcode" className="text-label" style={STYLES.modalLabel}>Barcode</label>
                   <input 
                     className="input" 
-                    name="barcode"
+                    id="product-barcode" name="barcode"
                     value={form.barcode} 
                     onChange={handleChange} 
                     placeholder={selectedProduct ? "Barcode value" : "Optional (Auto-generated)"}
@@ -739,38 +723,36 @@ export default function InventoryPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </AccessibleDialog>
       )}
 
       {/* Variants Modal */}
       {showVariantsModal && variantsProduct && (
-        <div className="modal-overlay" onClick={() => setShowVariantsModal(false)}>
-          <div className="modal-content" style={{ maxWidth: 680, width: '95%' }} onClick={e => e.stopPropagation()}>
+        <AccessibleDialog title={`Variants — ${variantsProduct.name}`} onClose={() => setShowVariantsModal(false)} style={{ maxWidth:680 }}>
             <h2 className="text-title" style={{ marginBottom: 4 }}>Variants — {variantsProduct.name}</h2>
             <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 20 }}>Base SKU: {variantsProduct.sku}</p>
 
             {/* Add / Edit form */}
             <form onSubmit={handleSaveVariant} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 20 }}>
               <div>
-                <label className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Variant SKU *</label>
-                <input className="input" required value={variantForm.sku} onChange={e => setVariantForm(p => ({ ...p, sku: e.target.value }))} placeholder="RHL-RED-S" />
+                <label htmlFor="variant-sku" className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Variant SKU *</label>
+                <input id="variant-sku" className="input" required value={variantForm.sku} onChange={e => setVariantForm(p => ({ ...p, sku: e.target.value }))} placeholder="RHL-RED-S" />
               </div>
               <div>
-                <label className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Size</label>
-                <input className="input" value={variantForm.size} onChange={e => setVariantForm(p => ({ ...p, size: e.target.value }))} placeholder="S / M / L / XL" />
+                <label htmlFor="variant-size" className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Size</label>
+                <input id="variant-size" className="input" value={variantForm.size} onChange={e => setVariantForm(p => ({ ...p, size: e.target.value }))} placeholder="S / M / L / XL" />
               </div>
               <div>
-                <label className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Color</label>
-                <input className="input" value={variantForm.color} onChange={e => setVariantForm(p => ({ ...p, color: e.target.value }))} placeholder="Red" />
+                <label htmlFor="variant-color" className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Color</label>
+                <input id="variant-color" className="input" value={variantForm.color} onChange={e => setVariantForm(p => ({ ...p, color: e.target.value }))} placeholder="Red" />
               </div>
               <div>
-                <label className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Stock</label>
-                <input className="input" type="number" value={variantForm.stock_quantity} onChange={e => setVariantForm(p => ({ ...p, stock_quantity: e.target.value }))} placeholder="0" />
+                <label htmlFor="variant-stock_quantity" className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Stock</label>
+                <input id="variant-stock_quantity" className="input" type="number" value={variantForm.stock_quantity} onChange={e => setVariantForm(p => ({ ...p, stock_quantity: e.target.value }))} placeholder="0" />
               </div>
               <div>
-                <label className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Price (EGP)</label>
-                <input className="input" type="number" step="0.01" value={variantForm.price} onChange={e => setVariantForm(p => ({ ...p, price: e.target.value }))} placeholder="Optional" />
+                <label htmlFor="variant-price" className="text-label" style={{ display: 'block', marginBottom: 4, fontSize: 10 }}>Price (EGP)</label>
+                <input id="variant-price" className="input" type="number" step="0.01" value={variantForm.price} onChange={e => setVariantForm(p => ({ ...p, price: e.target.value }))} placeholder="Optional" />
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
                 <button type="submit" className="btn btn-primary btn-sm" style={{ flex: 1 }}>
@@ -817,14 +799,12 @@ export default function InventoryPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
               <button className="btn btn-secondary btn-sm" onClick={() => setShowVariantsModal(false)}>Close</button>
             </div>
-          </div>
-        </div>
+        </AccessibleDialog>
       )}
 
       {/* Bulk Barcode Variant Selection Modal */}
       {showBulkBarcodeModal && (
-        <div className="modal-overlay" onClick={() => setShowBulkBarcodeModal(false)}>
-          <div className="modal-content" style={{ maxWidth: 700, width: '95%', maxHeight: '80vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
+        <AccessibleDialog title="Select Variants for Barcodes" onClose={() => setShowBulkBarcodeModal(false)} style={{ maxWidth:700, maxHeight:'80vh' }}>
             <h2 className="text-title" style={{ marginBottom: 4 }}>Select Variants for Barcodes</h2>
             <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginBottom: 16 }}>
               Choose which size / color variants to include in the barcode labels.
@@ -837,13 +817,13 @@ export default function InventoryPage() {
               background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <label className="text-label" style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>Copies per label</label>
+                <label htmlFor="barcode-copies" className="text-label" style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>Copies per label</label>
                 <input
                   className="input"
                   type="number"
                   min="1"
                   max="200"
-                  value={bulkCopies}
+                  id="barcode-copies" value={bulkCopies}
                   disabled={bulkUseStock}
                   onChange={e => setBulkCopies(Math.max(1, Math.min(200, Number(e.target.value) || 1)))}
                   style={{ width: 80, opacity: bulkUseStock ? 0.5 : 1 }}
@@ -859,7 +839,7 @@ export default function InventoryPage() {
               <input
                 className="input"
                 placeholder="Filter products by name or SKU…"
-                value={bulkSearch}
+                aria-label="Filter barcode products" value={bulkSearch}
                 onChange={e => setBulkSearch(e.target.value)}
                 style={{ marginBottom: 14 }}
               />
@@ -942,8 +922,7 @@ export default function InventoryPage() {
                 🖨️ Generate &amp; Print {bulkLabelTotal} {bulkLabelTotal === 1 ? 'Label' : 'Labels'}
               </button>
             </div>
-          </div>
-        </div>
+        </AccessibleDialog>
       )}
 
       {/* Barcode View Modal */}
@@ -954,8 +933,7 @@ export default function InventoryPage() {
         const displaySku = activeVariant ? activeVariant.sku : selectedProductForBarcode.sku;
         const variantLabel = activeVariant ? [activeVariant.size, activeVariant.color].filter(Boolean).join(' / ') : '';
         return (
-        <div className="modal-overlay" onClick={closeBarcodeModal}>
-          <div className="modal-content" style={{ ...STYLES.barcodeModalContent, maxWidth: 440 }} onClick={handleModalContentClick}>
+        <AccessibleDialog title="Product Barcode" onClose={closeBarcodeModal} style={{ ...STYLES.barcodeModalContent, maxWidth:440 }}>
             <h2 className="text-title" style={STYLES.barcodeModalTitle}>Product Barcode</h2>
             <p style={STYLES.barcodeModalProduct}>{selectedProductForBarcode.name}</p>
             {variantLabel && <p style={{ fontSize: 12, color: 'var(--color-primary, #4f46e5)', marginBottom: 4 }}>{variantLabel}</p>}
@@ -966,10 +944,10 @@ export default function InventoryPage() {
             {/* Variant selector */}
             {pvs.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <label className="text-label" style={{ display: 'block', fontSize: 10, marginBottom: 6, color: 'var(--color-text-dim)' }}>Select Variant</label>
+                <label htmlFor="barcode-variant" className="text-label" style={{ display: 'block', fontSize: 10, marginBottom: 6, color: 'var(--color-text-dim)' }}>Select Variant</label>
                 <select
                   className="input"
-                  value={selectedBarcodeVariant}
+                  id="barcode-variant" value={selectedBarcodeVariant}
                   onChange={e => setSelectedBarcodeVariant(e.target.value)}
                   style={{ width: '100%' }}
                 >
@@ -1018,8 +996,7 @@ export default function InventoryPage() {
                 Print Label
               </button>
             </div>
-          </div>
-        </div>
+        </AccessibleDialog>
         );
       })()}
     </DashboardShell>

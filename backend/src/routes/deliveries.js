@@ -4,6 +4,7 @@ const router = express.Router();
 const { supabase, fetchAll } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
+const { DELIVERY_READ_ROLES, DELIVERY_MANAGE_ROLES, DELIVERY_STATUS_ROLES, DELIVERY_REPORT_ROLES } = require('../utils/permissions');
 const { verifyBostaWebhook } = require('../middleware/webhookVerify');
 const bostaClient = require('../services/bostaClient');
 const { generateWaybillPDF } = require('../services/pdfGenerator');
@@ -51,7 +52,7 @@ async function listDeliveryOrders(req, res) {
       .select(`
         *,
         orders(customer_name, customer_phone, customer_email, total, payment_method, items, order_number, shopify_order_name, created_at),
-        drivers(name, phone, zone, uuid_link, availability_status)
+        drivers(name, phone, zone, availability_status)
       `)
       .order('created_at', { ascending: false });
 
@@ -63,12 +64,14 @@ async function listDeliveryOrders(req, res) {
     if (end) query = query.lte('created_at', `${end}T23:59:59.999Z`);
 
     if (req.user?.role === 'driver') {
-      const { data: driverRecord } = await supabase
+      const { data: driverRecord, error: driverError } = await supabase
         .from('drivers')
         .select('id')
         .eq('user_id', req.user.id)
         .maybeSingle();
-      if (driverRecord) query = query.eq('driver_id', driverRecord.id);
+      if (driverError) throw driverError;
+      if (!driverRecord) return res.status(403).json({ error: 'No driver profile linked to this account.' });
+      query = query.eq('driver_id', driverRecord.id);
     }
 
     const { data, error } = await query;
@@ -157,11 +160,12 @@ async function updateDeliveryStatus(req, res) {
   if (validationError) return res.status(400).json({ error: validationError });
 
   try {
-    const { data: delivery } = await supabase
+    const { data: delivery, error: deliveryError } = await supabase
       .from('delivery_orders')
       .select('*, drivers(user_id)')
       .eq('id', req.params.id)
       .single();
+    if (deliveryError) throw deliveryError;
     if (!delivery) return res.status(404).json({ error: 'Delivery not found.' });
 
     if (req.user?.role === 'driver' && delivery.drivers?.user_id !== req.user.id) {
@@ -205,14 +209,26 @@ async function updateDeliveryStatus(req, res) {
   }
 }
 
+// The UUID link is a bearer credential. Never accept the public driver row ID.
+// Deactivating the driver or rotating/removing uuid_link revokes the link.
+async function findDriverByLink(token) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token || '')) return null;
+  const { data, error } = await supabase
+    .from('drivers')
+    .select('id, name, phone, zone, availability_status')
+    .eq('uuid_link', token)
+    .eq('status', 'active')
+    .maybeSingle();
+  if (error) throw error;
+  // Return only the fields required by the mobile driver page.
+  if (!data) return null;
+  return { id: data.id, name: data.name, phone: data.phone, zone: data.zone, availability_status: data.availability_status };
+}
+
 async function getDriverOrders(req, res) {
   try {
     const today = toDateOnly();
-    const { data: driver } = await supabase
-      .from('drivers')
-      .select('id, name, phone, zone, uuid_link, availability_status')
-      .or(`id.eq.${req.params.id},uuid_link.eq.${req.params.id}`)
-      .single();
+    const driver = await findDriverByLink(req.params.id);
 
     if (!driver) return res.status(404).json({ error: 'Driver not found.' });
 
@@ -241,11 +257,7 @@ async function updateDriverOrderStatus(req, res) {
   if (validationError) return res.status(400).json({ error: validationError });
 
   try {
-    const { data: driver } = await supabase
-      .from('drivers')
-      .select('id, name')
-      .or(`id.eq.${req.params.id},uuid_link.eq.${req.params.id}`)
-      .single();
+    const driver = await findDriverByLink(req.params.id);
     if (!driver) return res.status(404).json({ error: 'Driver not found.' });
 
     const { data: delivery } = await supabase
@@ -366,7 +378,7 @@ async function bostaLabel(req, res) {
       if (waybill.success && waybill.url) {
         try {
           const parsedUrl = new URL(waybill.url);
-          if (parsedUrl.protocol === 'https:' && parsedUrl.hostname.endsWith('bosta.co')) {
+          if (parsedUrl.protocol === 'https:' && (parsedUrl.hostname === 'bosta.co' || parsedUrl.hostname.endsWith('.bosta.co'))) {
             const pdfRes = await require('axios').get(parsedUrl.href, { responseType: 'arraybuffer' });
             res.set('Content-Type', 'application/pdf');
             res.set('Content-Disposition', `attachment; filename="bosta-label-${shipmentId}.pdf"`);
@@ -542,16 +554,16 @@ async function updateDeliveryType(req, res) {
   }
 }
 
-router.get('/', authenticate, listDeliveryOrders);
-router.get('/orders', authenticate, listDeliveryOrders);
+router.get('/', authenticate, authorize(...DELIVERY_READ_ROLES), listDeliveryOrders);
+router.get('/orders', authenticate, authorize(...DELIVERY_READ_ROLES), listDeliveryOrders);
 router.patch('/orders/:id/type', authenticate, authorize('admin', 'ceo', 'dispatcher', 'worker'), updateDeliveryType);
-router.get('/summary', authenticate, getSummary);
+router.get('/summary', authenticate, authorize(...DELIVERY_REPORT_ROLES), getSummary);
 router.post('/assign', authenticate, authorize('admin', 'ceo', 'dispatcher', 'worker'), assignDriver);
-router.put('/:id/status', authenticate, updateDeliveryStatus);
-router.patch('/orders/:id/status', authenticate, updateDeliveryStatus);
+router.put('/:id/status', authenticate, authorize(...DELIVERY_STATUS_ROLES), updateDeliveryStatus);
+router.patch('/orders/:id/status', authenticate, authorize(...DELIVERY_STATUS_ROLES), updateDeliveryStatus);
 router.post('/:id/bosta', authenticate, authorize('admin', 'ceo', 'dispatcher', 'worker'), createBostaShipment);
 router.post('/bosta/create', authenticate, authorize('admin', 'ceo', 'dispatcher', 'worker'), createBostaShipment);
-router.get('/:id/track', authenticate, async (req, res) => {
+router.get('/:id/track', authenticate, authorize(...DELIVERY_MANAGE_ROLES), async (req, res) => {
   try {
     const { data: delivery } = await supabase.from('delivery_orders').select('tracking_number').eq('id', req.params.id).single();
     if (!delivery?.tracking_number) return res.status(400).json({ error: 'No tracking number available.' });
@@ -561,8 +573,8 @@ router.get('/:id/track', authenticate, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-router.get('/bosta/track/:trackingNumber', authenticate, trackBosta);
-router.get('/:id/waybill', authenticate, async (req, res) => {
+router.get('/bosta/track/:trackingNumber', authenticate, authorize(...DELIVERY_MANAGE_ROLES), trackBosta);
+router.get('/:id/waybill', authenticate, authorize(...DELIVERY_MANAGE_ROLES), async (req, res) => {
   try {
     const safeId = String(req.params.id).replace(/[^a-zA-Z0-9_-]/g, '');
     const { data: delivery } = await supabase.from('delivery_orders').select('*, orders(*)').eq('id', safeId).single();
@@ -575,12 +587,12 @@ router.get('/:id/waybill', authenticate, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-router.get('/bosta/label/:shipmentId', authenticate, bostaLabel);
+router.get('/bosta/label/:shipmentId', authenticate, authorize(...DELIVERY_MANAGE_ROLES), bostaLabel);
 router.post('/bosta/webhook', verifyBostaWebhook, processBostaWebhook);
 router.get('/driver/:id/orders', getDriverOrders);
 router.put('/driver/:id/orders/:orderId/status', updateDriverOrderStatus);
 router.patch('/driver/:id/orders/:orderId/status', updateDriverOrderStatus);
-router.get('/analytics', authenticate, deliveryAnalytics);
+router.get('/analytics', authenticate, authorize(...DELIVERY_REPORT_ROLES), deliveryAnalytics);
 
 // GET /api/delivery/dispatch-queue — pending own_driver orders grouped with available drivers
 router.get('/dispatch-queue', authenticate, authorize('admin', 'ceo', 'dispatcher'), async (_req, res) => {

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 import { formatEGP, formatDate, getStatusColor } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
+import AccessibleDialog from '../components/ui/AccessibleDialog';
 import toast from 'react-hot-toast';
 import {
   Bar,
@@ -28,6 +30,10 @@ const CHART_COLORS = ['#6366f1','#3fb950','#f0883e','#58a6ff','#f85149','#a371f7
 const TT = { background:'var(--color-bg-elevated)', border:'1px solid var(--color-border)', color:'var(--color-text)', fontSize:12, borderRadius:6 };
 
 export default function DeliveryPage() {
+  const {user} = useAuth();
+  const canReport = ['admin','ceo','dispatcher','accountant'].includes(user?.role);
+  const canManageDrivers = ['admin','ceo'].includes(user?.role);
+  const canDispatch = ['admin','ceo','dispatcher'].includes(user?.role);
   const [activeTab, setActiveTab] = useState('dispatcher');
   const [deliveries, setDeliveries] = useState([]);
   const [drivers, setDrivers] = useState([]);
@@ -58,8 +64,8 @@ export default function DeliveryPage() {
       const [ordersData, driversData, summaryData, analyticsData] = await Promise.all([
         api.get(`/delivery/orders${params.toString() ? `?${params}` : ''}`),
         api.get('/drivers'),
-        api.get('/delivery/summary'),
-        api.get('/delivery/analytics')
+        canReport ? api.get('/delivery/summary') : Promise.resolve(null),
+        canReport ? api.get('/delivery/analytics') : Promise.resolve(null)
       ]);
       setDeliveries(ordersData);
       setDrivers(driversData);
@@ -235,7 +241,7 @@ export default function DeliveryPage() {
   return (
     <DashboardShell title="Delivery Management">
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
-        {[['dispatcher', 'Dispatcher'], ['dispatch-queue', 'Dispatch Queue'], ['drivers', 'Drivers'], ['analytics', 'Analytics']].map(([id, label]) => (
+        {[['dispatcher', 'Dispatcher'], ['dispatch-queue', 'Dispatch Queue'], ['drivers', 'Drivers'], ['analytics', 'Analytics']].filter(([id]) => id === 'dispatcher' || (id === 'drivers' ? canManageDrivers : id === 'analytics' ? canReport : canDispatch)).map(([id, label]) => (
           <button
             key={id}
             className={`btn ${activeTab === id ? 'btn-primary' : 'btn-secondary'} btn-sm`}
@@ -248,24 +254,24 @@ export default function DeliveryPage() {
 
       {activeTab === 'dispatcher' && (
         <>
-          <SummaryCards summary={summary} />
+          {canReport && <SummaryCards summary={summary} />}
 
           <form onSubmit={applyFilters} className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
-            <select className="input select" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
+            <select className="input select" aria-label="Filter by delivery status" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
               <option value="">All statuses</option>
               {STATUS_OPTIONS.map(status => <option key={status} value={status}>{status.replace(/_/g, ' ')}</option>)}
             </select>
-            <select className="input select" value={filters.driver_id} onChange={(e) => setFilters({ ...filters, driver_id: e.target.value })}>
+            <select className="input select" aria-label="Filter by driver" value={filters.driver_id} onChange={(e) => setFilters({ ...filters, driver_id: e.target.value })}>
               <option value="">All drivers</option>
               {drivers.map(driver => <option key={driver.id} value={driver.id}>{driver.name}</option>)}
             </select>
-            <select className="input select" value={filters.delivery_type} onChange={(e) => setFilters({ ...filters, delivery_type: e.target.value })}>
+            <select className="input select" aria-label="Filter by delivery type" value={filters.delivery_type} onChange={(e) => setFilters({ ...filters, delivery_type: e.target.value })}>
               <option value="">All types</option>
               <option value="own_driver">Own Driver</option>
               <option value="bosta">Bosta Courier</option>
             </select>
-            <input className="input" type="date" value={filters.start} onChange={(e) => setFilters({ ...filters, start: e.target.value })} />
-            <input className="input" type="date" value={filters.end} onChange={(e) => setFilters({ ...filters, end: e.target.value })} />
+            <input className="input" type="date" aria-label="Start date" value={filters.start} onChange={(e) => setFilters({ ...filters, start: e.target.value })} />
+            <input className="input" type="date" aria-label="End date" value={filters.end} onChange={(e) => setFilters({ ...filters, end: e.target.value })} />
             <button className="btn btn-primary" type="submit">Apply</button>
           </form>
 
@@ -312,7 +318,7 @@ export default function DeliveryPage() {
                             borderRadius: '4px',
                             backgroundColor: 'var(--color-bg-card)',
                           }}
-                          value={delivery.delivery_type}
+                          aria-label={`Delivery type for ${delivery.orders?.order_number || delivery.id}`} value={delivery.delivery_type}
                           onChange={async (e) => {
                             try {
                               await api.patch(`/delivery/orders/${delivery.id}/type`, { delivery_type: e.target.value });
@@ -354,7 +360,7 @@ export default function DeliveryPage() {
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                           <button className="btn btn-secondary btn-sm" onClick={() => { setAssigning(delivery); setSelectedDriverId(''); }}>Assign</button>
-                          <button className="btn btn-secondary btn-sm" onClick={() => { setStatusTarget(delivery); setNewStatus(delivery.status === 'assigned' ? 'out_for_delivery' : 'delivered'); }}>Status</button>
+                          {canDispatch && <button className="btn btn-secondary btn-sm" onClick={() => { setStatusTarget(delivery); setNewStatus(delivery.status === 'assigned' ? 'out_for_delivery' : 'delivered'); }}>Status</button>}
                           <button className="btn btn-primary btn-sm" onClick={() => { setBostaTarget(delivery); setBostaForm({ package_size: 'SMALL', city: 'Cairo', zone: '', cod_amount: delivery.cod_amount || '' }); }}>Bosta</button>
                           {delivery.bosta_shipment_id && <button className="btn btn-secondary btn-sm" onClick={() => downloadLabel(delivery)}>Label</button>}
                         </div>
@@ -438,7 +444,7 @@ export default function DeliveryPage() {
               <form onSubmit={quickAssign} style={{ display: 'grid', gap: 16 }}>
                 <div>
                   <label className="text-label" style={{ display: 'block', marginBottom: 6 }}>Select Driver</label>
-                  <select className="input" required value={quickDriverId} onChange={e => setQuickDriverId(e.target.value)}>
+                  <select className="input" required aria-label="Choose driver" value={quickDriverId} onChange={e => setQuickDriverId(e.target.value)}>
                     <option value="">— Choose driver —</option>
                     {queue.drivers.map(d => (
                       <option key={d.id} value={d.id}>
@@ -473,7 +479,7 @@ export default function DeliveryPage() {
       {assigning && (
         <Modal title="Assign Own Driver" onClose={() => setAssigning(null)}>
           <form onSubmit={assignDriver} style={{ display: 'grid', gap: 16 }}>
-            <select className="input select" value={selectedDriverId} onChange={(e) => setSelectedDriverId(e.target.value)} required>
+            <select className="input select" aria-label="Choose available driver" value={selectedDriverId} onChange={(e) => setSelectedDriverId(e.target.value)} required>
               <option value="">Choose active available driver</option>
               {drivers.filter(driver => driver.status === 'active' && driver.availability_status !== 'busy').map(driver => (
                 <option key={driver.id} value={driver.id}>{driver.name} ({driver.zone || 'No zone'})</option>
@@ -487,11 +493,11 @@ export default function DeliveryPage() {
       {statusTarget && (
         <Modal title="Update Delivery Status" onClose={() => setStatusTarget(null)}>
           <form onSubmit={updateStatus} style={{ display: 'grid', gap: 16 }}>
-            <select className="input select" value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required>
+            <select className="input select" aria-label="Delivery status" value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required>
               {STATUS_OPTIONS.map(status => <option key={status} value={status}>{status.replace(/_/g, ' ')}</option>)}
             </select>
             {newStatus === 'failed' && (
-              <select className="input select" value={failedReason} onChange={(e) => setFailedReason(e.target.value)} required>
+              <select className="input select" aria-label="Failure reason" value={failedReason} onChange={(e) => setFailedReason(e.target.value)} required>
                 {FAILURE_REASONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             )}
@@ -503,17 +509,17 @@ export default function DeliveryPage() {
       {bostaTarget && (
         <Modal title="Create Bosta Shipment" onClose={() => setBostaTarget(null)}>
           <form onSubmit={createBostaShipment} style={{ display: 'grid', gap: 12 }}>
-            <input className="input" value={bostaTarget.orders?.customer_name || ''} readOnly />
-            <input className="input" value={bostaTarget.orders?.customer_phone || ''} readOnly />
-            <input className="input" value={bostaTarget.customer_address || ''} readOnly />
-            <select className="input select" value={bostaForm.package_size} onChange={(e) => setBostaForm({ ...bostaForm, package_size: e.target.value })}>
+            <input className="input" aria-label="Customer name" value={bostaTarget.orders?.customer_name || ''} readOnly />
+            <input className="input" aria-label="Customer phone" value={bostaTarget.orders?.customer_phone || ''} readOnly />
+            <input className="input" aria-label="Delivery address" value={bostaTarget.customer_address || ''} readOnly />
+            <select className="input select" aria-label="Package size" value={bostaForm.package_size} onChange={(e) => setBostaForm({ ...bostaForm, package_size: e.target.value })}>
               <option value="SMALL">Small</option>
               <option value="MEDIUM">Medium</option>
               <option value="LARGE">Large</option>
             </select>
-            <input className="input" value={bostaForm.city} onChange={(e) => setBostaForm({ ...bostaForm, city: e.target.value })} placeholder="City" />
-            <input className="input" value={bostaForm.zone} onChange={(e) => setBostaForm({ ...bostaForm, zone: e.target.value })} placeholder="Zone" />
-            <input className="input" type="number" value={bostaForm.cod_amount} onChange={(e) => setBostaForm({ ...bostaForm, cod_amount: e.target.value })} placeholder="COD amount EGP" />
+            <input className="input" aria-label="City" value={bostaForm.city} onChange={(e) => setBostaForm({ ...bostaForm, city: e.target.value })} placeholder="City" />
+            <input className="input" aria-label="Zone" value={bostaForm.zone} onChange={(e) => setBostaForm({ ...bostaForm, zone: e.target.value })} placeholder="Zone" />
+            <input className="input" type="number" aria-label="COD amount in EGP" value={bostaForm.cod_amount} onChange={(e) => setBostaForm({ ...bostaForm, cod_amount: e.target.value })} placeholder="COD amount EGP" />
             <button className="btn btn-primary" type="submit">Create Shipment</button>
           </form>
         </Modal>
@@ -522,14 +528,14 @@ export default function DeliveryPage() {
       {driverModalOpen && (
         <Modal title={editingDriver ? 'Edit Driver' : 'Add Driver'} onClose={() => setDriverModalOpen(false)}>
           <form onSubmit={saveDriver} style={{ display: 'grid', gap: 12 }}>
-            <input className="input" value={driverForm.name} onChange={(e) => setDriverForm({ ...driverForm, name: e.target.value })} placeholder="Driver name" required />
-            <input className="input" value={driverForm.phone} onChange={(e) => setDriverForm({ ...driverForm, phone: e.target.value })} placeholder="Phone" required />
-            <input className="input" value={driverForm.zone} onChange={(e) => setDriverForm({ ...driverForm, zone: e.target.value })} placeholder="Zone" />
-            <select className="input select" value={driverForm.status} onChange={(e) => setDriverForm({ ...driverForm, status: e.target.value })}>
+            <input className="input" aria-label="Driver name" value={driverForm.name} onChange={(e) => setDriverForm({ ...driverForm, name: e.target.value })} placeholder="Driver name" required />
+            <input className="input" aria-label="Driver phone" value={driverForm.phone} onChange={(e) => setDriverForm({ ...driverForm, phone: e.target.value })} placeholder="Phone" required />
+            <input className="input" aria-label="Driver zone" value={driverForm.zone} onChange={(e) => setDriverForm({ ...driverForm, zone: e.target.value })} placeholder="Zone" />
+            <select className="input select" aria-label="Driver status" value={driverForm.status} onChange={(e) => setDriverForm({ ...driverForm, status: e.target.value })}>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
-            <select className="input select" value={driverForm.availability_status} onChange={(e) => setDriverForm({ ...driverForm, availability_status: e.target.value })}>
+            <select className="input select" aria-label="Driver availability" value={driverForm.availability_status} onChange={(e) => setDriverForm({ ...driverForm, availability_status: e.target.value })}>
               <option value="available">Available</option>
               <option value="busy">Busy</option>
             </select>
@@ -592,7 +598,7 @@ function DriversPanel({ drivers, openDriverModal, deleteDriver, toggleAvailabili
               <button className="btn btn-secondary btn-sm" onClick={() => openDriverModal(driver)}>Edit</button>
               <button className="btn btn-danger btn-sm" onClick={() => deleteDriver(driver)}>Delete</button>
               <span className="font-mono" style={{ fontSize: 11, color: 'var(--color-text-muted)', alignSelf: 'center' }}>
-                /driver/{driver.uuid_link || driver.id}
+                {driver.uuid_link ? `/driver/${driver.uuid_link}` : 'Driver link unavailable'}
               </span>
             </div>
           </div>
@@ -680,14 +686,12 @@ function AnalyticsPanel({ analytics, failureChart, costComparison }) {
 
 function Modal({ title, children, onClose }) {
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: 520, width: '100%' }}>
+    <AccessibleDialog title={title} onClose={onClose} style={{ maxWidth:520 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', marginBottom: 18 }}>
-          <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>{title}</p>
+          <h2 className="text-title">{title}</h2>
           <button className="btn btn-secondary btn-sm" onClick={onClose}>Close</button>
         </div>
         {children}
-      </div>
-    </div>
+    </AccessibleDialog>
   );
 }

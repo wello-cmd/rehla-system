@@ -6,7 +6,7 @@ const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 
 // GET /api/expenses
-router.get('/', authenticate, async (req, res) => {
+router.get('/', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
     if (error) throw error;
@@ -17,7 +17,7 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // POST /api/expenses (FR-FN-03)
-router.post('/', authenticate, async (req, res) => {
+router.post('/', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   const { title, description, category, amount, date } = req.body;
   if (!title || !category || amount === undefined || !date) {
     return res.status(400).json({ error: 'Title, category, amount, and date are required.' });

@@ -88,6 +88,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'operational',
     version: '2.0.0',
+    release: process.env.RENDER_GIT_COMMIT || null,
     timestamp: new Date().toISOString(),
     supabase: !!process.env.SUPABASE_URL,
     shopify: !!process.env.SHOPIFY_ACCESS_TOKEN,

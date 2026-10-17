@@ -14,10 +14,36 @@ router.get('/', authenticate, async (req, res) => {
       .order('name');
 
     if (error) throw error;
-    const drivers = await Promise.all((data || []).map(async driver => {
-      const stats = await getDriverStats(driver.id);
-      return { ...driver, stats };
-    }));
+
+    // Batch fetch all delivery stats in one query instead of N+1
+    const driverIds = (data || []).map(d => d.id);
+    const deliveryMap = {};
+    if (driverIds.length > 0) {
+      const { data: deliveries } = await supabase
+        .from('delivery_orders')
+        .select('driver_id, status')
+        .in('driver_id', driverIds);
+      for (const d of deliveries || []) {
+        if (!deliveryMap[d.driver_id]) deliveryMap[d.driver_id] = { total: 0, delivered: 0, failed: 0 };
+        deliveryMap[d.driver_id].total++;
+        if (d.status === 'delivered') deliveryMap[d.driver_id].delivered++;
+        if (d.status === 'failed') deliveryMap[d.driver_id].failed++;
+      }
+    }
+
+    const drivers = (data || []).map(driver => {
+      const s = deliveryMap[driver.id] || { total: 0, delivered: 0, failed: 0 };
+      return {
+        ...driver,
+        stats: {
+          total_deliveries: s.total,
+          delivered: s.delivered,
+          failed: s.failed,
+          success_rate: s.total ? Number(((s.delivered / s.total) * 100).toFixed(1)) : 0
+        }
+      };
+    });
+
     res.json(drivers);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -85,9 +111,10 @@ router.put('/:id', authenticate, authorize('admin', 'ceo'), async (req, res) => 
       .update(updates)
       .eq('id', req.params.id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Driver not found.' });
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -143,7 +170,8 @@ router.get('/:id/cod', authenticate, async (req, res) => {
       .gt('cod_amount', 0);
 
     const collected = (data || []).filter(d => d.status === 'delivered').reduce((s, d) => s + Number(d.cod_amount), 0);
-    const pending = (data || []).filter(d => d.status !== 'delivered').reduce((s, d) => s + Number(d.cod_amount), 0);
+    // Only count active deliveries as pending — exclude failed/returned where COD was never collected
+    const pending = (data || []).filter(d => !['delivered', 'failed', 'returned'].includes(d.status)).reduce((s, d) => s + Number(d.cod_amount), 0);
 
     res.json({ collected, pending, total: collected + pending });
   } catch (err) {

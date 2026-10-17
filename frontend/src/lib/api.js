@@ -5,6 +5,15 @@ class ApiClient {
   getRefreshToken() { return localStorage.getItem('rehla_refresh_token'); }
 
   async _refreshToken() {
+    if (!this.refreshPromise) {
+      this.refreshPromise = this._performRefresh().finally(() => {
+        this.refreshPromise = null;
+      });
+    }
+    return this.refreshPromise;
+  }
+
+  async _performRefresh() {
     const refresh_token = this.getRefreshToken();
     if (!refresh_token) return false;
     try {
@@ -15,6 +24,7 @@ class ApiClient {
       });
       if (!res.ok) return false;
       const data = await res.json();
+      if (!data.token || !data.refresh_token || this.getRefreshToken() !== refresh_token) return false;
       localStorage.setItem('rehla_token', data.token);
       localStorage.setItem('rehla_refresh_token', data.refresh_token);
       return true;
@@ -38,37 +48,30 @@ class ApiClient {
       ...(options.headers || {}),
     };
 
-    try {
-      const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+    const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+    const isAuthRequest = endpoint === '/auth/login' || endpoint === '/auth/refresh';
 
-      // 401 = no token, 403 = expired/invalid token — both warrant a refresh attempt
-      if ((response.status === 401 || response.status === 403) && !_isRetry) {
-        const refreshed = await this._refreshToken();
+    // Only an unauthenticated protected request may renew the session. A 403
+    // represents a permission denial and must leave the signed-in user intact.
+    if (response.status === 401 && !isAuthRequest) {
+      if (!_isRetry) {
+        // Another request may already have renewed this request's old token.
+        const refreshed = (this.getToken() && this.getToken() !== token) || await this._refreshToken();
         if (refreshed) return this.request(endpoint, options, true);
-        this._clearSession();
-        throw new Error('Session expired.');
       }
-
-      // 403 on the retry = genuinely forbidden (wrong role), not a token issue
-      if (response.status === 401 || response.status === 403) {
-        this._clearSession();
-        throw new Error('Access denied.');
-      }
-
-      // Binary / download responses
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('pdf') || contentType.includes('image') || contentType.includes('csv')) {
-        if (!response.ok) throw new Error('Download failed.');
-        return response.blob();
-      }
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Request failed.');
-      return data;
-    } catch (err) {
-      console.error(`[API] ${endpoint}:`, err);
-      throw err;
+      this._clearSession();
+      throw new Error('Session expired.');
     }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('pdf') || contentType.includes('image') || contentType.includes('csv')) {
+      if (!response.ok) throw new Error('Download failed.');
+      return response.blob();
+    }
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Request failed.');
+    return data;
   }
 
   get(endpoint)          { return this.request(endpoint); }

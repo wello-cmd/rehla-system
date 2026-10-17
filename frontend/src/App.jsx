@@ -1,31 +1,33 @@
+import { lazy, Suspense } from 'react';
+import { getRoleLandingPath } from './lib/roles';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext'; // rateLimit
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
 
 // Import Pages
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import InventoryPage from './pages/InventoryPage';
-import WarehouseExitPage from './pages/WarehouseExitPage';
-import StockLookupPage from './pages/StockLookupPage';
-import DeliveryPage from './pages/DeliveryPage';
-import InvoicesPage from './pages/InvoicesPage';
-import InvoiceCreatePage from './pages/InvoiceCreatePage';
-import ClientsPage from './pages/ClientsPage';
-import ExpensesPage from './pages/ExpensesPage';
-import AnalyticsPage from './pages/AnalyticsPage';
-import ProfitLossPage from './pages/ProfitLossPage';
-import PosPage from './pages/PosPage';
-import AiPage from './pages/AiPage';
-import DriverPage from './pages/DriverPage';
-import UsersPage from './pages/UsersPage';
-import WarehouseLogsPage from './pages/WarehouseLogsPage';
-import FinancialDashboardPage from './pages/FinancialDashboardPage';
-import ShopifyPage from './pages/ShopifyPage';
-import BostaPage from './pages/BostaPage';
-import ChannelsPage from './pages/ChannelsPage';
-import ReturnsPage from './pages/ReturnsPage';
-import CustomersPage from './pages/CustomersPage';
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const InventoryPage = lazy(() => import('./pages/InventoryPage'));
+const WarehouseExitPage = lazy(() => import('./pages/WarehouseExitPage'));
+const StockLookupPage = lazy(() => import('./pages/StockLookupPage'));
+const DeliveryPage = lazy(() => import('./pages/DeliveryPage'));
+const InvoicesPage = lazy(() => import('./pages/InvoicesPage'));
+const InvoiceCreatePage = lazy(() => import('./pages/InvoiceCreatePage'));
+const ClientsPage = lazy(() => import('./pages/ClientsPage'));
+const ExpensesPage = lazy(() => import('./pages/ExpensesPage'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
+const ProfitLossPage = lazy(() => import('./pages/ProfitLossPage'));
+const PosPage = lazy(() => import('./pages/PosPage'));
+const AiPage = lazy(() => import('./pages/AiPage'));
+const DriverPage = lazy(() => import('./pages/DriverPage'));
+const UsersPage = lazy(() => import('./pages/UsersPage'));
+const WarehouseLogsPage = lazy(() => import('./pages/WarehouseLogsPage'));
+const FinancialDashboardPage = lazy(() => import('./pages/FinancialDashboardPage'));
+const ShopifyPage = lazy(() => import('./pages/ShopifyPage'));
+const BostaPage = lazy(() => import('./pages/BostaPage'));
+const ChannelsPage = lazy(() => import('./pages/ChannelsPage'));
+const ReturnsPage = lazy(() => import('./pages/ReturnsPage'));
+const CustomersPage = lazy(() => import('./pages/CustomersPage'));
 
 // Protected Route Wrapper
 function ProtectedRoute({ children, allowedRoles }) {
@@ -51,13 +53,21 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // If not allowed, redirect to first page they have access to
-    if (user.role === 'worker') return <Navigate to="/warehouse/exit" replace />;
-    if (user.role === 'driver') return <Navigate to="/login" replace />; // Drivers normally use UUID link
-    return <Navigate to="/" replace />;
+    return <Navigate to={getRoleLandingPath(user.role)} replace />;
   }
 
   return children;
+}
+
+function ForbiddenPage() {
+  const { logout } = useAuth();
+  return (
+    <main style={{ maxWidth: 520, margin: '15vh auto', padding: 24 }}>
+      <h1>Access unavailable</h1>
+      <p style={{ margin: '16px 0' }}>Your account does not have access to this workspace. Contact your administrator for help. Drivers should use their delivery link.</p>
+      <button className="btn btn-secondary" onClick={logout}>Sign out</button>
+    </main>
+  );
 }
 
 function AppContent() {
@@ -75,6 +85,7 @@ function AppContent() {
           },
         }}
       />
+      <Suspense fallback={<div role="status" style={{ padding: 32 }}>Loading page…</div>}>
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -207,9 +218,14 @@ function AppContent() {
           </ProtectedRoute>
         } />
 
+        <Route path="/forbidden" element={
+          <ProtectedRoute><ForbiddenPage /></ProtectedRoute>
+        } />
+
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </>
   );
 }

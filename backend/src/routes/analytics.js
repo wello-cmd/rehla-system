@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { supabase, fetchAll } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
+const authorize = require('../middleware/authorize');
 
 // Group an array of records by a time period key
 function groupByPeriod(items, groupBy, dateField = 'created_at') {
@@ -67,7 +68,7 @@ function cairoEndUTC(dateStr) {
 
 
 // GET /api/analytics/sales?start&end&groupBy
-router.get('/sales', authenticate, async (req, res) => {
+router.get('/sales', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     const { start, end, groupBy = 'month' } = req.query;
 
@@ -186,7 +187,7 @@ router.get('/sales', authenticate, async (req, res) => {
 });
 
 // GET /api/analytics/top-products?start&end
-router.get('/top-products', authenticate, async (req, res) => {
+router.get('/top-products', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     const { start, end } = req.query;
 
@@ -228,7 +229,7 @@ router.get('/top-products', authenticate, async (req, res) => {
 });
 
 // GET /api/analytics/products (all-time inventory sell-through)
-router.get('/products', authenticate, async (_req, res) => {
+router.get('/products', authenticate, authorize('admin','ceo','accountant'), async (_req, res) => {
   try {
     const [products, itemsById, itemsBySku, variants] = await Promise.all([
       fetchAll(supabase.from('products').select('id, sku, name, stock_quantity, price, category')),
@@ -267,7 +268,7 @@ router.get('/products', authenticate, async (_req, res) => {
 });
 
 // GET /api/analytics/delivery?start&end
-router.get('/delivery', authenticate, async (req, res) => {
+router.get('/delivery', authenticate, authorize('admin','ceo','accountant','dispatcher'), async (req, res) => {
   try {
     const { start, end } = req.query;
 
@@ -329,7 +330,7 @@ router.get('/delivery', authenticate, async (req, res) => {
 });
 
 // GET /api/analytics/delivery/cost-comparison?start&end
-router.get('/delivery/cost-comparison', authenticate, async (req, res) => {
+router.get('/delivery/cost-comparison', authenticate, authorize('admin','ceo','accountant','dispatcher'), async (req, res) => {
   try {
     const { start, end } = req.query;
 
@@ -362,7 +363,7 @@ router.get('/delivery/cost-comparison', authenticate, async (req, res) => {
 });
 
 // GET /api/analytics/financial-kpis?start&end&groupBy
-router.get('/financial-kpis', authenticate, async (req, res) => {
+router.get('/financial-kpis', authenticate, authorize('admin','ceo','accountant'), async (req, res) => {
   try {
     const { start, end, groupBy = 'month' } = req.query;
 

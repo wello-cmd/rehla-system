@@ -40,8 +40,10 @@ out/
 .antigravity/
 .gemini/
 .antigravity-ide/
-.vibecheck/
 .cursor/
 .claude/
 .cline/
 .codex/
+
+# Private deployment snapshots
+.deployment-backups/

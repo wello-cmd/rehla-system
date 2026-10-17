@@ -7,15 +7,18 @@ export default function DashboardShell({ children, title, subtitle, actions }) {
 
   return (
     <div style={{ display:'flex' }}>
+      <a className="skip-link" href="#main-content">Skip to content</a>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <main className="main-content">
+      <main id="main-content" tabIndex={-1} className="main-content">
         {/* Mobile header */}
         <div className="mobile-header">
           <button
             className="hamburger-btn"
             onClick={() => setSidebarOpen(true)}
             aria-label="Open menu"
+            aria-expanded={sidebarOpen}
+            aria-controls="primary-navigation"
           >
             <span className="material-symbols-outlined" style={{ fontSize:22 }}>menu</span>
           </button>

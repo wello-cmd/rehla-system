@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getRoleLandingPath } from '../lib/roles';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -17,7 +18,7 @@ export default function LoginPage() {
     try {
       const user = await login(email, password);
       toast.success(`Welcome back, ${user.name}`);
-      navigate('/');
+      navigate(getRoleLandingPath(user.role), { replace: true });
     } catch (err) {
       toast.error(err.message || 'Invalid credentials');
     } finally {

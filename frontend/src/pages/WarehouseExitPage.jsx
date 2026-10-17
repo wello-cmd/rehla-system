@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { api } from '../lib/api';
+import { prepareCheckoutAttempt } from '../lib/checkoutAttempt';
 import DashboardShell from '../components/layout/DashboardShell';
 import toast from 'react-hot-toast';
 
@@ -22,6 +23,8 @@ export default function WarehouseExitPage() {
   const [queueLoading, setQueueLoading] = useState(false);
 
   const scanInputRef = useRef(null);
+  const attemptRef = useRef(null);
+  const inFlightRef = useRef(false);
 
   async function loadQueue() {
     setQueueLoading(true);
@@ -66,13 +69,18 @@ export default function WarehouseExitPage() {
 
   async function submitExit(code) {
     const val = (code || '').trim();
-    if (!val) return;
+    if (!val || inFlightRef.current) return;
+    inFlightRef.current = true;
     setLoading(true);
     try {
-      const data = await api.post('/inventory/warehouse/exit', {
+      const attempt = prepareCheckoutAttempt(attemptRef.current, {
         sku: val.toUpperCase(),
         ...(orderRef ? { order_identifier: orderRef } : {}),
       });
+      attemptRef.current = attempt;
+      const data = await api.post('/inventory/warehouse/exit', attempt.payload);
+      attemptRef.current = null;
+      setScanInput('');
       const withWarn = { ...data.product, warning: data.warning };
       setResult(withWarn);
       setHistory(prev => [{ ...withWarn, timestamp: new Date().toLocaleTimeString() }, ...prev]);
@@ -91,8 +99,8 @@ export default function WarehouseExitPage() {
       toast.error(err.message);
       setResult(null);
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
-      setScanInput('');
       setTimeout(() => scanInputRef.current?.focus(), 0);
     }
   }

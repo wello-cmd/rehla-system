@@ -53,10 +53,10 @@ CREATE TABLE IF NOT EXISTS products (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_products_sku ON products(sku);
-CREATE INDEX idx_products_barcode ON products(barcode);
-CREATE INDEX idx_products_shopify ON products(shopify_variant_id);
-CREATE INDEX idx_products_shopify_inventory_item ON products(shopify_inventory_item_id);
+CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
+CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
+CREATE INDEX IF NOT EXISTS idx_products_shopify ON products(shopify_variant_id);
+CREATE INDEX IF NOT EXISTS idx_products_shopify_inventory_item ON products(shopify_inventory_item_id);
 
 -- =============================================
 -- 4. ORDERS (SRS Table: orders)
@@ -78,9 +78,9 @@ CREATE TABLE IF NOT EXISTS orders (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_orders_shopify ON orders(shopify_order_id);
-CREATE INDEX idx_orders_status ON orders(status);
-CREATE INDEX idx_orders_created ON orders(created_at);
+CREATE INDEX IF NOT EXISTS idx_orders_shopify ON orders(shopify_order_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
 
 -- =============================================
 -- 5. ORDER ITEMS
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   cost_per_unit NUMERIC(10,2) DEFAULT 0
 );
 
-CREATE INDEX idx_order_items_order ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
 
 -- =============================================
 -- 6. INVENTORY LOG (SRS Table: inventory_log)
@@ -116,9 +116,9 @@ CREATE TABLE IF NOT EXISTS inventory_log (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_inventory_log_sku ON inventory_log(sku);
-CREATE INDEX idx_inventory_log_type ON inventory_log(event_type);
-CREATE INDEX idx_inventory_log_created ON inventory_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_inventory_log_sku ON inventory_log(sku);
+CREATE INDEX IF NOT EXISTS idx_inventory_log_type ON inventory_log(event_type);
+CREATE INDEX IF NOT EXISTS idx_inventory_log_created ON inventory_log(created_at);
 
 -- =============================================
 -- 7. SYNC LOG (SRS Table: sync_log)
@@ -173,9 +173,9 @@ CREATE TABLE IF NOT EXISTS delivery_orders (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_delivery_orders_status ON delivery_orders(status);
-CREATE INDEX idx_delivery_orders_driver ON delivery_orders(driver_id);
-CREATE INDEX idx_delivery_orders_bosta ON delivery_orders(bosta_shipment_id);
+CREATE INDEX IF NOT EXISTS idx_delivery_orders_status ON delivery_orders(status);
+CREATE INDEX IF NOT EXISTS idx_delivery_orders_driver ON delivery_orders(driver_id);
+CREATE INDEX IF NOT EXISTS idx_delivery_orders_bosta ON delivery_orders(bosta_shipment_id);
 
 -- =============================================
 -- 10. DELIVERY LOG (SRS Table: delivery_log)
@@ -203,9 +203,9 @@ CREATE TABLE IF NOT EXISTS expenses (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_expenses_date ON expenses(date);
-CREATE INDEX idx_expenses_category ON expenses(category);
-CREATE INDEX idx_expenses_status ON expenses(status);
+CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
+CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
+CREATE INDEX IF NOT EXISTS idx_expenses_status ON expenses(status);
 
 -- =============================================
 -- 12. CLIENTS (SRS Table: clients — B2B registry)
@@ -240,9 +240,9 @@ CREATE TABLE IF NOT EXISTS invoices (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_invoices_status ON invoices(status);
-CREATE INDEX idx_invoices_client ON invoices(client_id);
-CREATE INDEX idx_invoices_due ON invoices(due_date);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_due ON invoices(due_date);
 
 -- =============================================
 -- 14. INVOICE ITEMS (SRS Table: invoice_items)
@@ -256,7 +256,7 @@ CREATE TABLE IF NOT EXISTS invoice_items (
   subtotal NUMERIC(10,2) NOT NULL
 );
 
-CREATE INDEX idx_invoice_items_invoice ON invoice_items(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id);
 
 -- =============================================
 -- 15. PAYMENTS (SRS Table: payments)
@@ -269,7 +269,7 @@ CREATE TABLE IF NOT EXISTS payments (
   paid_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_payments_invoice ON payments(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
 
 -- =============================================
 -- FUNCTIONS: Auto-flag overdue invoices (FR-IV-06)

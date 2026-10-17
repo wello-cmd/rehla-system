@@ -127,7 +127,7 @@ router.post('/webhooks', verifyBostaWebhook, async (req, res) => {
       .from('delivery_orders')
       .select('id, order_id')
       .or(`bosta_shipment_id.eq.${event.shipmentId},tracking_number.eq.${event.trackingNumber}`)
-      .single();
+      .maybeSingle();
 
     if (delivery) {
       // Map Bosta status to our status

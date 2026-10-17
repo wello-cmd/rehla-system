@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, Link } from 'react-router-dom';
 import ThemeToggle from '../ui/ThemeToggle';
@@ -65,16 +65,75 @@ function avatarColor(name) {
 export default function Sidebar({ isOpen, onClose }) {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const sidebarRef = useRef(null);
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
+  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches);
+  const [apiStatus, setApiStatus] = useState('Checking API…');
 
   useEffect(() => {
-    if (isOpen && onClose) onClose();
+    const media = window.matchMedia('(max-width: 768px)');
+    const update = () => { setMobile(media.matches); if (!media.matches) closeRef.current?.(); };
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    let controller;
+    async function check() {
+      controller?.abort();
+      controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch('/api/health', { signal:controller.signal, cache:'no-store' });
+        const data = await response.json();
+        if (active) setApiStatus(response.ok && data.status === 'operational' ? 'API reachable' : 'API unavailable');
+      } catch { if (active) setApiStatus(navigator.onLine ? 'API unavailable' : 'Offline'); }
+      finally { clearTimeout(timeout); }
+    }
+    check();
+    const interval = setInterval(check, 60000);
+    window.addEventListener('online', check);
+    window.addEventListener('offline', check);
+    return () => { active = false; controller?.abort(); clearInterval(interval); window.removeEventListener('online', check); window.removeEventListener('offline', check); };
+  }, []);
+
+  useEffect(() => {
+    if (!mobile || !isOpen) return;
+    const opener = document.activeElement;
+    const sidebar = sidebarRef.current;
+    const main = document.getElementById('main-content');
+    const previousOverflow = document.body.style.overflow;
+    if (main) main.inert = true;
+    document.body.style.overflow = 'hidden';
+    sidebar.querySelector('.sidebar-close-btn')?.focus();
+    function keydown(event) {
+      if (event.key === 'Escape') { event.preventDefault(); closeRef.current?.(); }
+      if (event.key !== 'Tab') return;
+      const controls = [...sidebar.querySelectorAll('a[href],button')].filter(el => !el.disabled && el.getClientRects().length);
+      const first = controls[0]; const last = controls.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }
+    document.addEventListener('keydown', keydown);
+    return () => {
+      if (main) main.inert = false;
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', keydown);
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
+  }, [mobile, isOpen]);
+
+  useEffect(() => {
+    closeRef.current?.();
   }, [location.pathname]);
 
   return (
     <>
       {isOpen && <div className="sidebar-backdrop" onClick={onClose} />}
 
-      <aside className={`sidebar ${isOpen ? 'sidebar--open' : ''}`}>
+      <aside id="primary-navigation" ref={sidebarRef} aria-label="Main navigation" inert={mobile && !isOpen} role={mobile && isOpen ? 'dialog' : undefined} aria-modal={mobile && isOpen ? true : undefined} className={`sidebar ${isOpen ? 'sidebar--open' : ''}`}>
 
         {/* ── Brand header ── */}
         <div style={{
@@ -86,7 +145,7 @@ export default function Sidebar({ isOpen, onClose }) {
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <div style={{
                 width: 30, height: 30,
-                background: 'var(--color-brand)',
+                background: 'var(--color-brand-solid)',
                 borderRadius: 6,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
@@ -105,7 +164,7 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
 
         {/* ── Navigation ── */}
-        <nav style={{ flex:1, minHeight:0, padding:'8px 8px', overflowY:'auto' }}>
+        <nav aria-label="Main" style={{ flex:1, minHeight:0, padding:'8px 8px', overflowY:'auto' }}>
           {NAV_GROUPS.map(group => {
             const visible = group.items.filter(i => i.roles.includes(user?.role));
             if (!visible.length) return null;
@@ -118,6 +177,7 @@ export default function Sidebar({ isOpen, onClose }) {
                     <Link
                       key={item.path}
                       to={item.path}
+                      aria-current={isActive ? 'page' : undefined}
                       style={{
                         position: 'relative',
                         display: 'flex',
@@ -197,8 +257,8 @@ export default function Sidebar({ isOpen, onClose }) {
           display:'flex', alignItems:'center', gap:7,
           background:'var(--color-bg)',
         }}>
-          <div className="pulse-dot" style={{ background:'var(--color-success)', flexShrink:0 }} />
-          <span style={{ fontSize:10, color:'var(--color-text-dim)', fontFamily:'var(--font-mono)', letterSpacing:'0.04em' }}>SYSTEM ONLINE</span>
+          <div aria-hidden="true" style={{ width:7, height:7, borderRadius:'50%', background:apiStatus === 'API reachable' ? 'var(--color-success)' : 'var(--color-warning)', flexShrink:0 }} />
+          <span style={{ fontSize:10, color:'var(--color-text-dim)', fontFamily:'var(--font-mono)', letterSpacing:'0.04em' }} role="status">{apiStatus}</span>
         </div>
       </aside>
     </>

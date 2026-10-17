@@ -1,0 +1,1 @@
+function e(e,t){let n=JSON.stringify(t);return e?.fingerprint===n?e:{fingerprint:n,payload:{...JSON.parse(n),idempotency_key:crypto.randomUUID()}}}export{e as t};

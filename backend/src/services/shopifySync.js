@@ -8,7 +8,6 @@ const { supabase } = require('../db/supabase');
 
 const SHOPIFY_STORE = process.env.SHOPIFY_STORE_URL?.trim();
 const SHOPIFY_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN?.trim();
-console.log(`[Shopify] store=${SHOPIFY_STORE} token_len=${SHOPIFY_TOKEN?.length} token_prefix=${SHOPIFY_TOKEN?.slice(0,10)}`);
 const RATE_LIMIT_DELAY = 500; // 2 requests per second max (FR-SH-08)
 
 class ShopifySync {
@@ -127,8 +126,7 @@ class ShopifySync {
             .single();
 
           if (parentErr) {
-            productsSkipped++;
-            continue;
+            throw parentErr;
           }
 
           const isNew = !parentProduct; // upsert always returns the row
@@ -139,7 +137,7 @@ class ShopifySync {
             const variantSku = (variant.sku || `SHP-${variant.id}`).toUpperCase();
             const variantName = variant.title !== 'Default Title' ? variant.title : null;
 
-            await supabase
+            const {error: variantError} = await supabase
               .from('product_variants')
               .upsert({
                 product_id: parentProduct.id,
@@ -156,6 +154,7 @@ class ShopifySync {
                 image_url: shopifyProduct.image?.src || '',
                 last_synced_at: new Date().toISOString()
               }, { onConflict: 'shopify_variant_id' });
+            if (variantError) throw variantError;
           }
         }
 
@@ -496,12 +495,14 @@ class ShopifySync {
    * Push a single variant's current stock to Shopify (by its inventory_item_id).
    */
   async pushVariantStock(variantId) {
-    const { data: v } = await supabase
+    const { data: v, error } = await supabase
       .from('product_variants')
       .select('shopify_inventory_item_id, stock_quantity')
       .eq('id', variantId)
       .maybeSingle();
+    if (error) throw error;
     if (!v || !v.shopify_inventory_item_id) return { skipped: true };
+    if (!this.isConfigured()) throw new Error('Shopify is not configured; stock remains queued.');
     return this.setInventoryLevel(v.shopify_inventory_item_id, v.stock_quantity);
   }
 
@@ -650,7 +651,7 @@ class ShopifySync {
    * Supports incremental sync via processedAtMin.
    */
   async syncRefunds(triggeredBy = 'auto', options = {}) {
-    if (!this.isConfigured()) return { synced: 0 };
+    if (!this.isConfigured()) return { success: false, error: 'Shopify not configured' };
 
     const statuses = ['refunded', 'partially_refunded', 'voided'];
     let totalSynced = 0;
@@ -707,8 +708,8 @@ class ShopifySync {
             .from('shopify_refunds')
             .upsert(rowsWithId, { onConflict: 'shopify_refund_id' });
 
-          if (error) console.error('[syncRefunds] upsert error:', error.message);
-          else totalSynced += rowsWithId.length;
+          if (error) throw error;
+          totalSynced += rowsWithId.length;
         }
 
         if (!orders.length) break;

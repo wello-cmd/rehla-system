@@ -1,13 +1,15 @@
 {
   "name": "rehla-backend",
   "version": "2.0.0",
-  "description": "Rehla Management System — Backend API (Supabase + Express)",
+  "description": "Rehla Management System \u2014 Backend API (Supabase + Express)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
     "migrate": "node src/db/migrate.js",
-    "seed": "node src/db/seed.js"
+    "seed": "node src/db/seed.js",
+    "test": "node --test test/*.test.js",
+    "test:live-schema": "REHLA_LIVE_SCHEMA_TEST=1 node --test test/operations.test.js test/invoice-operations.test.js"
   },
   "dependencies": {
     "@shopify/shopify-api": "^11.0.0",
@@ -16,14 +18,17 @@
     "bcryptjs": "^2.4.3",
     "bwip-js": "^4.5.0",
     "cors": "^2.8.5",
-    "csv-parse": "^6.2.1",
+    "csv-parse": "7.0.3",
     "csv-stringify": "^6.5.0",
     "dotenv": "^16.4.0",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.1.1",
-    "node-cron": "^3.0.3",
+    "node-cron": "4.6.0",
     "pdfkit": "^0.15.0",
-    "uuid": "^10.0.0"
+    "uuid": "11.1.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.10"
   }
 }

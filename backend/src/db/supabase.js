@@ -19,6 +19,13 @@ const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '', {
 // Anon client — limited access, used for auth token verification
 const supabaseAnon = createClient(supabaseUrl || '', supabaseAnonKey || '');
 
+// Isolate user sign-in sessions from the privileged database client.
+function createAuthClient() {
+  return createClient(supabaseUrl || '', supabaseAnonKey || supabaseServiceKey || '', {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false }
+  });
+}
+
 // Helper: run raw SQL via Supabase's rpc or pg functions
 async function runQuery(sql, params = []) {
   const { data, error } = await supabase.rpc('run_sql', { query: sql, params });
@@ -50,4 +57,4 @@ async function fetchAll(query, pageSize = 1000) {
   return allRows;
 }
 
-module.exports = { supabase, supabaseAnon, fetchAll };
+module.exports = { supabase, supabaseAnon, createAuthClient, fetchAll };

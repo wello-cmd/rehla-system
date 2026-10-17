@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
+import { prepareCheckoutAttempt } from '../lib/checkoutAttempt';
+import AccessibleDialog from '../components/ui/AccessibleDialog';
 import { formatEGP, formatNumber } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
 import toast from 'react-hot-toast';
@@ -18,6 +20,13 @@ export default function PosPage() {
   const [discountAmount, setDiscountAmount] = useState('');
   const [discountReason, setDiscountReason] = useState('');
   const [checkoutResult, setCheckoutResult] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const checkoutInFlightRef = useRef(false);
+  const checkoutAttemptRef = useRef(null);
+
+  useEffect(() => {
+    checkoutAttemptRef.current = null;
+  }, [cart, paymentMethod, customerName, customerPhone, deliveryAddress, amountReceived, discountAmount, discountReason]);
 
   async function fetchProducts() {
     try {
@@ -112,11 +121,14 @@ export default function PosPage() {
 
   async function handleCheckout(e) {
     e.preventDefault();
+    if (checkoutInFlightRef.current) return;
     if (cart.length === 0) {
       toast.error('Cart is empty');
       return;
     }
 
+    checkoutInFlightRef.current = true;
+    setSubmitting(true);
     try {
       const payload = {
         items: cart.map(item => ({ id: item.id, sku: item.sku, quantity: item.quantity })),
@@ -129,8 +141,11 @@ export default function PosPage() {
         discount_reason: discountReason.trim() || undefined
       };
 
-      const result = await api.post('/pos/checkout', payload);
-      setCheckoutResult(result);
+      const attempt = prepareCheckoutAttempt(checkoutAttemptRef.current, payload);
+      checkoutAttemptRef.current = attempt;
+      const result = await api.post('/pos/checkout', attempt.payload);
+      checkoutAttemptRef.current = null;
+      setCheckoutResult({ ...result, amount_received: attempt.payload.amount_received });
       toast.success('Sale recorded successfully!');
       // Reset POS cart and fields
       setCart([]);
@@ -143,6 +158,9 @@ export default function PosPage() {
       fetchProducts();
     } catch (err) {
       toast.error(err.message || 'Checkout failed');
+    } finally {
+      checkoutInFlightRef.current = false;
+      setSubmitting(false);
     }
   }
 
@@ -156,7 +174,7 @@ export default function PosPage() {
   return (
     <DashboardShell title="POS Checkout (Register)">
       {loading ? renderSkeleton() : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', alignItems: 'start' }}>
+        <fieldset disabled={submitting} aria-busy={submitting} style={{ minWidth: 0, border: 0, padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '24px', alignItems: 'start' }}>
           {/* Products Finder catalog */}
           <div className="card" style={{ padding: '20px' }}>
             <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '12px' }}>Scan Barcode or Search</p>
@@ -175,12 +193,14 @@ export default function PosPage() {
 
             <div style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {filteredProducts.map(p => (
-                <div
+                <button
+                  type="button"
+                  disabled={p.stock_quantity <= 0 || submitting}
                   key={p.id}
                   onClick={() => addToCart(p)}
                   className="card card-hover"
                   style={{
-                    padding: '12px 16px', display: 'flex', justifyContent: 'space-between',
+                    padding: '12px 16px', textAlign: 'left', color: 'inherit', font: 'inherit', display: 'flex', justifyContent: 'space-between',
                     alignItems: 'center', cursor: 'pointer', background: 'var(--color-bg)',
                     opacity: p.stock_quantity <= 0 ? 0.5 : 1
                   }}
@@ -195,7 +215,7 @@ export default function PosPage() {
                     <p className="font-mono" style={{ fontWeight: 700 }}>{formatEGP(p.price)}</p>
                     {p.stock_quantity <= 0 && <span className="badge badge-error" style={{ fontSize: '9px', marginTop: '4px' }}>Out of stock</span>}
                   </div>
-                </div>
+                </button>
               ))}
               {filteredProducts.length === 0 && (
                 <p style={{ color: 'var(--color-text-dim)', fontSize: '13px', textAlign: 'center', padding: '30px' }}>No products found.</p>
@@ -337,20 +357,19 @@ export default function PosPage() {
               <button
                 type="submit"
                 className="btn btn-primary"
-                disabled={cart.length === 0}
+                disabled={cart.length === 0 || submitting}
                 style={{ width: '100%', marginTop: '8px' }}
               >
-                PROCEED CHECKOUT
+                {submitting ? 'Recording sale…' : 'PROCEED CHECKOUT'}
               </button>
             </form>
           </div>
-        </div>
+        </fieldset>
       )}
 
       {/* Sale Receipt Dialog Modal */}
       {checkoutResult && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '420px', textAlign: 'center' }}>
+        <AccessibleDialog title="Payment received" onClose={() => setCheckoutResult(null)} style={{ maxWidth: '420px', textAlign: 'center' }}>
             <div className="pulse-dot" style={{ background: 'var(--color-success)', margin: '0 auto 12px' }}></div>
             <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Payment Received</p>
             <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '24px' }}>
@@ -372,11 +391,11 @@ export default function PosPage() {
                 <span>Total:</span>
                 <span className="font-mono">{formatEGP(checkoutResult.total)}</span>
               </div>
-              {amountReceived && (
+              {checkoutResult.amount_received != null && (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span>Amount Received:</span>
-                    <span className="font-mono">{formatEGP(parseFloat(amountReceived))}</span>
+                    <span className="font-mono">{formatEGP(checkoutResult.amount_received)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-success)', fontWeight: 600 }}>
                     <span>Change Returned:</span>
@@ -393,8 +412,7 @@ export default function PosPage() {
             >
               Start New Sale
             </button>
-          </div>
-        </div>
+        </AccessibleDialog>
       )}
     </DashboardShell>
   );

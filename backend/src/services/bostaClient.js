@@ -181,6 +181,7 @@ class BostaClient {
       let updatedCount = 0;
 
       for (const d of activeDeliveries) {
+        if (!d.tracking_number) continue;
         const tracking = await this.getTrackingStatus(d.tracking_number);
         
         const statusMap = {

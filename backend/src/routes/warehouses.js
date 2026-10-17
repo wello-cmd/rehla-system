@@ -6,21 +6,28 @@ const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 
 // GET /api/warehouses
-router.get('/', async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
   try {
     const { data: warehouses, error } = await supabase.from('warehouses').select('*');
     if (error) throw error;
 
-    // Enrich with product counts
-    for (const wh of warehouses) {
-      const { data: products } = await supabase
-        .from('products')
-        .select('id, stock_quantity, brand')
-        .eq('warehouse_id', wh.id);
+    // Batch fetch all products in one query instead of N+1
+    const { data: allProducts } = await supabase
+      .from('products')
+      .select('warehouse_id, stock_quantity, brand')
+      .not('warehouse_id', 'is', null);
 
-      wh.sku_count = (products || []).length;
-      wh.total_stock = (products || []).reduce((s, p) => s + p.stock_quantity, 0);
-      wh.brands = [...new Set((products || []).map(p => p.brand))];
+    const productsByWarehouse = {};
+    for (const p of allProducts || []) {
+      if (!productsByWarehouse[p.warehouse_id]) productsByWarehouse[p.warehouse_id] = [];
+      productsByWarehouse[p.warehouse_id].push(p);
+    }
+
+    for (const wh of warehouses) {
+      const products = productsByWarehouse[wh.id] || [];
+      wh.sku_count = products.length;
+      wh.total_stock = products.reduce((s, p) => s + p.stock_quantity, 0);
+      wh.brands = [...new Set(products.map(p => p.brand))];
     }
 
     res.json(warehouses);

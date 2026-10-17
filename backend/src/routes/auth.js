@@ -1,7 +1,7 @@
 // Auth Routes — Login, profile, user management
 const express = require('express');
 const router = express.Router();
-const { supabase } = require('../db/supabase');
+const { supabase, createAuthClient } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const rateLimit = require('../middleware/rateLimiter');
@@ -17,7 +17,7 @@ router.post('/login', rateLimit(20, 15 * 60 * 1000), async (req, res) => {
   }
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await createAuthClient().auth.signInWithPassword({ email, password });
     if (error) {
       return res.status(401).json({ error: error.message || 'Invalid credentials.' });
     }
@@ -63,7 +63,7 @@ router.post('/refresh', async (req, res) => {
   if (!refresh_token) return res.status(400).json({ error: 'refresh_token required.' });
 
   try {
-    const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+    const { data, error } = await createAuthClient().auth.refreshSession({ refresh_token });
     if (error || !data.session) return res.status(401).json({ error: 'Invalid or expired refresh token.' });
 
     res.json({

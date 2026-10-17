@@ -9,7 +9,7 @@ const authorize = require('../middleware/authorize');
 const { supabase, fetchAll } = require('../db/supabase');
 
 // GET /api/shopify/orders — List Shopify orders with optional filters
-router.get('/orders', authenticate, async (req, res) => {
+router.get('/orders', authenticate, authorize('admin','ceo'), async (req, res) => {
   try {
     const { status, payment_status, start, end, limit = 50, offset = 0 } = req.query;
     let query = supabase
@@ -33,7 +33,7 @@ router.get('/orders', authenticate, async (req, res) => {
 });
 
 // GET /api/shopify/analytics — Shopify channel analytics
-router.get('/analytics', authenticate, async (req, res) => {
+router.get('/analytics', authenticate, authorize('admin','ceo'), async (req, res) => {
   try {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -137,7 +137,7 @@ router.post('/sync', authenticate, authorize('admin', 'ceo'), async (req, res) =
 });
 
 // GET /api/shopify/sync-log — Sync history (FR-SH-07)
-router.get('/sync-log', authenticate, async (req, res) => {
+router.get('/sync-log', authenticate, authorize('admin','ceo'), async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('sync_log')
@@ -230,7 +230,7 @@ router.post('/webhooks/customers/update', verifyShopifyWebhook, async (req, res)
 
 // POST /api/shopify/register-webhooks — Register all webhooks on Shopify (run once per deployment)
 // Body: { baseUrl: "https://your-backend.onrender.com" }  (optional — falls back to BACKEND_URL env)
-router.post('/register-webhooks', authenticate, async (req, res) => {
+router.post('/register-webhooks', authenticate, authorize('admin','ceo'), async (req, res) => {
   const baseUrl = (req.body?.baseUrl || process.env.BACKEND_URL || '').replace(/\/$/, '');
   if (!baseUrl) {
     return res.status(400).json({ error: 'Provide baseUrl in body or set BACKEND_URL env var' });
@@ -286,7 +286,7 @@ router.post('/register-webhooks', authenticate, async (req, res) => {
 });
 
 // GET /api/shopify/webhooks — List currently registered Shopify webhooks
-router.get('/webhooks', authenticate, async (_req, res) => {
+router.get('/webhooks', authenticate, authorize('admin','ceo'), async (_req, res) => {
   try {
     const SHOPIFY_BASE = `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-01`;
     const { data } = await axios.get(`${SHOPIFY_BASE}/webhooks.json`, {

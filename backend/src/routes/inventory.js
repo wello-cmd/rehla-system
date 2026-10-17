@@ -5,6 +5,7 @@ const { supabase } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const rateLimit = require('../middleware/rateLimiter');
+const operationError = require('../services/operationError');
 const { generateBarcode, generateBulkBarcodes, generateLabelHtml, formatLabelLines } = require('../services/barcodeGenerator');
 const { stringify } = require('csv-stringify/sync');
 const shopifySync = require('../services/shopifySync');
@@ -19,6 +20,17 @@ function syncStockToShopify(kind, id) {
     .catch(err => console.error(`[Shopify] stock push failed (${kind} ${id}):`, err.message || err));
 }
 
+async function findVariant(code) {
+  const normalized = String(code).trim().toUpperCase();
+  for (const column of ['sku','barcode']) {
+    const {data,error} = await supabase.from('product_variants')
+      .select('*, products(id, name, warehouse_id, brand)').eq(column,normalized).maybeSingle();
+    if(error) throw error;
+    if(data) return data;
+  }
+  return null;
+}
+
 // Resolve an order from a free-form identifier typed/scanned at the exit station.
 // Accepts the Shopify order name ("#1001" or "1001"), the internal order_number,
 // or the raw shopify_order_id. Returns the matched order row or null.
@@ -28,13 +40,13 @@ async function resolveOrder(rawIdentifier) {
   const bare = id.replace(/^#/, '');
 
   // 1. Shopify order name — try the value as typed and with a leading '#'.
-  const { data: byName } = await supabase
-    .from('orders')
-    .select('id, order_number, shopify_order_name, shopify_order_id, customer_name, customer_phone, status')
-    .or(`shopify_order_name.eq.${id},shopify_order_name.eq.#${bare}`)
-    .limit(1)
-    .maybeSingle();
-  if (byName) return byName;
+  for (const name of [...new Set([id,`#${bare}`])]) {
+    const { data: byName, error } = await supabase.from('orders')
+      .select('id, order_number, shopify_order_name, shopify_order_id, customer_name, customer_phone, status')
+      .eq('shopify_order_name',name).limit(1).maybeSingle();
+    if(error) throw error;
+    if(byName) return byName;
+  }
 
   // 2. Raw Shopify order id.
   const { data: byShopifyId } = await supabase
@@ -242,54 +254,18 @@ router.put('/:id', authenticate, authorize('admin', 'ceo'), async (req, res) => 
 
 // PUT /api/inventory/:id/stock — Manual stock adjustment (FR-WH-13)
 router.put('/:id/stock', authenticate, authorize('admin', 'ceo', 'worker'), async (req, res) => {
-  const { quantity, notes } = req.body;
-  if (quantity === undefined) {
-    return res.status(400).json({ error: 'Quantity is required.' });
+  const quantity = Number(req.body.quantity);
+  if (req.body.quantity === undefined || req.body.quantity === null || req.body.quantity === '' || !Number.isSafeInteger(quantity) || quantity < 0) {
+    return res.status(400).json({ error: 'Stock must be a nonnegative integer.' });
   }
-
   try {
-    // NFR-RL-04: Atomic transaction — fetch then update
-    const { data: product, error: fetchErr } = await supabase
-      .from('products')
-      .select('id, sku, stock_quantity')
-      .eq('id', req.params.id)
-      .single();
-
-    if (fetchErr || !product) {
-      return res.status(404).json({ error: 'Product not found.' });
-    }
-
-    const prevQty = product.stock_quantity;
-    const newQty = quantity;
-    const diff = newQty - prevQty;
-
-    const { error: updateErr } = await supabase
-      .from('products')
-      .update({ stock_quantity: newQty })
-      .eq('id', req.params.id);
-
-    if (updateErr) throw updateErr;
-
-    // Mirror the new level to Shopify
-    syncStockToShopify('product', req.params.id);
-
-    // Log the adjustment
-    await supabase.from('inventory_log').insert({
-      product_id: product.id,
-      sku: product.sku,
-      event_type: 'adjustment',
-      quantity_changed: diff,
-      previous_quantity: prevQty,
-      new_quantity: newQty,
-      notes: notes || 'Manual stock adjustment',
-      handler_id: req.user.id,
-      handler_name: req.user.name
+    const { data, error } = await supabase.rpc('rehla_set_product_stock', {
+      p_product_id: req.params.id, p_quantity: quantity, p_actor: req.user.id, p_notes: req.body.notes || 'Manual stock adjustment'
     });
-
-    res.json({ success: true, previous: prevQty, new: newQty, change: diff });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    if (error) return operationError(res,error);
+    syncStockToShopify('product',req.params.id);
+    res.json(data);
+  } catch (err) { return operationError(res,err); }
 });
 
 // DELETE /api/inventory/:id — Delete product
@@ -602,10 +578,13 @@ router.get('/warehouse/queue', authenticate, async (req, res) => {
 // POST /api/warehouse/exit — Warehouse exit scan (FR-WH-06 through FR-WH-09)
 // Primary: look the item up in stock and deduct it. Attaching a Shopify order is
 // OPTIONAL — when given, the exit is tagged to it and mismatches only WARN (never block).
-router.post('/warehouse/exit', authenticate, async (req, res) => {
+router.post('/warehouse/exit', authenticate, authorize('admin', 'ceo', 'worker'), async (req, res) => {
   const { sku, barcode, quantity, order_identifier } = req.body;
-  const searchValue = (sku || barcode || '').toUpperCase();
-  const qty = quantity || 1;
+  const searchValue = String(sku || barcode || '').trim().toUpperCase();
+  const qty = quantity === undefined ? 1 : Number(quantity);
+  if (quantity === null || quantity === '' || !Number.isSafeInteger(qty) || qty <= 0) {
+    return res.status(400).json({ error: 'Quantity must be a positive integer.' });
+  }
 
   if (!searchValue) {
     return res.status(400).json({ error: 'SKU or barcode is required.' });
@@ -613,25 +592,13 @@ router.post('/warehouse/exit', authenticate, async (req, res) => {
 
   try {
     // Look up variant by SKU or barcode — this + the stock check are the real guards.
-    const { data: variant, error: lookupErr } = await supabase
-      .from('product_variants')
-      .select('*, products(id, name, warehouse_id, brand)')
-      .or(`sku.eq.${searchValue},barcode.eq.${searchValue}`)
-      .maybeSingle();
-
-    if (lookupErr) throw lookupErr;
+    const variant = await findVariant(searchValue);
     if (!variant) return res.status(404).json({ error: `Product not found: ${searchValue}` });
 
     const parent = variant.products;
     const displayName = `${parent?.name || ''}${variant.variant_name ? ` - ${variant.variant_name}` : ''}`;
 
-    // FR-WH-09: the one hard block — never let stock go negative.
-    if (variant.stock_quantity < qty) {
-      return res.status(400).json({
-        error: `Insufficient stock for ${displayName}. Available: ${variant.stock_quantity}`
-      });
-    }
-
+    // Stock validation belongs inside the locked transaction, after retry lookup.
     // Optional order tagging. Any mismatch becomes a warning, not a block.
     let order = null;
     let warning = null;
@@ -665,45 +632,18 @@ router.post('/warehouse/exit', authenticate, async (req, res) => {
       }
     }
 
-    const prevQty = variant.stock_quantity;
-    const newQty = prevQty - qty;
-
-    // Update variant stock
-    await supabase.from('product_variants').update({ stock_quantity: newQty }).eq('id', variant.id);
-
-    // Recalculate and sync parent total stock
-    const { data: siblings } = await supabase
-      .from('product_variants').select('stock_quantity').eq('product_id', parent.id);
-    const parentTotal = (siblings || []).reduce((s, v) => s + (v.stock_quantity || 0), 0);
-    await supabase.from('products').update({ stock_quantity: parentTotal }).eq('id', parent.id);
-
-    // Mirror the new variant level to Shopify
-    syncStockToShopify('variant', variant.id);
-
-    // Only tag the log to an order when we resolved a real one.
-    const linkedOrder = order || null;
-    const orderRef = linkedOrder
-      ? (linkedOrder.shopify_order_name || (linkedOrder.order_number != null ? `#${linkedOrder.order_number}` : null))
-      : null;
-
-    // FR-WH-08: Log the exit (order fields stay null for a free scan)
-    await supabase.from('inventory_log').insert({
-      product_id: parent.id,
-      sku: variant.sku,
-      event_type: 'warehouse_exit',
-      quantity_changed: -qty,
-      previous_quantity: prevQty,
-      new_quantity: newQty,
-      notes: orderRef ? `Warehouse exit scan — order ${orderRef}` : 'Warehouse exit scan',
-      handler_id: req.user.id,
-      handler_name: req.user.name,
-      warehouse_id: parent.warehouse_id,
-      order_id: linkedOrder ? linkedOrder.id : null,
-      order_number: orderRef
+    const { data: moved, error: moveError } = await supabase.rpc('rehla_stock_move', {
+      p_variant_id: variant.id, p_delta: -qty, p_actor: req.user.id,
+      p_event: 'warehouse_exit', p_notes: 'Warehouse exit scan', p_order_id: order?.id || null,
+      p_request_key: req.body.idempotency_key || null
     });
+    if (moveError) return operationError(res, moveError);
+    const linkedOrder = order || null;
+    const prevQty = moved.previous_stock;
+    const newQty = moved.current_stock;
 
     // Recompute pack progress so the UI can reflect order completion (null for free scans).
-    const progress = linkedOrder ? await getOrderPackProgress(linkedOrder) : null;
+    const progress = linkedOrder ? await getOrderPackProgress(linkedOrder).catch(() => null) : null;
 
     res.json({
       success: true,
@@ -742,68 +682,21 @@ router.get('/logs', authenticate, authorize('admin', 'ceo', 'worker'), async (re
 });
 
 // POST /api/inventory/warehouse/restock — Receive / add stock inbound
-router.post('/warehouse/restock', authenticate, authorize('admin', 'ceo', 'worker'), async (req, res) => {
-  const { sku, quantity, notes } = req.body;
-  if (!sku || !quantity || quantity <= 0) {
-    return res.status(400).json({ error: 'SKU and a positive quantity are required.' });
-  }
+router.post('/warehouse/restock', authenticate, authorize('admin','ceo','worker'), async (req,res) => {
+  const sku = String(req.body.sku || '').trim();
+  const qty = Number(req.body.quantity);
+  if (!sku || !Number.isSafeInteger(qty) || qty <= 0) return res.status(400).json({error:'SKU and a positive integer quantity are required.'});
   try {
-    const searchValue = sku.toUpperCase();
-    const { data: variant, error: findErr } = await supabase
-      .from('product_variants')
-      .select('*, products(id, name, warehouse_id)')
-      .or(`sku.eq.${searchValue},barcode.eq.${sku}`)
-      .maybeSingle();
-
-    if (findErr) throw findErr;
-    if (!variant) return res.status(404).json({ error: `Product not found: ${sku}` });
-
-    const parent = variant.products;
-    const qty = parseInt(quantity, 10);
-    const prevQty = variant.stock_quantity;
-    const newQty = prevQty + qty;
-
-    await supabase.from('product_variants').update({ stock_quantity: newQty }).eq('id', variant.id);
-
-    // Recalculate parent total
-    const { data: siblings } = await supabase
-      .from('product_variants').select('stock_quantity').eq('product_id', parent.id);
-    const parentTotal = (siblings || []).reduce((s, v) => s + (v.stock_quantity || 0), 0);
-    await supabase.from('products').update({ stock_quantity: parentTotal }).eq('id', parent.id);
-
-    // Mirror the new variant level to Shopify
-    syncStockToShopify('variant', variant.id);
-
-    await supabase.from('inventory_log').insert({
-      product_id: parent.id,
-      sku: variant.sku,
-      event_type: 'restock',
-      quantity_changed: qty,
-      previous_quantity: prevQty,
-      new_quantity: newQty,
-      notes: notes || 'Manual restock',
-      handler_name: req.user?.name || 'system'
+    const variant = await findVariant(sku);
+    if (!variant) return res.status(404).json({error:'Product not found.'});
+    const {data,error} = await supabase.rpc('rehla_stock_move', {
+      p_variant_id:variant.id,p_delta:qty,p_actor:req.user.id,p_event:'restock',p_notes:req.body.notes || 'Manual restock',
+      p_order_id:null,p_request_key:req.body.idempotency_key || null
     });
-
-    const displayName = `${parent?.name || ''}${variant.variant_name ? ` - ${variant.variant_name}` : ''}`;
-    res.json({
-      product: {
-        id: parent.id,
-        variant_id: variant.id,
-        name: displayName,
-        sku: variant.sku,
-        barcode: variant.barcode,
-        previous_stock: prevQty,
-        current_stock: newQty,
-        quantity_added: qty
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    if(error) return operationError(res,error);
+    res.json({product:{...data,quantity_added:qty}});
+  } catch(err) { return operationError(res,err); }
 });
-
-// ── Product Variants ────────────────────────────────────────────────────────
 
 // GET /api/inventory/:productId/variants
 router.get('/:productId/variants', authenticate, async (req, res) => {

@@ -2,8 +2,10 @@ services:
   - type: web
     name: rehla-system
     runtime: node
-    buildCommand: cd frontend && npm install && npm run build && cd ../backend && npm install
+    buildCommand: cd frontend && npm ci --include=dev && npm run build && cd ../backend && npm ci --omit=dev
     startCommand: cd backend && node server.js
     envVars:
+      - key: NODE_VERSION
+        value: 22.22.3
       - key: NODE_ENV
         value: production

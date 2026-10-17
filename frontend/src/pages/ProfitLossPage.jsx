@@ -3,7 +3,7 @@ import { api } from '../lib/api';
 import { formatEGP, formatNumber } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
 import toast from 'react-hot-toast';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, LineChart, Line, AreaChart, Area } from 'recharts';
+import { Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, LineChart, Line, AreaChart, Area } from 'recharts';
 
 export default function ProfitLossPage() {
   const [loading, setLoading] = useState(true);

@@ -3,10 +3,11 @@ const express = require('express');
 const router = express.Router();
 const { supabase, fetchAll } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
+const authorize = require('../middleware/authorize');
 
 // GET /api/channels/comparison
 // Joins Shopify orders against delivery_orders to compute cross-channel metrics.
-router.get('/comparison', authenticate, async (_req, res) => {
+router.get('/comparison', authenticate, authorize('admin','ceo'), async (_req, res) => {
   try {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);

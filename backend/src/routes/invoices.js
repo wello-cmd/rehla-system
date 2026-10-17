@@ -4,10 +4,11 @@ const router = express.Router();
 const { supabase } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
+const { FINANCE_ROLES } = require('../utils/permissions');
 const { generateInvoicePDF } = require('../services/pdfGenerator');
 
 // GET /api/invoices — List all invoices
-router.get('/', authenticate, async (req, res) => {
+router.get('/', authenticate, authorize(...FINANCE_ROLES), async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('invoices')
@@ -22,7 +23,7 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // GET /api/invoices/summary — Dashboard summary (FR-IV-10)
-router.get('/summary', authenticate, async (req, res) => {
+router.get('/summary', authenticate, authorize(...FINANCE_ROLES), async (req, res) => {
   try {
     const { data: invoices } = await supabase.from('invoices').select('total, status');
 
@@ -50,88 +51,45 @@ router.get('/summary', authenticate, async (req, res) => {
   }
 });
 
-// POST /api/invoices — Create invoice with auto-number (FR-IV-02, FR-IV-03)
+// Map known database validation failures without exposing infrastructure as a 400.
+function invoiceErrorStatus(error) {
+  if (error.code === 'P0002') return 404;
+  if (error.code === '42501') return 403;
+  if (error.code?.startsWith('22') || ['23502', '23503', '23514'].includes(error.code)) return 400;
+  return 500;
+}
+
+// POST /api/invoices — Header, lines and number allocation commit together.
 router.post('/', authenticate, authorize('admin', 'ceo'), async (req, res) => {
   const { client_id, customer_name, customer_email, issue_date, due_date, notes, items } = req.body;
-
-  if (!customer_name) {
+  if (typeof customer_name !== 'string' || !customer_name.trim()) {
     return res.status(400).json({ error: 'Customer name is required.' });
   }
-
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'At least one invoice item is required.' });
+  }
   try {
-    // FR-IV-03: Auto-generate invoice number INV-YYYY-XXXX
-    const year = new Date().getFullYear();
-    const { data: lastInvoice } = await supabase
-      .from('invoices')
-      .select('invoice_number')
-      .like('invoice_number', `INV-${year}-%`)
-      .order('invoice_number', { ascending: false })
-      .limit(1)
-      .single();
-
-    let nextNum = 1;
-    if (lastInvoice) {
-      const parts = lastInvoice.invoice_number.split('-');
-      nextNum = parseInt(parts[2]) + 1;
-    }
-    const invoiceNumber = `INV-${year}-${String(nextNum).padStart(4, '0')}`;
-
-    // Calculate totals from items
-    let subtotal = 0;
-    const lineItems = items || [];
-    for (const item of lineItems) {
-      item.subtotal = item.quantity * item.unit_price;
-      subtotal += item.subtotal;
-    }
-
-    // Insert invoice
-    const { data: invoice, error } = await supabase
-      .from('invoices')
-      .insert({
-        client_id: client_id || null,
-        invoice_number: invoiceNumber,
-        customer_name,
-        customer_email: customer_email || '',
-        issue_date: issue_date || new Date().toISOString().split('T')[0],
-        due_date: due_date || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
-        subtotal,
-        total: subtotal,
-        notes: notes || '',
-        status: 'Draft'
-      })
-      .select()
-      .single();
-
+    const { data, error } = await supabase.rpc('rehla_create_invoice', {
+      p_payload: { client_id, customer_name, customer_email, issue_date, due_date, notes, items },
+      p_actor: req.user.id
+    });
     if (error) throw error;
-
-    // FR-IV-04: Insert line items
-    if (lineItems.length > 0) {
-      const itemsToInsert = lineItems.map(item => ({
-        invoice_id: invoice.id,
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        subtotal: item.subtotal
-      }));
-
-      await supabase.from('invoice_items').insert(itemsToInsert);
-    }
-
-    res.status(201).json({ ...invoice, items: lineItems });
+    res.status(201).json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(invoiceErrorStatus(err)).json({ error: err.message });
   }
 });
 
 // GET /api/invoices/:id — Get invoice with items
-router.get('/:id', authenticate, async (req, res) => {
+router.get('/:id', authenticate, authorize(...FINANCE_ROLES), async (req, res) => {
   try {
-    const { data: invoice } = await supabase
+    const { data: invoice, error: invoiceErr } = await supabase
       .from('invoices')
       .select('*, clients(*)')
       .eq('id', req.params.id)
-      .single();
+      .maybeSingle();
 
+    if (invoiceErr) throw invoiceErr;
     if (!invoice) return res.status(404).json({ error: 'Invoice not found.' });
 
     const { data: items } = await supabase
@@ -152,24 +110,21 @@ router.get('/:id', authenticate, async (req, res) => {
   }
 });
 
-// PUT /api/invoices/:id/status — Update status (FR-IV-05)
-router.put('/:id/status', authenticate, async (req, res) => {
+// PUT /api/invoices/:id/status — Paid requires recorded payment coverage.
+router.put('/:id/status', authenticate, authorize(...FINANCE_ROLES), async (req, res) => {
   const { status } = req.body;
   const validStatuses = ['Draft', 'Sent', 'Paid', 'Overdue'];
   if (!validStatuses.includes(status)) {
     return res.status(400).json({ error: `Invalid status. Must be: ${validStatuses.join(', ')}` });
   }
-
   try {
-    const { error } = await supabase
-      .from('invoices')
-      .update({ status })
-      .eq('id', req.params.id);
-
+    const { data, error } = await supabase.rpc('rehla_set_invoice_status', {
+      p_invoice_id: req.params.id, p_status: status, p_actor: req.user.id
+    });
     if (error) throw error;
-    res.json({ success: true, status });
+    res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(invoiceErrorStatus(err)).json({ error: err.message });
   }
 });
 
@@ -192,14 +147,15 @@ router.post('/flag-overdue', authenticate, authorize('admin', 'ceo'), async (req
 });
 
 // GET /api/invoices/:id/pdf — Generate branded PDF (FR-IV-07, FR-IV-08)
-router.get('/:id/pdf', authenticate, async (req, res) => {
+router.get('/:id/pdf', authenticate, authorize(...FINANCE_ROLES), async (req, res) => {
   try {
-    const { data: invoice } = await supabase
+    const { data: invoice, error: invoiceErr } = await supabase
       .from('invoices')
       .select('*, clients(*)')
       .eq('id', req.params.id)
-      .single();
+      .maybeSingle();
 
+    if (invoiceErr) throw invoiceErr;
     if (!invoice) return res.status(404).json({ error: 'Invoice not found.' });
 
     const { data: items } = await supabase
@@ -217,51 +173,25 @@ router.get('/:id/pdf', authenticate, async (req, res) => {
   }
 });
 
-// POST /api/invoices/:id/payments — Record payment (FR-IV-09)
-router.post('/:id/payments', authenticate, authorize('admin', 'ceo', 'accountant'), async (req, res) => {
+// POST /api/invoices/:id/payments — Payment and balance status are one transaction.
+router.post('/:id/payments', authenticate, authorize(...FINANCE_ROLES), async (req, res) => {
   const { amount, payment_method } = req.body;
   const validMethods = ['Cash', 'Bank Transfer', 'Instalment'];
-
-  if (!amount || !payment_method) {
-    return res.status(400).json({ error: 'Amount and payment_method required.' });
+  const numericAmount = (typeof amount === 'number' || (typeof amount === 'string' && amount.trim())) ? Number(amount) : NaN;
+  if (!Number.isFinite(numericAmount) || Math.round(numericAmount * 100) <= 0) {
+    return res.status(400).json({ error: 'Amount must be a finite positive number of at least 0.01.' });
   }
   if (!validMethods.includes(payment_method)) {
     return res.status(400).json({ error: `Invalid method. Must be: ${validMethods.join(', ')}` });
   }
-
   try {
-    const { data, error } = await supabase
-      .from('payments')
-      .insert({
-        invoice_id: req.params.id,
-        amount,
-        payment_method
-      })
-      .select()
-      .single();
-
+    const { data, error } = await supabase.rpc('rehla_record_payment', {
+      p_invoice_id: req.params.id, p_amount: numericAmount, p_method: payment_method, p_actor: req.user.id
+    });
     if (error) throw error;
-
-    // Check if fully paid
-    const { data: allPayments } = await supabase
-      .from('payments')
-      .select('amount')
-      .eq('invoice_id', req.params.id);
-
-    const { data: invoice } = await supabase
-      .from('invoices')
-      .select('total')
-      .eq('id', req.params.id)
-      .single();
-
-    const totalPaid = (allPayments || []).reduce((s, p) => s + Number(p.amount), 0);
-    if (totalPaid >= Number(invoice.total)) {
-      await supabase.from('invoices').update({ status: 'Paid' }).eq('id', req.params.id);
-    }
-
     res.status(201).json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(invoiceErrorStatus(err)).json({ error: err.message });
   }
 });
 

@@ -10,7 +10,7 @@ const authorize = require('../middleware/authorize');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // GET /api/customers
-router.get('/', authenticate, async (req, res) => {
+router.get('/', authenticate, authorize('admin','ceo'), async (req, res) => {
   try {
     const { search } = req.query;
 
@@ -134,7 +134,7 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // GET /api/customers/:id
-router.get('/:id', authenticate, async (req, res) => {
+router.get('/:id', authenticate, authorize('admin','ceo'), async (req, res) => {
   try {
     const { data: customer, error } = await supabase
       .from('customers').select('*').eq('id', req.params.id).single();

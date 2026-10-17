@@ -23,7 +23,8 @@ router.get('/', authenticate, async (req, res) => {
 // GET /api/orders/:id
 router.get('/:id', authenticate, async (req, res) => {
   try {
-    const { data: order } = await supabase.from('orders').select('*').eq('id', req.params.id).single();
+    const { data: order, error: orderErr } = await supabase.from('orders').select('*').eq('id', req.params.id).maybeSingle();
+    if (orderErr) throw orderErr;
     if (!order) return res.status(404).json({ error: 'Order not found.' });
     const { data: items } = await supabase.from('order_items').select('*').eq('order_id', req.params.id);
     res.json({ ...order, items: items || [] });

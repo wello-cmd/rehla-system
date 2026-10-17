@@ -5,7 +5,7 @@ const { supabase } = require('../db/supabase');
 
 async function authenticate(req, res, next) {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const token = typeof authHeader === 'string' ? /^Bearer\s+(\S+)$/i.exec(authHeader)?.[1] : null;
 
   if (!token) {
     return res.status(401).json({ error: 'Access token required.' });
@@ -16,7 +16,7 @@ async function authenticate(req, res, next) {
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error || !user) {
-      return res.status(403).json({ error: 'Invalid or expired token.' });
+      return res.status(401).json({ error: 'Invalid or expired token.' });
     }
 
     // Fetch user profile with role
@@ -42,7 +42,7 @@ async function authenticate(req, res, next) {
     next();
   } catch (err) {
     console.error('[Auth Error]', err.message);
-    return res.status(403).json({ error: 'Authentication failed.' });
+    return res.status(401).json({ error: 'Authentication failed.' });
   }
 }
 

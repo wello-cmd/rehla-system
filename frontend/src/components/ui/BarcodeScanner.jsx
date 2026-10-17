@@ -7,7 +7,7 @@ export default function BarcodeScanner({ onDetect, onClose }) {
   const videoRef = useRef(null);
   const controlsRef = useRef(null);
   const onDetectRef = useRef(onDetect);
-  onDetectRef.current = onDetect;
+  useEffect(() => { onDetectRef.current = onDetect; }, [onDetect]);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -16,7 +16,7 @@ export default function BarcodeScanner({ onDetect, onClose }) {
 
     (async () => {
       try {
-        await reader.decodeFromConstraints(
+        const controls = await reader.decodeFromConstraints(
           { video: { facingMode: { ideal: 'environment' } } },
           videoRef.current,
           (result, _err, ctrl) => {
@@ -28,7 +28,10 @@ export default function BarcodeScanner({ onDetect, onClose }) {
             }
           }
         );
+        if (!active) controls.stop();
+        else controlsRef.current = controls;
       } catch (e) {
+        if (!active) return;
         setError(e?.message || 'Unable to access the camera. Allow camera permission and use HTTPS.');
       }
     })();
