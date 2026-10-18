@@ -444,4 +444,16 @@ DO $$ DECLARE table_name text; BEGIN
 END $$;
 NOTIFY pgrst,'reload schema';
 
+-- 20261018131000_pin_function_search_paths.sql
+ALTER FUNCTION public.generate_invoice_number() SET search_path = public, pg_temp;
+ALTER FUNCTION public.rehla_stock_move(uuid,integer,uuid,text,text,uuid,text) SET search_path = public, pg_temp;
+ALTER FUNCTION public.rehla_checkout(jsonb,uuid,text) SET search_path = public, pg_temp;
+ALTER FUNCTION public.rehla_restock_return(uuid,uuid) SET search_path = public, pg_temp;
+ALTER FUNCTION public.rehla_set_product_stock(uuid,integer,uuid,text) SET search_path = public, pg_temp;
+ALTER FUNCTION public.rehla_refund_return(uuid,uuid) SET search_path = public, pg_temp;
+ALTER FUNCTION public.rehla_claim_sync(text,integer) SET search_path = public, pg_temp;
+ALTER FUNCTION public.rehla_renew_sync(text,uuid,integer) SET search_path = public, pg_temp;
+ALTER FUNCTION public.rehla_finish_sync(text,uuid,boolean,timestamptz) SET search_path = public, pg_temp;
+ALTER FUNCTION public.rehla_variant_totals() SET search_path = public, pg_temp;
+
 COMMIT;

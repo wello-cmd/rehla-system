@@ -1,6 +1,6 @@
 # Rehla fixes — updated 18 October 2026
 
-## Implemented locally
+## Implemented and deployed
 
 - Removed the root VibeCheck instruction file and its injected truthpack rules in `.claude/CLAUDE.md`.
 - Fixed staff landing routes, forbidden-role handling, session refresh races, and logout on permission denial.
@@ -36,11 +36,11 @@
 
 ## Remaining limitations
 
-- The `restrict_public_business_access` security migration was applied live and verified on 18 October. The two main business-operation migrations and matching app deployment are still pending staging; no external financial transactions or stock syncs were performed.
+- The `restrict_public_business_access` security migration was applied live and verified on 18 October. All business-operation migrations and matching application are now deployed; see deployment/RELEASE-20261018.md. No customer fund transfers or manual stock corrections were performed.
 - Marking a return refunded records its workflow status; it does not transfer customer funds. Partial returns no longer mark the entire order refunded automatically.
 - Historical POS invoices created before these changes may lack payment records; reconcile them before changing status through the stricter payment rules.
 - Existing shared driver links do not expire automatically; deactivation or token rotation revokes them.
-- Pending application/migration changes now renew integration leases once a minute. A failed renewal prevents checkpoint advancement. These changes still require deployment.
+- Deployed integration jobs renew leases once a minute. A failed renewal prevents checkpoint advancement.
 - The first durable sync imports full available history; plan staging verification and initial catch-up time.
 - Dashboard panels now fail independently, identify unavailable metrics and offer Retry; refreshes retain the selected period and ignore stale responses. Important table columns remain accessible through horizontal scrolling on phones. Physical-phone verification is still required.
 
@@ -57,6 +57,6 @@
 
 ### Outstanding external requirements
 
-- The remaining Supabase security warning is leaked-password protection. It needs the Auth dashboard/configuration controls, which this MCP toolset does not expose: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- The remaining Supabase security warning is leaked-password protection. The dashboard confirms this requires Pro; this project is Free and no paid upgrade was authorized: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
 - Per user direction, attempted to reconcile BO-1729308, BO-1729309, BO-1729310 and BO-1744387 against Shopify. The Admin API returned 401 Unauthorized; the saved deployment uses the same rejected token. Reconnect Shopify, then compare authoritative variant/location inventory before changing these records. No stock was guessed or changed.
-- Main operation migrations/app release need a confirmed staging environment, recoverable backup, and staging concurrency/integration checks. Branch creation remains blocked by Supabase's cost-confirmation requirement; the required cost tools are unavailable in this connection.
+- Production deployment completed after restoring 48,128 backed-up public business rows into isolated PGlite and rehearsing migrations successfully. Supabase paid staging was not created. Multi-connection concurrency and live external-integration testing remain limitations.

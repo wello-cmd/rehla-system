@@ -28,3 +28,7 @@ Security advisor reference: https://supabase.com/docs/guides/database/database-l
 Applied restrict_public_business_access to the connected live project. Verified anonymous profile/customer/refund access is denied; authenticated users cannot modify staff profiles; customer/refund RLS is enabled; service-role customer access is retained. The security advisor now reports only disabled leaked-password protection. No stock quantities were changed. The two business-operation migrations remain pending staging.
 
 Shopify inventory verification was attempted using the configured Admin API credentials. Shopify returned HTTP 401; the saved deployment credential matches the rejected token. This blocks source-based stock reconciliation until the integration is reconnected. No credentials were included in logs/reports.
+
+## Release completed — 18 October, 13:05 UTC
+
+The historical pending statuses above are superseded by RELEASE-20261018.md. Production app cb38d73 is live; reliable_operations_and_invoices_release and pin_function_search_paths are applied. Business row counts and service-only RPC permissions verified.
