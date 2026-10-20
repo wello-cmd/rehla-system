@@ -41,7 +41,7 @@ function database(rows = {}, errors = {}) {
 }
 function routes(file, db, extras = {}) {
   return load(`routes/${file}.js`, {
-    '../db/supabase': { supabase: db, fetchAll: async query => (await query).data, ...extras },
+    '../db/supabase': { supabase: db, supabaseServiceReady: true, fetchAll: async query => (await query).data, ...extras },
     '../middleware/authenticate': (req, res, next) => req.user ? next() : res.status(401).json({}),
     '../middleware/rateLimiter': () => (_req, _res, next) => next(),
     '../middleware/webhookVerify': { verifyBostaWebhook: (_req, _res, next) => next() },
@@ -267,3 +267,43 @@ for (const [file,route] of [['financial','/pl'],['finance','/revenue'],['analyti
   assert.equal(db.operations.length,0);
  });
 }
+
+// Login failures must identify invalid input separately from an unavailable Auth service.
+test('login normalizes an email pasted with surrounding spaces without altering the password', async () => {
+  const db = database({ user_profiles: [{ id: 'user-1', role: 'worker' }] });
+  let credentials;
+  const response = await invoke(routes('auth', db, { createAuthClient: () => ({ auth: { signInWithPassword: async value => {
+    credentials = value;
+    return { data: { user: { id: 'user-1', email: 'worker@example.test' }, session: { access_token: 'token', refresh_token: 'refresh' } }, error: null };
+  } } }) }), 'post', '/login', { body: { email: '  Worker@Example.Test  ', password: ' password with spaces ' } });
+  assert.equal(response.statusCode, 200);
+  assert.equal(credentials.email, 'worker@example.test');
+  assert.equal(credentials.password, ' password with spaces ');
+});
+for (const body of [{ email: {}, password: 'password' }, { email: 'user@example.test', password: [] }, { email: '   ', password: 'password' }]) {
+  test(`login rejects malformed credentials before contacting Auth: ${JSON.stringify(body)}`, async () => {
+    const response = await invoke(routes('auth', database(), { createAuthClient: () => { assert.fail('invalid input must not reach Auth'); } }), 'post', '/login', { body });
+    assert.equal(response.statusCode, 400);
+  });
+}
+for (const [error, expected] of [[{ status: 503, message: 'private provider diagnostic' }, 503], [{ status: 0, message: 'fetch failed' }, 503], [{ status: 429, message: 'provider rate limit' }, 429]]) {
+  test(`login preserves actionable upstream failure ${error.status}`, async () => {
+    const response = await invoke(routes('auth', database(), { createAuthClient: () => ({ auth: { signInWithPassword: async () => ({ data: null, error }) } }) }), 'post', '/login', { body: { email: 'user@example.test', password: 'password' } });
+    assert.equal(response.statusCode, expected);
+    assert.doesNotMatch(response.body.error, /private provider diagnostic/);
+  });
+}
+
+test('login fails safely when the backend service credential is not privileged', async () => {
+  const response = await invoke(routes('auth', database(), { supabaseServiceReady: false, createAuthClient: () => { assert.fail('misconfigured server must not create user sessions'); } }), 'post', '/login', { body: { email: 'user@example.test', password: 'password' } });
+  assert.equal(response.statusCode, 503);
+  assert.match(response.body.error, /administrator/);
+});
+
+test('login reports profile permission failure without exposing database diagnostics', async () => {
+  const db = database({}, { user_profiles: { code: '42501', message: 'private database diagnostics' } });
+  const response = await invoke(routes('auth', db, { createAuthClient: () => ({ auth: { signInWithPassword: async () => ({ data: { user: { id: 'user-1' }, session: { access_token: 'token', refresh_token: 'refresh' } }, error: null }) } }) }), 'post', '/login', { body: { email: 'user@example.test', password: 'password' } });
+  assert.equal(response.statusCode, 503);
+  assert.match(response.body.error, /administrator/);
+  assert.doesNotMatch(response.body.error, /42501|private|user_profiles/);
+});

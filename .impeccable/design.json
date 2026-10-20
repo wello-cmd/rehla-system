@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-20T19:09:31.402556+00:00",
+  "title": "Design System: Rehla Dispatch Desk",
+  "extensions": {
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "768px"
+      },
+      {
+        "name": "stacked",
+        "value": "1000px"
+      },
+      {
+        "name": "metric-three",
+        "value": "1199px"
+      }
+    ],
+    "motion": [
+      {
+        "name": "navigation-state",
+        "value": "0.15s ease",
+        "purpose": "Navigation hover; disabled for reduced motion."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "description": "Observed shared Rehla interface component.",
+      "html": "<button class=\"ds-primary\">Save changes</button>",
+      "css": ".ds-primary{background:var(--color-brand-solid);color:white;border:1px solid var(--color-brand-solid);font:500 13px Inter,system-ui,sans-serif;padding:10px 16px;border-radius:5px;}.ds-primary:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px;}.ds-primary{cursor:pointer;min-height:40px;}.ds-primary:hover{filter:brightness(.94);}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "description": "Observed shared Rehla interface component.",
+      "html": "<button class=\"ds-secondary\">Refresh</button>",
+      "css": ".ds-secondary{background:var(--color-bg-card);color:var(--color-text);border:1px solid var(--color-border);font:500 13px Inter,system-ui,sans-serif;padding:10px 16px;border-radius:5px;}.ds-secondary:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px;}.ds-secondary{cursor:pointer;min-height:40px;}.ds-secondary:hover{filter:brightness(.94);}"
+    },
+    {
+      "name": "Ghost button",
+      "kind": "button",
+      "description": "Observed shared Rehla interface component.",
+      "html": "<button class=\"ds-ghost\">View deliveries</button>",
+      "css": ".ds-ghost{background:transparent;color:var(--color-text-muted);border:1px solid transparent;font:500 13px Inter,system-ui,sans-serif;padding:10px 16px;border-radius:5px;}.ds-ghost:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px;}.ds-ghost{cursor:pointer;min-height:40px;}.ds-ghost:hover{filter:brightness(.94);}"
+    },
+    {
+      "name": "Text field",
+      "kind": "input",
+      "description": "Observed shared Rehla interface component.",
+      "html": "<label class=\"ds-label\">Email address<input class=\"ds-field\" type=\"email\" placeholder=\"you@company.com\"></label>",
+      "css": ".ds-field{background:var(--color-bg-elevated);color:var(--color-text);border:1px solid var(--color-border);font:500 13px Inter,system-ui,sans-serif;padding:10px 16px;border-radius:5px;}.ds-field:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px;}.ds-label{display:grid;gap:8px;font:13px Inter,system-ui,sans-serif;}.ds-field:hover{border-color:var(--color-text-muted);}.ds-field:focus{border-color:var(--color-brand);}"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "description": "Observed shared Rehla interface component.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\">Dashboard</a><a href=\"#\">Inventory</a></nav>",
+      "css": ".ds-nav{background:#17252a;color:#f3f5f3;font:500 13px Inter,system-ui,sans-serif;padding:10px 16px;border-radius:5px;}.ds-nav:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px;}.ds-nav a{display:block;color:inherit;padding:10px;text-decoration:none;border-radius:5px;}.ds-nav a[aria-current]{background:#b84013;color:#fff;}.ds-nav a:hover{background:#263a41;}.ds-nav a:focus-visible{outline:2px solid #ff986a;}"
+    },
+    {
+      "name": "Status tag",
+      "kind": "chip",
+      "description": "Observed shared Rehla interface component.",
+      "html": "<span class=\"ds-tag\">Delivered</span>",
+      "css": ".ds-tag{background:rgba(34,115,90,.12);color:var(--color-success);font:500 13px Inter,system-ui,sans-serif;padding:10px 16px;border-radius:5px;}.ds-tag:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px;}"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "description": "Observed shared Rehla interface component.",
+      "html": "<section class=\"ds-panel\"><h2>Delivery services</h2><p>Shopify orders go to Bosta. Rehla in-house delivery is managed separately.</p></section>",
+      "css": ".ds-panel{background:var(--color-bg-card);color:var(--color-text);border:1px solid var(--color-border-light);font:500 13px Inter,system-ui,sans-serif;padding:10px 16px;border-radius:5px;}.ds-panel:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px;}.ds-panel{padding:20px;border-radius:8px;}.ds-panel h2{font-size:16px;margin:0 0 12px;}.ds-panel p{color:var(--color-text-muted);line-height:1.6;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Dispatch Desk",
+    "overview": "Warm working surfaces and permanent ink navigation make daily operations and executive reporting clear.",
+    "keyCharacteristics": [
+      "Warm ivory canvas",
+      "Ink navigation",
+      "Orange actions",
+      "Readable tables",
+      "Both themes"
+    ],
+    "rules": [
+      {
+        "name": "The State Rule",
+        "body": "Status color accompanies a readable label.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do preserve real data and unavailable states.",
+      "Do retain keyboard focus and essential columns."
+    ],
+    "donts": [
+      "Do not count Bosta as an additional sales channel.",
+      "Do not ship illustrative metrics."
+    ]
+  }
+}

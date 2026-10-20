@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 function currentTheme() {
   if (typeof document !== 'undefined' && document.documentElement.classList.contains('light')) return 'light';
-  try { return localStorage.getItem('theme') || 'dark'; } catch (e) { return 'dark'; }
+  try { return localStorage.getItem('theme') || 'light'; } catch (e) { return 'light'; }
 }
 
 export default function ThemeToggle({ style }) {

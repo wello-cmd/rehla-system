@@ -55,13 +55,6 @@ const NAV_GROUPS = [
   },
 ];
 
-// Pastel colours for avatar by initial
-const AVATAR_COLORS = ['#6366f1','#3fb950','#f0883e','#58a6ff','#f85149','#a371f7'];
-function avatarColor(name) {
-  const code = (name?.charCodeAt(0) || 65) - 65;
-  return AVATAR_COLORS[code % AVATAR_COLORS.length];
-}
-
 export default function Sidebar({ isOpen, onClose }) {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -132,133 +125,33 @@ export default function Sidebar({ isOpen, onClose }) {
   return (
     <>
       {isOpen && <div className="sidebar-backdrop" onClick={onClose} />}
-
       <aside id="primary-navigation" ref={sidebarRef} aria-label="Main navigation" inert={mobile && !isOpen} role={mobile && isOpen ? 'dialog' : undefined} aria-modal={mobile && isOpen ? true : undefined} className={`sidebar ${isOpen ? 'sidebar--open' : ''}`}>
-
-        {/* ── Brand header ── */}
-        <div style={{
-          padding: '18px 16px',
-          borderBottom: '1px solid var(--color-border-light)',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        }}>
-          <Link to="/" style={{ textDecoration:'none', color:'inherit' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <div style={{
-                width: 30, height: 30,
-                background: 'var(--color-brand-solid)',
-                borderRadius: 6,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                <span className="material-symbols-outlined" style={{ fontSize:18, color:'#fff' }}>storefront</span>
-              </div>
-              <div>
-                <p style={{ fontSize:15, fontWeight:800, letterSpacing:'-0.03em', lineHeight:1.1 }}>REHLA</p>
-                <p style={{ fontSize:10, color:'var(--color-text-dim)', letterSpacing:'0.04em', textTransform:'uppercase', marginTop:1 }}>Management</p>
-              </div>
-            </div>
+        <div className="sidebar-brand">
+          <Link to="/" className="brand-lockup" aria-label="Rehla workspace">
+            <span className="brand-name">REHLA <span className="brand-mark" aria-hidden="true"><span className="material-symbols-outlined">route</span></span></span>
+            <span className="brand-caption">Management workspace</span>
           </Link>
-          <button className="sidebar-close-btn" onClick={onClose} aria-label="Close menu">
-            <span className="material-symbols-outlined" style={{ fontSize:20 }}>close</span>
-          </button>
+          <button className="sidebar-close-btn" onClick={onClose} aria-label="Close menu"><span className="material-symbols-outlined">close</span></button>
         </div>
-
-        {/* ── Navigation ── */}
-        <nav aria-label="Main" style={{ flex:1, minHeight:0, padding:'8px 8px', overflowY:'auto' }}>
+        <nav aria-label="Main" className="sidebar-nav">
           {NAV_GROUPS.map(group => {
             const visible = group.items.filter(i => i.roles.includes(user?.role));
-            if (!visible.length) return null;
-            return (
-              <div key={group.label}>
-                <p className="section-label" style={{ padding:'10px 10px 4px', marginBottom:0 }}>{group.label}</p>
-                {visible.map(item => {
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      aria-current={isActive ? 'page' : undefined}
-                      style={{
-                        position: 'relative',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 9,
-                        padding: '8px 10px',
-                        marginBottom: 1,
-                        borderRadius: 5,
-                        textDecoration: 'none',
-                        fontSize: 13,
-                        fontWeight: isActive ? 600 : 400,
-                        color: isActive ? 'var(--color-text)' : 'var(--color-text-muted)',
-                        background: isActive ? 'var(--color-brand-dim)' : 'transparent',
-                        transition: 'all 0.12s',
-                      }}
-                      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--color-bg-hover)'; e.currentTarget.style.color = 'var(--color-text)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = isActive ? 'var(--color-brand-dim)' : 'transparent'; e.currentTarget.style.color = isActive ? 'var(--color-text)' : 'var(--color-text-muted)'; }}
-                    >
-                      {isActive && (
-                        <span style={{
-                          position:'absolute', left:0, top:6, bottom:6,
-                          width:3, background:'var(--color-brand)',
-                          borderRadius:'0 3px 3px 0',
-                        }} />
-                      )}
-                      <span
-                        className="material-symbols-outlined"
-                        style={{
-                          fontSize: 18,
-                          color: isActive ? 'var(--color-brand-hover)' : 'inherit',
-                          fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0",
-                          transition: 'color 0.12s',
-                        }}
-                      >
-                        {item.icon}
-                      </span>
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            );
+            return visible.length ? <div className="nav-group" key={group.label}>
+              <p className="nav-group-label">{group.label}</p>
+              {visible.map(item => <Link key={item.path} to={item.path} aria-current={location.pathname === item.path ? 'page' : undefined} className="nav-link">
+                <span className="material-symbols-outlined" aria-hidden="true">{item.icon}</span><span>{item.label}</span>
+              </Link>)}
+            </div> : null;
           })}
         </nav>
-
-        {/* ── User footer ── */}
-        <div style={{ padding:'12px 12px', borderTop:'1px solid var(--color-border-light)' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-            <div style={{
-              width:32, height:32, borderRadius:6,
-              background: avatarColor(user?.name),
-              display:'flex', alignItems:'center', justifyContent:'center',
-              fontSize:13, fontWeight:700, color:'#fff', flexShrink:0,
-            }}>
-              {user?.name?.charAt(0)?.toUpperCase() || 'R'}
-            </div>
-            <div style={{ minWidth:0 }}>
-              <p style={{ fontSize:13, fontWeight:600, lineHeight:1.2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user?.name}</p>
-              <p style={{ fontSize:10, color:'var(--color-text-dim)', textTransform:'uppercase', letterSpacing:'0.04em', marginTop:1 }}>{user?.role}</p>
-            </div>
-          </div>
+        <div className="sidebar-footer">
           <ThemeToggle />
-          <button
-            onClick={logout}
-            className="btn btn-ghost btn-sm"
-            style={{ width:'100%', justifyContent:'flex-start', color:'var(--color-text-dim)', fontSize:12 }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize:15 }}>logout</span>
-            Sign Out
-          </button>
-        </div>
-
-        {/* ── Status bar ── */}
-        <div style={{
-          padding:'8px 16px',
-          borderTop:'1px solid var(--color-border-light)',
-          display:'flex', alignItems:'center', gap:7,
-          background:'var(--color-bg)',
-        }}>
-          <div aria-hidden="true" style={{ width:7, height:7, borderRadius:'50%', background:apiStatus === 'API reachable' ? 'var(--color-success)' : 'var(--color-warning)', flexShrink:0 }} />
-          <span style={{ fontSize:10, color:'var(--color-text-dim)', fontFamily:'var(--font-mono)', letterSpacing:'0.04em' }} role="status">{apiStatus}</span>
+          <div className="sidebar-profile">
+            <span className="profile-avatar" aria-hidden="true">{user?.name?.charAt(0)?.toUpperCase() || 'R'}</span>
+            <div><p>{user?.name}</p><span>{user?.role}</span></div>
+            <button onClick={logout} className="sidebar-signout" aria-label="Sign out" title="Sign out"><span className="material-symbols-outlined">logout</span></button>
+          </div>
+          <p className="sidebar-status"><span aria-hidden="true" className={apiStatus === 'API reachable' ? 'status-dot is-reachable' : 'status-dot'} />{apiStatus}</p>
         </div>
       </aside>
     </>

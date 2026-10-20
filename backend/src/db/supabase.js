@@ -2,17 +2,22 @@
 // Provides both service-role (backend) and anon (frontend-safe) clients
 
 const { createClient } = require('@supabase/supabase-js');
+const { isServiceRoleKey } = require('./supabaseCredentials');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseServiceReady = isServiceRoleKey(supabaseServiceKey);
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.warn('[WARN] Supabase credentials not set. Database operations will fail.');
 }
+if (supabaseServiceKey && !supabaseServiceReady) {
+  console.error('[Supabase] AUTH_SERVICE_KEY_INVALID: configure a server secret or service-role key.');
+}
 
 // Service role client — full access, used for backend operations
-const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '', {
+const supabase = createClient(supabaseUrl || '', supabaseServiceReady ? supabaseServiceKey : 'invalid-server-credential', {
   auth: { autoRefreshToken: false, persistSession: false }
 });
 
@@ -57,4 +62,4 @@ async function fetchAll(query, pageSize = 1000) {
   return allRows;
 }
 
-module.exports = { supabase, supabaseAnon, createAuthClient, fetchAll };
+module.exports = { supabase, supabaseAnon, createAuthClient, fetchAll, supabaseServiceReady };

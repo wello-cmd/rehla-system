@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { formatEGP, formatDate, getStatusColor } from '../lib/formatters';
@@ -30,6 +31,7 @@ const CHART_COLORS = ['#6366f1','#3fb950','#f0883e','#58a6ff','#f85149','#a371f7
 const TT = { background:'var(--color-bg-elevated)', border:'1px solid var(--color-border)', color:'var(--color-text)', fontSize:12, borderRadius:6 };
 
 export default function DeliveryPage() {
+  const [searchParams] = useSearchParams();
   const {user} = useAuth();
   const canReport = ['admin','ceo','dispatcher','accountant'].includes(user?.role);
   const canManageDrivers = ['admin','ceo'].includes(user?.role);
@@ -40,7 +42,7 @@ export default function DeliveryPage() {
   const [summary, setSummary] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ status: '', driver_id: '', delivery_type: '', start: '', end: '' });
+  const [filters, setFilters] = useState({ status: '', driver_id: '', delivery_type: ['own_driver','bosta'].includes(searchParams.get('delivery_type')) ? searchParams.get('delivery_type') : '', start: '', end: '' });
   const [assigning, setAssigning] = useState(null);
   const [selectedDriverId, setSelectedDriverId] = useState('');
   const [statusTarget, setStatusTarget] = useState(null);

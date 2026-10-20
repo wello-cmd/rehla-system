@@ -1,7 +1,7 @@
 // Auth Routes — Login, profile, user management
 const express = require('express');
 const router = express.Router();
-const { supabase, createAuthClient } = require('../db/supabase');
+const { supabase, createAuthClient, supabaseServiceReady } = require('../db/supabase');
 const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const rateLimit = require('../middleware/rateLimiter');
@@ -11,14 +11,24 @@ router.use(rateLimit(100, 15 * 60 * 1000));
 
 // POST /api/auth/login — Supabase Auth sign-in with rate limiting
 router.post('/login', rateLimit(20, 15 * 60 * 1000), async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
+  const { email: suppliedEmail, password } = req.body;
+  if (typeof suppliedEmail !== 'string' || !suppliedEmail.trim() || typeof password !== 'string' || !password) {
     return res.status(400).json({ error: 'Email and password required.' });
+  }
+  const email = suppliedEmail.trim().toLowerCase();
+  if (!supabaseServiceReady) {
+    return res.status(503).json({ error: 'Sign-in is unavailable. Contact your administrator to check the server configuration.' });
   }
 
   try {
     const { data, error } = await createAuthClient().auth.signInWithPassword({ email, password });
     if (error) {
+      if (error.status === 429) {
+        return res.status(429).json({ error: 'Too many sign-in attempts. Please try again later.' });
+      }
+      if (error.status === 0 || error.status >= 500) {
+        return res.status(503).json({ error: 'Sign-in is temporarily unavailable. Please try again shortly.' });
+      }
       return res.status(401).json({ error: error.message || 'Invalid credentials.' });
     }
 
@@ -29,7 +39,10 @@ router.post('/login', rateLimit(20, 15 * 60 * 1000), async (req, res) => {
       .eq('id', data.user.id)
       .maybeSingle();
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error('[Auth] Profile lookup failed:', profileError.code || 'UNKNOWN');
+      return res.status(503).json({ error: 'Sign-in is temporarily unavailable. Please contact your administrator.' });
+    }
     if (!profile) {
       return res.status(403).json({ error: 'User profile not found. Contact your administrator.' });
     }

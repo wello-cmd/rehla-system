@@ -59,6 +59,11 @@ class ApiClient {
         const refreshed = (this.getToken() && this.getToken() !== token) || await this._refreshToken();
         if (refreshed) return this.request(endpoint, options, true);
       }
+      // A different login can finish while this request waits for an old
+      // refresh. Its failure must not clear the newly signed-in session.
+      if (this.getToken() && this.getToken() !== token) {
+        return this.request(endpoint, options, true);
+      }
       this._clearSession();
       throw new Error('Session expired.');
     }

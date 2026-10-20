@@ -6,7 +6,7 @@ export default function DashboardShell({ children, title, subtitle, actions }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div style={{ display:'flex' }}>
+    <div className="workspace-shell">
       <a className="skip-link" href="#main-content">Skip to content</a>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -28,6 +28,11 @@ export default function DashboardShell({ children, title, subtitle, actions }) {
           <div style={{ width:40 }} />
         </div>
 
+        <div className="workspace-bar">
+          <p>Workspace <span aria-hidden="true">/</span> <strong>{title === 'Business overview' ? 'Overview' : title || 'Rehla'}</strong></p>
+          <span className="workspace-currency">EGP <span className="material-symbols-outlined" aria-hidden="true">language</span></span>
+        </div>
+
         {/* Page header */}
         {title && (
           <div
@@ -38,7 +43,7 @@ export default function DashboardShell({ children, title, subtitle, actions }) {
             }}
           >
             <div>
-              <h1 style={{ fontSize:22, fontWeight:700, letterSpacing:'-0.02em', lineHeight:1.2 }}>{title}</h1>
+              <h1 className="page-heading">{title}</h1>
               {subtitle && (
                 <p style={{ fontSize:13, color:'var(--color-text-muted)', marginTop:4 }}>{subtitle}</p>
               )}

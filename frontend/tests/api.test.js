@@ -111,3 +111,24 @@ test('a renewed token rejected with 401 ends the session after one retry', async
   assert.equal(storage.size, 0);
   assert.equal(window.location.href, '/login');
 });
+
+test('an old failed refresh cannot erase a newer successful login', async () => {
+  let releaseRefresh;
+  const pendingRefresh = new Promise(resolve => { releaseRefresh = resolve; });
+  globalThis.fetch = async (url, options) => {
+    if (url === '/api/auth/refresh') return pendingRefresh;
+    return options.headers.Authorization === 'Bearer newly-signed-in'
+      ? json({ ok: true })
+      : json({ error: 'Expired.' }, 401);
+  };
+  const request = api.get('/invoices');
+  await new Promise(resolve => setImmediate(resolve));
+  storage.set('rehla_token', 'newly-signed-in');
+  storage.set('rehla_refresh_token', 'new-login-refresh');
+  storage.set('rehla_user', '{"role":"admin"}');
+  releaseRefresh(json({ error: 'Expired refresh token.' }, 401));
+  assert.deepEqual(await request, { ok: true });
+  assert.equal(storage.get('rehla_token'), 'newly-signed-in');
+  assert.equal(storage.get('rehla_refresh_token'), 'new-login-refresh');
+  assert.equal(window.location.href, '/warehouse/exit');
+});

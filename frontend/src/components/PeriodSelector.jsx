@@ -103,7 +103,7 @@ export default function PeriodSelector({ onChange }) {
       borderRadius: '4px', padding: '10px 14px',
     }}>
       {/* Mode buttons */}
-      <div style={{ display: 'flex', gap: '3px' }}>
+      <div className="period-selector-modes" style={{ display: 'flex', gap: '3px' }}>
         {MODES.map(m => (
           <button key={m.id} onClick={() => setMode(m.id)} style={btnStyle(mode === m.id)}>
             {m.label}
@@ -117,21 +117,21 @@ export default function PeriodSelector({ onChange }) {
       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
         {/* Year */}
         {['month', 'quarter', 'half', 'year'].includes(mode) && (
-          <select style={inputStyle} value={year} onChange={e => setYear(Number(e.target.value))}>
+          <select aria-label="Year" style={inputStyle} value={year} onChange={e => setYear(Number(e.target.value))}>
             {years.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         )}
 
         {/* Month */}
         {mode === 'month' && (
-          <select style={inputStyle} value={month} onChange={e => setMonth(Number(e.target.value))}>
+          <select aria-label="Month" style={inputStyle} value={month} onChange={e => setMonth(Number(e.target.value))}>
             {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
           </select>
         )}
 
         {/* Quarter */}
         {mode === 'quarter' && (
-          <div style={{ display: 'flex', gap: '3px' }}>
+          <div className="period-selector-modes" style={{ display: 'flex', gap: '3px' }}>
             {[1,2,3,4].map(q => (
               <button key={q} onClick={() => setQuarter(q)} style={btnStyle(quarter === q)}>Q{q}</button>
             ))}
@@ -140,7 +140,7 @@ export default function PeriodSelector({ onChange }) {
 
         {/* Half */}
         {mode === 'half' && (
-          <div style={{ display: 'flex', gap: '3px' }}>
+          <div className="period-selector-modes" style={{ display: 'flex', gap: '3px' }}>
             {[1,2].map(h => (
               <button key={h} onClick={() => setHalf(h)} style={btnStyle(half === h)}>H{h}</button>
             ))}
@@ -149,15 +149,15 @@ export default function PeriodSelector({ onChange }) {
 
         {/* Day */}
         {mode === 'day' && (
-          <input type="date" style={inputStyle} value={dayDate} onChange={e => setDayDate(e.target.value)} />
+          <input aria-label="Report day" type="date" style={inputStyle} value={dayDate} onChange={e => setDayDate(e.target.value)} />
         )}
 
         {/* Custom */}
         {mode === 'custom' && (
           <>
-            <input type="date" style={inputStyle} value={customStart} onChange={e => setCustomStart(e.target.value)} />
+            <input aria-label="Start date" type="date" style={inputStyle} value={customStart} onChange={e => setCustomStart(e.target.value)} />
             <span style={{ color: 'var(--color-text-dim)', fontSize: '11px' }}>→</span>
-            <input type="date" style={inputStyle} value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
+            <input aria-label="End date" type="date" style={inputStyle} value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
             <button onClick={apply} style={{ ...btnStyle(true), background: 'var(--color-bg-active)' }}>Apply</button>
           </>
         )}

@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="light">
 <head>
   <meta charset="UTF-8" />
   <script>
     // Apply saved theme before paint to avoid a flash of the wrong theme
     (function () {
       try {
-        var t = localStorage.getItem('theme') || 'dark';
+        var t = localStorage.getItem('theme') || 'light';
         document.documentElement.classList.remove('dark', 'light');
         document.documentElement.classList.add(t);
       } catch (e) {}

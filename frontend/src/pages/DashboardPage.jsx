@@ -1,67 +1,28 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import { formatEGP, formatNumber } from '../lib/formatters';
+import { formatNumber } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
 import PeriodSelector from '../components/PeriodSelector';
 import { loadDashboardPanels } from '../lib/dashboardPanels';
-import {
-  ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Legend, PieChart, Pie, Cell,
-} from 'recharts';
+import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 
-const CHART_COLORS = ['#6366f1','#3fb950','#f0883e','#58a6ff','#f85149'];
-const TT = { background:'var(--color-bg-elevated)', border:'1px solid var(--color-border)', color:'var(--color-text)', fontSize:12, borderRadius:6 };
-const kTick = v => `${(v/1000).toFixed(0)}k`;
-const egpFmt = v => `EGP ${Number(v).toLocaleString('en-EG',{minimumFractionDigits:0,maximumFractionDigits:0})}`;
-
-// Build default period: current month
+const money = value => `EGP ${Number(value || 0).toLocaleString('en-EG', { maximumFractionDigits:0 })}`;
+const TT = { background:'var(--color-bg-elevated)', border:'1px solid var(--color-border)', color:'var(--color-text)', fontSize:12, borderRadius:5 };
+const statusColor = name => /fail|cancel|return/i.test(name) ? 'var(--color-error)' : /delivered/i.test(name) ? 'var(--color-success)' : /transit|out_for|assigned/i.test(name) ? 'var(--color-info)' : 'var(--color-warning)';
 function defaultPeriod() {
   const now = new Date();
-  const y   = now.getFullYear();
-  const m   = String(now.getMonth() + 1).padStart(2, '0');
-  const d   = String(now.getDate()).padStart(2, '0');
-  const start = `${y}-${m}-01`;
-  const end   = `${y}-${m}-${d}`;
-  const monthName = now.toLocaleString('en', { month: 'long' });
-  return { start, end, groupBy: 'day', label: `${monthName} ${y}` };
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return { start:`${year}-${month}-01`, end:`${year}-${month}-${String(new Date(year,now.getMonth()+1,0).getDate()).padStart(2,'0')}`, groupBy:'day', label:now.toLocaleDateString('en',{month:'short',year:'numeric'}) };
 }
-
-function KpiCard({ label, value, sub, color, icon, loading, error }) {
-  return (
-    <div className="card kpi-card" style={{ '--kpi-accent': color || 'var(--color-border-light)' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6 }}>
-        <p className="text-label" style={{ color:'var(--color-text-dim)' }}>{label}</p>
-        {icon && (
-          <span className="material-symbols-outlined" style={{ fontSize:18, color: color || 'var(--color-text-dim)', fontVariationSettings:"'FILL' 1", opacity:0.6 }}>
-            {icon}
-          </span>
-        )}
-      </div>
-      {loading
-        ? <div className="skeleton" style={{ height:30, width:'65%', marginBottom:4 }} />
-        : <p style={{ fontSize:24, fontWeight:800, letterSpacing:'-0.03em', fontFamily:'var(--font-mono)', color: color || 'inherit', lineHeight:1.1, whiteSpace:'nowrap' }}>{error ? 'Unavailable' : value}</p>
-      }
-      {!loading && !error && sub && (
-        <p style={{ fontSize:11, color:'var(--color-text-muted)', marginTop:4 }}>{sub}</p>
-      )}
-    </div>
-  );
+function Metric({ label, value, note, icon, loading, error }) {
+  return <div className="summary-metric"><p className="metric-label"><span className="material-symbols-outlined" aria-hidden="true">{icon}</span>{label}</p>{loading ? <div className="skeleton" style={{height:30,width:'85%'}} /> : <p className="metric-value">{error ? 'Unavailable' : value}</p>}{!loading && !error && note && <p className="metric-note">{note}</p>}</div>;
 }
-
-function ChartCard({ title, loading, height = 260, children, extra, error }) {
-  return (
-    <div className="card" style={{ display:'flex', flexDirection:'column', gap:14 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-        <p className="text-label" style={{ color:'var(--color-text-dim)' }}>{title}</p>
-        {extra}
-      </div>
-      {loading
-        ? <div className="skeleton" style={{ height }} />
-        : error ? <p role="status">This section is unavailable. Use Retry above to try again.</p> : children
-      }
-    </div>
-  );
+function Panel({ title, extra, loading, error, children, className = '' }) {
+  return <section className={`card ${className}`} aria-label={title}><div className="panel-heading"><h2>{title}</h2>{extra}</div>{loading ? <div className="skeleton" style={{height:180}} /> : error ? <p className="panel-error" role="status">This section is unavailable. Use Refresh to try again.</p> : children}</section>;
 }
+function Empty({ children }) { return <div className="empty-state" style={{padding:'40px 12px'}}><p>{children}</p></div>; }
 
 export default function DashboardPage() {
   const [loading,        setLoading]        = useState(true);
@@ -108,211 +69,50 @@ export default function DashboardPage() {
   const profitMargin  = netRevenue > 0 ? ((totalProfit / netRevenue) * 100).toFixed(1) : '0.0';
   const avgOrderValue = orderCount > 0 ? netRevenue / orderCount : 0;
 
-  const deliveryPieData = Object.entries(deliveryData?.statusBreakdown || {})
-    .map(([name, value]) => ({ name: name.replace(/_/g,' '), value }));
 
-  return (
-    <DashboardShell title="Dashboard" subtitle={period.label || 'All time'}>
-      <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-
-        <PeriodSelector onChange={handlePeriod} />
-        {Object.keys(panelErrors).length > 0 && (
-          <div role="status" style={{display:'flex', gap:12, alignItems:'center', flexWrap:'wrap'}}>
-            <p>Could not load: {Object.keys(panelErrors).join(', ')}. Available sections are shown below.</p>
-            <button className="btn btn-secondary" disabled={loading} onClick={() => fetchDashboard(period)}>Retry</button>
-          </div>
-        )}
-
-        {/* KPI cards */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(190px,1fr))', gap:12 }}>
-          <KpiCard
-            label="Net Revenue"
-            error={panelErrors.sales}
-            value={formatEGP(salesData?.totalRevenue ?? 0)}
-            sub={`${formatNumber(salesData?.totalOrders ?? 0)} orders`}
-            icon="payments"
-            color="var(--color-brand-hover)"
-            loading={loading}
-          />
-          <KpiCard
-            label="Net Profit"
-            error={panelErrors.sales || panelErrors.finance}
-            value={formatEGP(totalProfit)}
-            sub={totalExpenses > 0 ? `${profitMargin}% margin` : 'No expenses recorded'}
-            icon="trending_up"
-            color={totalProfit >= 0 ? 'var(--color-success)' : 'var(--color-error)'}
-            loading={loading}
-          />
-          <KpiCard
-            label="Avg Order Value"
-            error={panelErrors.sales}
-            value={formatEGP(avgOrderValue)}
-            icon="analytics"
-            loading={loading}
-          />
-          <KpiCard
-            label="Outstanding"
-            error={panelErrors.invoices}
-            value={formatEGP(invoiceSummary?.total_outstanding ?? 0)}
-            sub={invoiceSummary?.total_overdue > 0 ? `${formatEGP(invoiceSummary.total_overdue)} overdue` : 'None overdue'}
-            icon="receipt_long"
-            color={invoiceSummary?.total_overdue > 0 ? 'var(--color-error)' : undefined}
-            loading={loading}
-          />
-          <KpiCard
-            label="Deliveries"
-            error={panelErrors.delivery}
-            value={formatNumber(deliveryData?.total ?? 0)}
-            sub={`${formatNumber(deliveryData?.delivered ?? 0)} delivered · ${formatNumber(deliveryData?.failed ?? 0)} failed`}
-            icon="local_shipping"
-            loading={loading}
-          />
-          <KpiCard
-            label="Inventory Value"
-            error={panelErrors.inventory}
-            value={formatEGP(inventoryValue?.retail_value ?? 0)}
-            sub={`${formatNumber(inventoryValue?.total_units ?? 0)} units`}
-            icon="inventory_2"
-            loading={loading}
-          />
-        </div>
-
-        {/* Revenue + Expenses trend */}
-        <ChartCard
-          title={`Revenue · Expenses · Profit — ${period.label || 'All time'}`}
-          loading={loading}
-          height={280}
-          error={panelErrors.finance}
-        >
-          {finKpis.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <ComposedChart data={finKpis} margin={{ bottom:28, right:8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
-                <XAxis
-                  dataKey="period"
-                  tick={{ fill:'var(--color-text-muted)', fontSize:10 }}
-                  angle={-20} textAnchor="end" height={44}
-                  interval="preserveStartEnd"
-                />
-                <YAxis tickFormatter={kTick} tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
-                <Tooltip contentStyle={TT} formatter={(v, n) => [egpFmt(v), n]} />
-                <Legend wrapperStyle={{ fontSize:11, paddingTop:8 }} />
-                <Bar dataKey="revenue"  name="Revenue"  fill="#6366f1" opacity={0.9} radius={[3,3,0,0]} />
-                <Bar dataKey="expenses" name="Expenses" fill="#f85149" opacity={0.7} radius={[3,3,0,0]} />
-                <Line dataKey="profit" name="Profit" stroke="#3fb950" strokeWidth={2.5} dot={{ r:3, fill:'#3fb950' }} type="monotone" />
-              </ComposedChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="empty-state" style={{ padding:'48px 0' }}>
-              <span className="material-symbols-outlined">bar_chart</span>
-              <p>No financial data for this period</p>
-            </div>
-          )}
-        </ChartCard>
-
-        {/* Row 2 */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(280px,1fr))', gap:16 }}>
-
-          {/* Top products */}
-          <ChartCard title="Top Products by Revenue" error={panelErrors.products} loading={loading} height={200}>
-            {topProducts.length > 0 ? (
-              <div>
-                {topProducts.slice(0,6).map((p, i) => (
-                  <div key={p.sku || p.name} style={{
-                    display:'flex', justifyContent:'space-between', alignItems:'center',
-                    padding:'8px 0',
-                    borderBottom: i < Math.min(topProducts.length,6) - 1 ? '1px solid var(--color-border-light)' : 'none',
-                  }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>
-                      <span style={{
-                        fontSize:10, fontFamily:'var(--font-mono)', color:'var(--color-text-dim)',
-                        minWidth:20, flexShrink:0,
-                      }}>
-                        {String(i+1).padStart(2,'0')}
-                      </span>
-                      <div style={{ minWidth:0 }}>
-                        <p style={{ fontSize:13, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</p>
-                        <p style={{ fontSize:10, color:'var(--color-text-dim)' }}>{p.units} units</p>
-                      </div>
-                    </div>
-                    <span style={{ fontSize:12, fontFamily:'var(--font-mono)', fontWeight:600, flexShrink:0, marginLeft:8 }}>
-                      {formatEGP(p.revenue)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-state" style={{ padding:'32px 0' }}>
-                <span className="material-symbols-outlined">inventory_2</span>
-                <p>No sales data yet</p>
-              </div>
-            )}
-          </ChartCard>
-
-          {/* Delivery donut */}
-          <ChartCard title="Delivery Status Breakdown" error={panelErrors.delivery} loading={loading} height={200}>
-            {deliveryPieData.length > 0 ? (
-              <>
-                <ResponsiveContainer width="100%" height={170}>
-                  <PieChart>
-                    <Pie
-                      data={deliveryPieData}
-                      dataKey="value"
-                      cx="50%" cy="50%"
-                      innerRadius={52} outerRadius={76}
-                      paddingAngle={2}
-                    >
-                      {deliveryPieData.map((_, i) => (
-                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={TT} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:'6px 14px', justifyContent:'center' }}>
-                  {deliveryPieData.map((d, i) => (
-                    <div key={i} style={{ display:'flex', alignItems:'center', gap:5, fontSize:11 }}>
-                      <div style={{ width:7, height:7, borderRadius:'50%', background:CHART_COLORS[i % CHART_COLORS.length], flexShrink:0 }} />
-                      <span style={{ color:'var(--color-text-muted)', textTransform:'capitalize' }}>{d.name}</span>
-                      <span style={{ fontFamily:'var(--font-mono)', fontWeight:600 }}>{d.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="empty-state" style={{ padding:'32px 0' }}>
-                <span className="material-symbols-outlined">local_shipping</span>
-                <p>No delivery data yet</p>
-              </div>
-            )}
-          </ChartCard>
-
-          {/* Profit margin trend */}
-          {finKpis.length > 1 && (
-            <ChartCard title="Profit Margin Trend" loading={loading} height={200}>
-              <ResponsiveContainer width="100%" height={200}>
-                <ComposedChart data={finKpis} margin={{ bottom:28, right:8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
-                  <XAxis
-                    dataKey="period"
-                    tick={{ fill:'var(--color-text-muted)', fontSize:9 }}
-                    angle={-20} textAnchor="end" height={42}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis tick={{ fill:'var(--color-text-muted)', fontSize:10 }} unit="%" />
-                  <Tooltip contentStyle={TT} formatter={v => [`${v}%`, 'Margin']} />
-                  <Line
-                    dataKey="profit_margin" name="Margin"
-                    stroke="#3fb950" strokeWidth={2.5}
-                    dot={{ r:3, fill:'#3fb950' }} type="monotone"
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </ChartCard>
-          )}
-
+  const statuses = Object.entries(deliveryData?.statusBreakdown || {}).filter(([,value]) => value > 0);
+  const statusTotal = statuses.reduce((total,[,value]) => total + value, 0);
+  const actions = <>
+    <details className="period-control" onKeyDown={event => { if(event.key === 'Escape') event.currentTarget.open = false; }}>
+      <summary className="btn btn-secondary"><span className="material-symbols-outlined" aria-hidden="true" style={{fontSize:17}}>calendar_month</span>{period.label || 'Select period'}<span className="material-symbols-outlined" aria-hidden="true" style={{fontSize:16}}>expand_more</span></summary>
+      <div className="period-popover"><PeriodSelector onChange={handlePeriod} /><button className="btn btn-ghost btn-sm" onClick={event => { event.currentTarget.closest('details').open = false; }}>Done</button></div>
+    </details>
+    <button className="btn btn-secondary" disabled={loading} onClick={() => fetchDashboard(period)}><span className={`material-symbols-outlined ${loading ? 'spinner' : ''}`} aria-hidden="true" style={{fontSize:18}}>refresh</span>{loading ? 'Refreshing…' : 'Refresh'}</button>
+  </>;
+  return <DashboardShell title="Business overview" subtitle="Sales, stock and delivery at a glance." actions={actions}>
+    <div className="dashboard-stack" aria-busy={loading}>
+      {Object.keys(panelErrors).length > 0 && <div className="dashboard-notice" role="status"><p>Could not load: {Object.keys(panelErrors).join(', ')}. Available sections remain visible.</p><button className="btn btn-secondary btn-sm" disabled={loading} onClick={() => fetchDashboard(period)}>Retry</button></div>}
+      <section className="dashboard-summary" aria-label="Business summary">
+        <Metric label="Net revenue" value={money(netRevenue)} note={`${formatNumber(orderCount)} orders`} icon="bar_chart" loading={loading} error={panelErrors.sales} />
+        <Metric label="Net profit" value={money(totalProfit)} note={`${profitMargin}% margin`} icon="database" loading={loading} error={panelErrors.sales || panelErrors.finance} />
+        <Metric label="Avg order value" value={money(avgOrderValue)} note="Net revenue per order" icon="shopping_cart" loading={loading} error={panelErrors.sales} />
+        <Metric label="Outstanding" value={money(invoiceSummary?.total_outstanding)} note={invoiceSummary?.total_overdue > 0 ? `${money(invoiceSummary.total_overdue)} overdue` : 'None overdue · All dates'} icon="receipt_long" loading={loading} error={panelErrors.invoices} />
+        <Metric label="Deliveries" value={formatNumber(deliveryData?.total || 0)} note={`${formatNumber(deliveryData?.delivered || 0)} delivered`} icon="local_shipping" loading={loading} error={panelErrors.delivery} />
+        <Metric label="Inventory value" value={money(inventoryValue?.retail_value)} note={`${formatNumber(inventoryValue?.total_units || 0)} units · Current stock`} icon="inventory_2" loading={loading} error={panelErrors.inventory} />
+      </section>
+      <div className="dashboard-main-grid">
+        <Panel title="Revenue, expenses & profit" extra={<span>{period.label}</span>} loading={loading} error={panelErrors.finance}>
+          {finKpis.length ? <><ResponsiveContainer width="100%" height={330}><ComposedChart data={finKpis} margin={{top:8,right:12,left:0,bottom:12}} accessibilityLayer><CartesianGrid stroke="var(--color-border-light)" vertical={false} /><XAxis dataKey="period" tick={{fill:'var(--color-text-muted)',fontSize:10}} tickLine={false} axisLine={false} minTickGap={24} /><YAxis tickFormatter={value => Number(value) >= 1000 ? `${(value/1000).toFixed(0)}k` : value} tick={{fill:'var(--color-text-muted)',fontSize:10}} axisLine={false} tickLine={false} width={46} /><Tooltip contentStyle={TT} formatter={(value,name) => [money(value),name]} /><Legend formatter={value => <span style={{color:'var(--color-text)'}}>{value}</span>} verticalAlign="top" align="left" iconType="circle" iconSize={7} wrapperStyle={{fontSize:11,paddingBottom:28}} /><Bar dataKey="revenue" name="Revenue" fill="var(--color-chart-revenue)" radius={[2,2,0,0]} isAnimationActive={false} /><Bar dataKey="expenses" name="Expenses" fill="var(--color-chart-expenses)" radius={[2,2,0,0]} isAnimationActive={false} /><Line dataKey="profit" name="Profit" stroke="var(--color-chart-profit)" strokeWidth={2.5} dot={false} isAnimationActive={false} /></ComposedChart></ResponsiveContainer><p className="metric-note">Paid-order revenue and approved expenses for the selected period.</p></> : <Empty>No financial data for this period.</Empty>}
+        </Panel>
+        <div className="dashboard-side">
+          <Panel title="Quick actions">
+            {[['/warehouse/exit','deployed_code','Warehouse exit','Record items leaving the warehouse'],['/invoices/new','description','Create invoice','Generate a customer invoice'],['/delivery?delivery_type=own_driver','local_shipping','In-house deliveries','Manage Rehla drivers and deliveries']].map(([path,icon,title,note]) => <Link key={path} to={path} className="quick-action"><span className="material-symbols-outlined" aria-hidden="true">{icon}</span><div><strong>{title}</strong><p>{note}</p></div><span className="material-symbols-outlined" aria-hidden="true">chevron_right</span></Link>)}
+          </Panel>
+          <Panel title="Delivery status" extra={!loading && !panelErrors.delivery ? <span>{formatNumber(deliveryData?.total || 0)} total</span> : null} loading={loading} error={panelErrors.delivery}>
+            {statuses.length ? <div className="delivery-distribution">{statuses.map(([name,value]) => <div key={name} className="distribution-row" style={{'--status-color':statusColor(name)}}><span><i aria-hidden="true" />{name.replaceAll('_',' ')}</span><div className="distribution-track" aria-hidden="true"><span style={{width:`${value/statusTotal*100}%`}} /></div><span className="distribution-percent">{Math.round(value/statusTotal*100)}%</span><span>{formatNumber(value)}</span></div>)}</div> : <Empty>No deliveries for this period.</Empty>}
+          </Panel>
         </div>
       </div>
-    </DashboardShell>
-  );
+      <div className="dashboard-bottom-grid">
+        <Panel title="Top products" extra={<Link to="/analytics">View analytics →</Link>} loading={loading} error={panelErrors.products}>
+          {topProducts.length ? <div className="table-container"><table className="data-table"><thead><tr><th scope="col">Product</th><th scope="col" style={{textAlign:'right'}}>Units</th><th scope="col" style={{textAlign:'right'}}>Revenue (EGP)</th></tr></thead><tbody>{topProducts.slice(0,5).map((product,index) => <tr key={product.sku || `${product.name}-${index}`}><td style={{whiteSpace:'normal',minWidth:170}}>{product.name}</td><td style={{textAlign:'right'}}>{formatNumber(product.units)}</td><td style={{textAlign:'right',fontWeight:600}}>{Number(product.revenue || 0).toLocaleString('en-EG',{maximumFractionDigits:0})}</td></tr>)}</tbody></table></div> : <Empty>No product sales for this period.</Empty>}
+        </Panel>
+        <Panel title="Delivery services">
+          <div className="delivery-service"><span className="material-symbols-outlined" aria-hidden="true">shopping_bag</span><div><strong>Shopify orders → Bosta</strong><p>Shopify orders are handed to Bosta for delivery.</p><Link className="btn btn-ghost btn-sm" to="/bosta" style={{paddingLeft:0}}>View Bosta deliveries<span className="material-symbols-outlined" aria-hidden="true" style={{fontSize:16}}>arrow_forward</span></Link></div></div>
+          <div className="delivery-service"><span className="material-symbols-outlined" aria-hidden="true">local_shipping</span><div><strong>Rehla in-house delivery</strong><p>Managed separately. Not linked to Shopify yet.</p><Link className="btn btn-ghost btn-sm" to="/delivery?delivery_type=own_driver" style={{paddingLeft:0}}>View in-house deliveries<span className="material-symbols-outlined" aria-hidden="true" style={{fontSize:16}}>arrow_forward</span></Link></div></div>
+        </Panel>
+      </div>
+      <p className="dashboard-footnote">{period.label} · Outstanding invoices cover all dates. Inventory reflects current stock.</p>
+    </div>
+  </DashboardShell>;
 }
