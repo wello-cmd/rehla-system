@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index.js';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatDate } from '../lib/formatters';
@@ -10,7 +11,7 @@ function Badge({ status }) {
               : status === 'pending' ? 'warning'
               : status === 'failed'  ? 'error'
               : 'neutral';
-  return <span className={`badge badge-${color}`} style={{ fontSize: 10 }}>{status}</span>;
+  return <span className={`badge badge-${color}`} style={{ fontSize: 10 }}>{translate(status)}</span>;
 }
 
 export default function CustomersPage() {
@@ -49,7 +50,7 @@ export default function CustomersPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setImporting(true);
-    const t = toast.loading('Importing customer data from CSV...');
+    const t = toast.loading(translate('Importing customer data from CSV...'));
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -64,7 +65,7 @@ export default function CustomersPage() {
       toast.success(`Imported ${data.updated} customers (${data.skipped} skipped)`, { id: t });
       load();
     } catch (err) {
-      toast.error(err.message || 'Import failed', { id: t });
+      toast.error(translate(err.message || 'Import failed'), { id: t });
     } finally {
       setImporting(false);
       e.target.value = '';
@@ -75,10 +76,10 @@ export default function CustomersPage() {
     setSyncing(true);
     try {
       await api.post('/shopify/sync', {});
-      toast.success('Shopify sync started — reload in a moment');
+      toast.success(translate("Shopify sync started — reload in a moment"));
       setTimeout(() => load(), 5000);
     } catch {
-      toast.error('Sync failed');
+      toast.error(translate("Sync failed"));
     } finally {
       setSyncing(false);
     }
@@ -105,30 +106,30 @@ export default function CustomersPage() {
   const totalOrders  = customers.reduce((s, c) => s + c.order_count, 0);
 
   function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => toast.success('Copied'));
+    navigator.clipboard.writeText(text).then(() => toast.success(translate("Copied")));
   }
 
   return (
-    <DashboardShell title="Customers">
+    <DashboardShell title={translate("Customers")}>
       <LoadNotice error={loadError} loading={loading} onRetry={load} stale={hasLoaded} />
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 14, marginBottom: 24 }}>
         <div className="card">
-          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>Total Customers</p>
-          <p style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{hasLoaded ? customers.length : loading ? 'Loading…' : 'Unavailable'}</p>
+          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>{translate("Total Customers")}</p>
+          <p style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{hasLoaded ? customers.length : loading ? translate("Loading…") : translate("Unavailable")}</p>
         </div>
         <div className="card">
-          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>Total Orders</p>
-          <p style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{hasLoaded ? totalOrders : loading ? 'Loading…' : 'Unavailable'}</p>
+          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>{translate("Total Orders")}</p>
+          <p style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{hasLoaded ? totalOrders : loading ? translate("Loading…") : translate("Unavailable")}</p>
         </div>
         <div className="card">
-          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>Total Revenue</p>
-          <p style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{hasLoaded ? formatEGP(totalRevenue) : loading ? 'Loading…' : 'Unavailable'}</p>
+          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>{translate("Total Revenue")}</p>
+          <p style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{hasLoaded ? formatEGP(totalRevenue) : loading ? translate("Loading…") : translate("Unavailable")}</p>
         </div>
         <div className="card">
-          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>Repeat Customers</p>
+          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>{translate("Repeat Customers")}</p>
           <p style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
-            {hasLoaded ? customers.filter(c => c.order_count > 1).length : loading ? 'Loading…' : 'Unavailable'}
+            {hasLoaded ? customers.filter(c => c.order_count > 1).length : loading ? translate("Loading…") : translate("Unavailable")}
           </p>
           <p style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>
             {customers.length > 0
@@ -147,9 +148,7 @@ export default function CustomersPage() {
         }}>
           <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--color-warning, #e6a817)', flexShrink: 0 }}>warning</span>
           <p style={{ fontSize: 13, flex: 1 }}>
-            <strong>{anonymousCount} orders</strong> ({formatEGP(anonymousRevenue)}) have no customer data and are hidden.
-            Run a Shopify sync to populate phone numbers and names.
-          </p>
+            <strong>{anonymousCount} {translate("orders")}</strong> ({formatEGP(anonymousRevenue)}{translate(") have no customer data and are hidden. Run a Shopify sync to populate phone numbers and names.")} </p>
           <button
             className="btn btn-sm btn-secondary"
             onClick={triggerSync}
@@ -157,7 +156,7 @@ export default function CustomersPage() {
             style={{ flexShrink: 0, fontSize: 12 }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sync</span>
-            {syncing ? 'Syncing…' : 'Sync Shopify'}
+            {syncing ? translate("Syncing…") : translate("Sync Shopify")}
           </button>
         </div>
       )}
@@ -171,15 +170,15 @@ export default function CustomersPage() {
             background: 'var(--color-bg-elevated)', fontSize: 12, color: 'var(--color-text-muted)',
             opacity: importing ? 0.6 : 1,
           }}
-          title="Export customers from Shopify Admin → Customers → Export, then upload the CSV here"
+          title={translate("Export customers from Shopify Admin → Customers → Export, then upload the CSV here")}
         >
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>upload_file</span>
-          {importing ? 'Importing…' : 'Import Shopify CSV'}
+          {importing ? translate("Importing…") : translate("Import Shopify CSV")}
         </button>
-        <input ref={csvRef} aria-label="Import Shopify customers CSV" type="file" accept=".csv" hidden onChange={handleCsvImport} disabled={importing} />
+        <input ref={csvRef} aria-label={translate("Import Shopify customers CSV")} type="file" accept=".csv" hidden onChange={handleCsvImport} disabled={importing} />
         <input
           className="input"
-          aria-label="Search customers" placeholder="Search by name, phone, or email..."
+          aria-label={translate("Search customers")} placeholder={translate("Search by name, phone, or email...")}
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{ flex: 1, minWidth: 240, padding: '8px 12px', fontSize: 13 }}
@@ -200,12 +199,12 @@ export default function CustomersPage() {
                 color:       sortBy === s.id ? 'var(--color-text)'      : 'var(--color-text-muted)',
               }}
             >
-              {s.label}
+              {translate(s.label)}
             </button>
           ))}
         </div>
         <span style={{ fontSize: 12, color: 'var(--color-text-dim)', fontFamily: 'var(--font-mono)' }}>
-          {hasLoaded ? `${filtered.length} customers` : loading ? 'Loading customers…' : 'Customer count unavailable'}
+          {hasLoaded ? `${filtered.length} customers` : loading ? translate("Loading customers…") : translate("Customer count unavailable")}
         </span>
       </div>
 
@@ -215,9 +214,7 @@ export default function CustomersPage() {
           {[1,2,3,4,5].map(i => <div key={i} className="skeleton" style={{ height: 56 }} />)}
         </div>
       ) : loadError && !hasLoaded ? null : filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-dim)' }}>
-          No customers found
-        </div>
+        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-dim)' }}> {translate("No customers found")} </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {filtered.map(c => (
@@ -237,12 +234,10 @@ export default function CustomersPage() {
               >
                 {/* Name */}
                 <div>
-                  <button type="button" className="customer-expand" aria-expanded={expanded === c.key} aria-controls={`customer-orders-${encodeURIComponent(c.key)}`} onClick={() => setExpanded(expanded === c.key ? null : c.key)}>{c.name || '(No name)'}<span className="material-symbols-outlined" aria-hidden="true">{expanded === c.key ? 'expand_less' : 'expand_more'}</span></button>
+                  <button type="button" className="customer-expand" aria-expanded={expanded === c.key} aria-controls={`customer-orders-${encodeURIComponent(c.key)}`} onClick={() => setExpanded(expanded === c.key ? null : c.key)}>{c.name || translate("(No name)")}<span className="material-symbols-outlined" aria-hidden="true">{expanded === c.key ? 'expand_less' : 'expand_more'}</span></button>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 2 }}>
                     {c.order_count > 1 && (
-                      <span style={{ fontSize: 10, color: 'var(--color-success)', fontWeight: 500 }}>
-                        Repeat customer
-                      </span>
+                      <span style={{ fontSize: 10, color: 'var(--color-success)', fontWeight: 500 }}> {translate("Repeat customer")} </span>
                     )}
                     {(c.city || c.province) && (
                       <span style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>
@@ -260,7 +255,7 @@ export default function CustomersPage() {
                       className="font-mono"
                       onClick={e => { e.stopPropagation(); copyToClipboard(c.phone); }}
                       style={{ fontSize: 12, color: 'var(--color-text)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted' }}
-                      title="Click to copy"
+                      title={translate("Click to copy")}
                     >
                       {c.phone}
                     </button>
@@ -288,25 +283,25 @@ export default function CustomersPage() {
                 {/* Orders */}
                 <div style={{ textAlign: 'center' }}>
                   <p className="font-mono" style={{ fontSize: 16, fontWeight: 700 }}>{c.order_count}</p>
-                  <p style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>orders</p>
+                  <p style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>{translate("orders")}</p>
                 </div>
 
                 {/* Total spent */}
-                <div style={{ textAlign: 'right' }}>
+                <div style={{ textAlign: "end" }}>
                   <p className="font-mono" style={{ fontSize: 13, fontWeight: 700 }}>{formatEGP(c.total_spent)}</p>
-                  <p style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>total spent</p>
+                  <p style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>{translate("total spent")}</p>
                 </div>
 
                 {/* Last order */}
-                <div style={{ textAlign: 'right' }}>
+                <div style={{ textAlign: "end" }}>
                   <p style={{ fontSize: 12 }}>{formatDate(c.last_order_at)}</p>
-                  <p style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>last order</p>
+                  <p style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>{translate("last order")}</p>
                 </div>
 
                 {/* Avg */}
-                <div style={{ textAlign: 'right' }}>
+                <div style={{ textAlign: "end" }}>
                   <p className="font-mono" style={{ fontSize: 11 }}>{formatEGP(c.avg_order_value)}</p>
-                  <p style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>avg</p>
+                  <p style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>{translate("avg")}</p>
                 </div>
 
                 {/* Expand icon */}
@@ -320,19 +315,18 @@ export default function CustomersPage() {
               {/* Expanded order history */}
               {expanded === c.key && (
                 <div id={`customer-orders-${encodeURIComponent(c.key)}`} style={{ borderTop: '1px solid var(--color-border-light)', background: 'var(--color-bg)', padding: '12px 16px' }}>
-                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 10, fontSize: 11 }}>
-                    ORDER HISTORY ({c.orders.length}{c.order_count > 20 ? '+' : ''})
+                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 10, fontSize: 11 }}> {translate("ORDER HISTORY (")}{c.orders.length}{c.order_count > 20 ? '+' : ''})
                   </p>
                   <div style={{ overflowX: 'auto' }}>
                     <table className="data-table" style={{ fontSize: 12 }}>
                       <thead>
                         <tr>
-                          <th>Order #</th>
-                          <th>Date</th>
-                          <th>Total</th>
-                          <th>Discount</th>
-                          <th>Status</th>
-                          <th>Payment</th>
+                          <th>{translate("Order #")}</th>
+                          <th>{translate("Date")}</th>
+                          <th>{translate("Total")}</th>
+                          <th>{translate("Discount")}</th>
+                          <th>{translate("Status")}</th>
+                          <th>{translate("Payment")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -368,8 +362,7 @@ export default function CustomersPage() {
                         className="btn btn-sm btn-secondary"
                         style={{ fontSize: 12, textDecoration: 'none' }}
                       >
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>call</span>
-                        Call {c.phone}
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>call</span> {translate("Call")} {c.phone}
                       </a>
                     )}
                     {c.phone && (
@@ -380,9 +373,7 @@ export default function CustomersPage() {
                         className="btn btn-sm btn-secondary"
                         style={{ fontSize: 12, textDecoration: 'none' }}
                       >
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>chat</span>
-                        WhatsApp
-                      </a>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>chat</span> {translate("WhatsApp")} </a>
                     )}
                     {c.email && (
                       <a
@@ -390,9 +381,7 @@ export default function CustomersPage() {
                         className="btn btn-sm btn-secondary"
                         style={{ fontSize: 12, textDecoration: 'none' }}
                       >
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>mail</span>
-                        Email
-                      </a>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>mail</span> {translate("Email")} </a>
                     )}
                   </div>
                 </div>

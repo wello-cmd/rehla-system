@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index.js';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import LoadNotice from '../components/ui/LoadNotice';
@@ -100,15 +101,15 @@ export default function DeliveryPage() {
 
   async function assignDriver(e) {
     e.preventDefault();
-    if (!assigning || !selectedDriverId) return toast.error('Select a driver first');
+    if (!assigning || !selectedDriverId) return toast.error(translate("Select a driver first"));
     try {
       await api.post('/delivery/assign', { delivery_id: assigning.id, driver_id: selectedDriverId });
-      toast.success('Driver assigned');
+      toast.success(translate("Driver assigned"));
       setAssigning(null);
       setSelectedDriverId('');
       fetchData();
     } catch (err) {
-      toast.error(err.message || 'Failed to assign driver');
+      toast.error(translate(err.message || 'Failed to assign driver'));
     }
   }
 
@@ -120,18 +121,18 @@ export default function DeliveryPage() {
         status: newStatus,
         failed_reason: newStatus === 'failed' ? failedReason : null
       });
-      toast.success('Delivery status updated');
+      toast.success(translate("Delivery status updated"));
       setStatusTarget(null);
       fetchData();
     } catch (err) {
-      toast.error(err.message || 'Failed to update delivery status');
+      toast.error(translate(err.message || 'Failed to update delivery status'));
     }
   }
 
   async function createBostaShipment(e) {
     e.preventDefault();
     if (!bostaTarget) return;
-    const loadingToast = toast.loading('Creating Bosta shipment...');
+    const loadingToast = toast.loading(translate('Creating Bosta shipment...'));
     try {
       const result = await api.post('/delivery/bosta/create', {
         delivery_order_id: bostaTarget.id,
@@ -147,7 +148,7 @@ export default function DeliveryPage() {
       setBostaTarget(null);
       fetchData();
     } catch (err) {
-      toast.error(err.message || 'Failed to create Bosta shipment', { id: loadingToast });
+      toast.error(translate(err.message || 'Failed to create Bosta shipment'), { id: loadingToast });
     }
   }
 
@@ -157,7 +158,7 @@ export default function DeliveryPage() {
       const data = await api.get('/delivery/dispatch-queue');
       setQueue(data);
     } catch (err) {
-      toast.error(err.message || 'Failed to load dispatch queue');
+      toast.error(translate(err.message || 'Failed to load dispatch queue'));
     } finally {
       setQueueLoading(false);
     }
@@ -165,15 +166,15 @@ export default function DeliveryPage() {
 
   async function quickAssign(e) {
     e.preventDefault();
-    if (!quickAssignTarget || !quickDriverId) return toast.error('Select a driver');
+    if (!quickAssignTarget || !quickDriverId) return toast.error(translate("Select a driver"));
     try {
       await api.post('/delivery/assign', { delivery_id: quickAssignTarget.id, driver_id: quickDriverId });
-      toast.success('Driver assigned');
+      toast.success(translate("Driver assigned"));
       setQuickAssignTarget(null);
       setQuickDriverId('');
       fetchQueue();
     } catch (err) {
-      toast.error(err.message || 'Failed to assign driver');
+      toast.error(translate(err.message || 'Failed to assign driver'));
     }
   }
 
@@ -185,16 +186,16 @@ export default function DeliveryPage() {
         setTracking(prev => ({ ...prev, [delivery.id]: data }));
       }
     } catch (err) {
-      if (showError) toast.error(err.message || 'Failed to fetch Bosta status');
+      if (showError) toast.error(translate(err.message || 'Failed to fetch Bosta status'));
     }
   }
 
   async function downloadLabel(delivery) {
-    if (!delivery.bosta_shipment_id) return toast.error('No Bosta shipment ID for this order');
+    if (!delivery.bosta_shipment_id) return toast.error(translate("No Bosta shipment ID for this order"));
     try {
       await api.downloadBlob(`/delivery/bosta/label/${delivery.bosta_shipment_id}`, `bosta-label-${delivery.bosta_shipment_id}.pdf`);
     } catch (err) {
-      toast.error(err.message || 'Failed to download label');
+      toast.error(translate(err.message || 'Failed to download label'));
     }
   }
 
@@ -219,7 +220,7 @@ export default function DeliveryPage() {
       setDriverModalOpen(false);
       fetchData();
     } catch (err) {
-      toast.error(err.message || 'Failed to save driver');
+      toast.error(translate(err.message || 'Failed to save driver'));
     }
   }
 
@@ -227,10 +228,10 @@ export default function DeliveryPage() {
     if (!window.confirm(`Delete ${driver.name}? Active assignments will be returned to pending.`)) return;
     try {
       await api.delete(`/drivers/${driver.id}`);
-      toast.success('Driver deleted');
+      toast.success(translate("Driver deleted"));
       fetchData();
     } catch (err) {
-      toast.error(err.message || 'Failed to delete driver');
+      toast.error(translate(err.message || 'Failed to delete driver'));
     }
   }
 
@@ -241,7 +242,7 @@ export default function DeliveryPage() {
       });
       fetchData();
     } catch (err) {
-      toast.error(err.message || 'Failed to update availability');
+      toast.error(translate(err.message || 'Failed to update availability'));
     }
   }
 
@@ -249,7 +250,7 @@ export default function DeliveryPage() {
   const costComparison = useMemo(() => Object.entries(analytics?.costComparison || {}).map(([type, data]) => ({ type: type.replace('_', ' '), ...data })), [analytics]);
 
   return (
-    <DashboardShell title="Delivery Management">
+    <DashboardShell title={translate("Delivery Management")}>
       <LoadNotice error={loadError} loading={loading} onRetry={fetchData} stale={hasLoaded} />
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
         {[['dispatcher', 'Dispatcher'], ['dispatch-queue', 'Dispatch Queue'], ['drivers', 'Drivers'], ['analytics', 'Analytics']].filter(([id]) => id === 'dispatcher' || (id === 'drivers' ? canManageDrivers : id === 'analytics' ? canReport : canDispatch)).map(([id, label]) => (
@@ -259,7 +260,7 @@ export default function DeliveryPage() {
             aria-pressed={activeTab === id}
             onClick={() => { setActiveTab(id); if (id === 'dispatch-queue') fetchQueue(); }}
           >
-            {label}
+            {translate(label)}
           </button>
         ))}
       </div>
@@ -269,22 +270,22 @@ export default function DeliveryPage() {
           {canReport && hasLoaded && <SummaryCards summary={summary} />}
 
           <form onSubmit={applyFilters} className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
-            <select className="input select" aria-label="Filter by delivery status" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
-              <option value="">All statuses</option>
-              {STATUS_OPTIONS.map(status => <option key={status} value={status}>{status.replace(/_/g, ' ')}</option>)}
+            <select className="input select" aria-label={translate("Filter by delivery status")} value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
+              <option value="">{translate("All statuses")}</option>
+              {STATUS_OPTIONS.map(status => <option key={status} value={status}>{translate(status)}</option>)}
             </select>
-            <select className="input select" aria-label="Filter by driver" value={filters.driver_id} onChange={(e) => setFilters({ ...filters, driver_id: e.target.value })}>
-              <option value="">All drivers</option>
+            <select className="input select" aria-label={translate("Filter by driver")} value={filters.driver_id} onChange={(e) => setFilters({ ...filters, driver_id: e.target.value })}>
+              <option value="">{translate("All drivers")}</option>
               {drivers.map(driver => <option key={driver.id} value={driver.id}>{driver.name}</option>)}
             </select>
-            <select className="input select" aria-label="Filter by delivery type" value={filters.delivery_type} onChange={(e) => setFilters({ ...filters, delivery_type: e.target.value })}>
-              <option value="">All types</option>
-              <option value="own_driver">Own Driver</option>
-              <option value="bosta">Bosta Courier</option>
+            <select className="input select" aria-label={translate("Filter by delivery type")} value={filters.delivery_type} onChange={(e) => setFilters({ ...filters, delivery_type: e.target.value })}>
+              <option value="">{translate("All types")}</option>
+              <option value="own_driver">{translate("Own Driver")}</option>
+              <option value="bosta">{translate("Bosta Courier")}</option>
             </select>
-            <input className="input" type="date" aria-label="Start date" value={filters.start} onChange={(e) => setFilters({ ...filters, start: e.target.value })} />
-            <input className="input" type="date" aria-label="End date" value={filters.end} onChange={(e) => setFilters({ ...filters, end: e.target.value })} />
-            <button className="btn btn-primary" type="submit">Apply</button>
+            <input className="input" type="date" aria-label={translate("Start date")} value={filters.start} onChange={(e) => setFilters({ ...filters, start: e.target.value })} />
+            <input className="input" type="date" aria-label={translate("End date")} value={filters.end} onChange={(e) => setFilters({ ...filters, end: e.target.value })} />
+            <button className="btn btn-primary" type="submit">{translate("Apply")}</button>
           </form>
 
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -292,22 +293,22 @@ export default function DeliveryPage() {
               <table className="data-table t-delivery">
                 <thead>
                   <tr>
-                    <th>Order</th>
-                    <th>Customer</th>
-                    <th>Address</th>
-                    <th>Type</th>
-                    <th>Driver / Courier</th>
-                    <th>COD</th>
-                    <th>Status</th>
-                    <th>Tracking</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
+                    <th>{translate("Order")}</th>
+                    <th>{translate("Customer")}</th>
+                    <th>{translate("Address")}</th>
+                    <th>{translate("Type")}</th>
+                    <th>{translate("Driver / Courier")}</th>
+                    <th>{translate("COD")}</th>
+                    <th>{translate("Status")}</th>
+                    <th>{translate("Tracking")}</th>
+                    <th style={{ textAlign: "end" }}>{translate("Actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan="9" style={{ padding: 32, textAlign: 'center' }}>Loading deliveries...</td></tr>
-                  ) : loadError && !hasLoaded ? <tr><td colSpan="9" style={{padding:32}}>Delivery data is unavailable. Use Retry above.</td></tr> : deliveries.length === 0 ? (
-                    <tr><td colSpan="9" style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-dim)' }}>No delivery orders found.</td></tr>
+                    <tr><td colSpan="9" style={{ padding: 32, textAlign: 'center' }}>{translate("Loading deliveries...")}</td></tr>
+                  ) : loadError && !hasLoaded ? <tr><td colSpan="9" style={{padding:32}}>{translate("Delivery data is unavailable. Use Retry above.")}</td></tr> : deliveries.length === 0 ? (
+                    <tr><td colSpan="9" style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-dim)' }}>{translate("No delivery orders found.")}</td></tr>
                   ) : deliveries.map(delivery => (
                     <tr key={delivery.id}>
                       <td className="font-mono">{delivery.orders?.shopify_order_name || `#${delivery.orders?.order_number || delivery.id.slice(0, 8)}`}</td>
@@ -315,7 +316,7 @@ export default function DeliveryPage() {
                         <strong>{delivery.orders?.customer_name}</strong>
                         <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{delivery.orders?.customer_phone}</div>
                       </td>
-                      <td style={{ maxWidth: 260 }}>{delivery.customer_address || 'No address'}</td>
+                      <td style={{ maxWidth: 260 }}>{delivery.customer_address || translate("No address")}</td>
                       <td>
                         <select
                           className="input select"
@@ -334,47 +335,47 @@ export default function DeliveryPage() {
                           onChange={async (e) => {
                             try {
                               await api.patch(`/delivery/orders/${delivery.id}/type`, { delivery_type: e.target.value });
-                              toast.success('Delivery type updated');
+                              toast.success(translate("Delivery type updated"));
                               fetchData();
                             } catch (err) {
-                              toast.error(err.message || 'Failed to update delivery type');
+                              toast.error(translate(err.message || 'Failed to update delivery type'));
                             }
                           }}
                         >
-                          <option value="own_driver">Own Driver</option>
-                          <option value="bosta">Bosta Courier</option>
+                          <option value="own_driver">{translate("Own Driver")}</option>
+                          <option value="bosta">{translate("Bosta Courier")}</option>
                         </select>
                       </td>
                       <td>
-                        {delivery.drivers?.name || (delivery.delivery_type === 'bosta' ? 'Bosta' : 'Unassigned')}
+                        {delivery.drivers?.name || (delivery.delivery_type === 'bosta' ? translate("Bosta") : translate("Unassigned"))}
                         {delivery.drivers?.availability_status && (
-                          <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{delivery.drivers.availability_status}</div>
+                          <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{translate(delivery.drivers.availability_status)}</div>
                         )}
                       </td>
                       <td>
                         {formatEGP(delivery.cod_amount)}
                         <div style={{ fontSize: 11, color: delivery.cod_collected ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
-                          {delivery.cod_collected ? 'Collected' : 'Outstanding'}
+                          {delivery.cod_collected ? translate("Collected") : translate("Outstanding")}
                         </div>
                       </td>
-                      <td><span className={`badge badge-${getStatusColor(delivery.status)}`}>{delivery.status.replace(/_/g, ' ')}</span></td>
+                      <td><span className={`badge badge-${getStatusColor(delivery.status)}`}>{translate(delivery.status)}</span></td>
                       <td>
                         {delivery.tracking_number ? (
                           <>
                             <div className="font-mono" style={{ fontSize: 12 }}>{delivery.tracking_number}</div>
-                            <button className="btn btn-secondary btn-sm" onClick={() => trackBosta(delivery, true)}>Track</button>
+                            <button className="btn btn-secondary btn-sm" onClick={() => trackBosta(delivery, true)}>{translate("Track")}</button>
                             {tracking[delivery.id] && (
                               <div style={{ fontSize: 12, marginTop: 4 }}>{tracking[delivery.id].statusName || tracking[delivery.id].status}</div>
                             )}
                           </>
                         ) : '—'}
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td style={{ textAlign: "end" }}>
                         <div style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                          <button className="btn btn-secondary btn-sm" onClick={() => { setAssigning(delivery); setSelectedDriverId(''); }}>Assign</button>
-                          {canDispatch && <button className="btn btn-secondary btn-sm" onClick={() => { setStatusTarget(delivery); setNewStatus(delivery.status === 'assigned' ? 'out_for_delivery' : 'delivered'); }}>Status</button>}
-                          <button className="btn btn-primary btn-sm" onClick={() => { setBostaTarget(delivery); setBostaForm({ package_size: 'SMALL', city: 'Cairo', zone: '', cod_amount: delivery.cod_amount || '' }); }}>Bosta</button>
-                          {delivery.bosta_shipment_id && <button className="btn btn-secondary btn-sm" onClick={() => downloadLabel(delivery)}>Label</button>}
+                          <button className="btn btn-secondary btn-sm" onClick={() => { setAssigning(delivery); setSelectedDriverId(''); }}>{translate("Assign")}</button>
+                          {canDispatch && <button className="btn btn-secondary btn-sm" onClick={() => { setStatusTarget(delivery); setNewStatus(delivery.status === 'assigned' ? 'out_for_delivery' : 'delivered'); }}>{translate("Status")}</button>}
+                          <button className="btn btn-primary btn-sm" onClick={() => { setBostaTarget(delivery); setBostaForm({ package_size: 'SMALL', city: 'Cairo', zone: '', cod_amount: delivery.cod_amount || '' }); }}>{translate("Bosta")}</button>
+                          {delivery.bosta_shipment_id && <button className="btn btn-secondary btn-sm" onClick={() => downloadLabel(delivery)}>{translate("Label")}</button>}
                         </div>
                       </td>
                     </tr>
@@ -389,10 +390,8 @@ export default function DeliveryPage() {
       {activeTab === 'dispatch-queue' && (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <p style={{ fontSize: 13, color: 'var(--color-text-dim)' }}>
-              Own-driver orders awaiting dispatch — oldest first.
-            </p>
-            <button className="btn btn-secondary btn-sm" onClick={fetchQueue}>⟲ Refresh</button>
+            <p style={{ fontSize: 13, color: 'var(--color-text-dim)' }}> {translate("Own-driver orders awaiting dispatch — oldest first.")} </p>
+            <button className="btn btn-secondary btn-sm" onClick={fetchQueue}>{translate("⟲ Refresh")}</button>
           </div>
 
           {/* Driver availability bar */}
@@ -400,14 +399,14 @@ export default function DeliveryPage() {
             {queue.drivers.map(d => (
               <div key={d.id} style={{ padding: '8px 14px', borderRadius: 4, border: '1px solid var(--color-border-light)', fontSize: 12 }}>
                 <span style={{ fontWeight: 700 }}>{d.name}</span>
-                <span style={{ color: 'var(--color-text-dim)', marginLeft: 6 }}>{d.zone || 'No zone'}</span>
-                <span style={{ marginLeft: 10, padding: '2px 8px', borderRadius: 3, fontSize: 10, fontWeight: 700, background: d.availability_status === 'available' ? '#22c55e22' : '#f59e0b22', color: d.availability_status === 'available' ? '#22c55e' : '#f59e0b' }}>
-                  {d.availability_status}
+                <span style={{ color: 'var(--color-text-dim)', marginInlineStart: 6 }}>{d.zone || translate("No zone")}</span>
+                <span style={{ marginInlineStart: 10, padding: '2px 8px', borderRadius: 3, fontSize: 10, fontWeight: 700, background: d.availability_status === 'available' ? '#22c55e22' : '#f59e0b22', color: d.availability_status === 'available' ? '#22c55e' : '#f59e0b' }}>
+                  {translate(d.availability_status)}
                 </span>
-                <span className="font-mono" style={{ marginLeft: 8, color: 'var(--color-text-dim)', fontSize: 11 }}>{d.active_orders} active</span>
+                <span className="font-mono" style={{ marginInlineStart: 8, color: 'var(--color-text-dim)', fontSize: 11 }}>{d.active_orders} {translate("active")}</span>
               </div>
             ))}
-            {queue.drivers.length === 0 && <p style={{ fontSize: 13, color: 'var(--color-text-dim)' }}>No active drivers configured.</p>}
+            {queue.drivers.length === 0 && <p style={{ fontSize: 13, color: 'var(--color-text-dim)' }}>{translate("No active drivers configured.")}</p>}
           </div>
 
           {queueLoading ? (
@@ -417,7 +416,7 @@ export default function DeliveryPage() {
               <div className="table-container">
                 <table className="data-table">
                   <thead>
-                    <tr><th>Order</th><th>Customer</th><th>Address</th><th>COD</th><th>Status</th><th>Assigned Driver</th><th>Actions</th></tr>
+                    <tr><th>{translate("Order")}</th><th>{translate("Customer")}</th><th>{translate("Address")}</th><th>{translate("COD")}</th><th>{translate("Status")}</th><th>{translate("Assigned Driver")}</th><th>{translate("Actions")}</th></tr>
                   </thead>
                   <tbody>
                     {queue.orders.map(o => (
@@ -429,17 +428,17 @@ export default function DeliveryPage() {
                         </td>
                         <td style={{ fontSize: 12, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={o.customer_address}>{o.customer_address || '—'}</td>
                         <td className="font-mono" style={{ fontSize: 13 }}>{formatEGP(o.cod_amount || 0)}</td>
-                        <td><span className={`badge badge-${o.status === 'assigned' ? 'warning' : 'neutral'}`}>{o.status}</span></td>
-                        <td style={{ fontSize: 13 }}>{o.drivers?.name || <span style={{ color: 'var(--color-text-dim)' }}>Unassigned</span>}</td>
+                        <td><span className={`badge badge-${o.status === 'assigned' ? 'warning' : 'neutral'}`}>{translate(o.status)}</span></td>
+                        <td style={{ fontSize: 13 }}>{o.drivers?.name || <span style={{ color: 'var(--color-text-dim)' }}>{translate("Unassigned")}</span>}</td>
                         <td>
                           <button className="btn btn-primary btn-sm" style={{ fontSize: 11 }} onClick={() => { setQuickAssignTarget(o); setQuickDriverId(''); }}>
-                            {o.drivers ? 'Reassign' : 'Assign Driver'}
+                            {o.drivers ? translate("Reassign") : translate("Assign Driver")}
                           </button>
                         </td>
                       </tr>
                     ))}
                     {queue.orders.length === 0 && (
-                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-dim)' }}>No pending own-driver orders.</td></tr>
+                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-dim)' }}>{translate("No pending own-driver orders.")}</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -455,19 +454,19 @@ export default function DeliveryPage() {
               </p>
               <form onSubmit={quickAssign} style={{ display: 'grid', gap: 16 }}>
                 <div>
-                  <label className="text-label" style={{ display: 'block', marginBottom: 6 }}>Select Driver</label>
-                  <select className="input" required aria-label="Choose driver" value={quickDriverId} onChange={e => setQuickDriverId(e.target.value)}>
-                    <option value="">— Choose driver —</option>
+                  <label className="text-label" style={{ display: 'block', marginBottom: 6 }}>{translate("Select Driver")}</label>
+                  <select className="input" required aria-label={translate("Choose driver")} value={quickDriverId} onChange={e => setQuickDriverId(e.target.value)}>
+                    <option value="">{translate("— Choose driver —")}</option>
                     {queue.drivers.map(d => (
                       <option key={d.id} value={d.id}>
-                        {d.name} ({d.zone || 'No zone'}) — {d.active_orders} active orders — {d.availability_status}
+                        {d.name} ({d.zone || translate("No zone")}) — {d.active_orders} {translate("active orders —")} {translate(d.availability_status)}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setQuickAssignTarget(null)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary btn-sm">Assign</button>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setQuickAssignTarget(null)}>{translate("Cancel")}</button>
+                  <button type="submit" className="btn btn-primary btn-sm">{translate("Assign")}</button>
                 </div>
               </form>
             </Modal>
@@ -489,69 +488,69 @@ export default function DeliveryPage() {
       )}
 
       {assigning && (
-        <Modal title="Assign Own Driver" onClose={() => setAssigning(null)}>
+        <Modal title={translate("Assign Own Driver")} onClose={() => setAssigning(null)}>
           <form onSubmit={assignDriver} style={{ display: 'grid', gap: 16 }}>
-            <select className="input select" aria-label="Choose available driver" value={selectedDriverId} onChange={(e) => setSelectedDriverId(e.target.value)} required>
-              <option value="">Choose active available driver</option>
+            <select className="input select" aria-label={translate("Choose available driver")} value={selectedDriverId} onChange={(e) => setSelectedDriverId(e.target.value)} required>
+              <option value="">{translate("Choose active available driver")}</option>
               {drivers.filter(driver => driver.status === 'active' && driver.availability_status !== 'busy').map(driver => (
-                <option key={driver.id} value={driver.id}>{driver.name} ({driver.zone || 'No zone'})</option>
+                <option key={driver.id} value={driver.id}>{driver.name} ({driver.zone || translate("No zone")})</option>
               ))}
             </select>
-            <button className="btn btn-primary" type="submit">Assign Driver</button>
+            <button className="btn btn-primary" type="submit">{translate("Assign Driver")}</button>
           </form>
         </Modal>
       )}
 
       {statusTarget && (
-        <Modal title="Update Delivery Status" onClose={() => setStatusTarget(null)}>
+        <Modal title={translate("Update Delivery Status")} onClose={() => setStatusTarget(null)}>
           <form onSubmit={updateStatus} style={{ display: 'grid', gap: 16 }}>
-            <select className="input select" aria-label="Delivery status" value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required>
-              {STATUS_OPTIONS.map(status => <option key={status} value={status}>{status.replace(/_/g, ' ')}</option>)}
+            <select className="input select" aria-label={translate("Delivery status")} value={newStatus} onChange={(e) => setNewStatus(e.target.value)} required>
+              {STATUS_OPTIONS.map(status => <option key={status} value={status}>{translate(status)}</option>)}
             </select>
             {newStatus === 'failed' && (
-              <select className="input select" aria-label="Failure reason" value={failedReason} onChange={(e) => setFailedReason(e.target.value)} required>
-                {FAILURE_REASONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              <select className="input select" aria-label={translate("Failure reason")} value={failedReason} onChange={(e) => setFailedReason(e.target.value)} required>
+                {FAILURE_REASONS.map(([value, label]) => <option key={value} value={value}>{translate(label)}</option>)}
               </select>
             )}
-            <button className="btn btn-primary" type="submit">Save Status</button>
+            <button className="btn btn-primary" type="submit">{translate("Save Status")}</button>
           </form>
         </Modal>
       )}
 
       {bostaTarget && (
-        <Modal title="Create Bosta Shipment" onClose={() => setBostaTarget(null)}>
+        <Modal title={translate("Create Bosta Shipment")} onClose={() => setBostaTarget(null)}>
           <form onSubmit={createBostaShipment} style={{ display: 'grid', gap: 12 }}>
-            <input className="input" aria-label="Customer name" value={bostaTarget.orders?.customer_name || ''} readOnly />
-            <input className="input" aria-label="Customer phone" value={bostaTarget.orders?.customer_phone || ''} readOnly />
-            <input className="input" aria-label="Delivery address" value={bostaTarget.customer_address || ''} readOnly />
-            <select className="input select" aria-label="Package size" value={bostaForm.package_size} onChange={(e) => setBostaForm({ ...bostaForm, package_size: e.target.value })}>
-              <option value="SMALL">Small</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="LARGE">Large</option>
+            <input className="input" aria-label={translate("Customer name")} value={bostaTarget.orders?.customer_name || ''} readOnly />
+            <input className="input" aria-label={translate("Customer phone")} value={bostaTarget.orders?.customer_phone || ''} readOnly />
+            <input className="input" aria-label={translate("Delivery address")} value={bostaTarget.customer_address || ''} readOnly />
+            <select className="input select" aria-label={translate("Package size")} value={bostaForm.package_size} onChange={(e) => setBostaForm({ ...bostaForm, package_size: e.target.value })}>
+              <option value="SMALL">{translate("Small")}</option>
+              <option value="MEDIUM">{translate("Medium")}</option>
+              <option value="LARGE">{translate("Large")}</option>
             </select>
-            <input className="input" aria-label="City" value={bostaForm.city} onChange={(e) => setBostaForm({ ...bostaForm, city: e.target.value })} placeholder="City" />
-            <input className="input" aria-label="Zone" value={bostaForm.zone} onChange={(e) => setBostaForm({ ...bostaForm, zone: e.target.value })} placeholder="Zone" />
-            <input className="input" type="number" aria-label="COD amount in EGP" value={bostaForm.cod_amount} onChange={(e) => setBostaForm({ ...bostaForm, cod_amount: e.target.value })} placeholder="COD amount EGP" />
-            <button className="btn btn-primary" type="submit">Create Shipment</button>
+            <input className="input" aria-label={translate("City")} value={bostaForm.city} onChange={(e) => setBostaForm({ ...bostaForm, city: e.target.value })} placeholder={translate("City")} />
+            <input className="input" aria-label={translate("Zone")} value={bostaForm.zone} onChange={(e) => setBostaForm({ ...bostaForm, zone: e.target.value })} placeholder={translate("Zone")} />
+            <input className="input" type="number" aria-label={translate("COD amount in EGP")} value={bostaForm.cod_amount} onChange={(e) => setBostaForm({ ...bostaForm, cod_amount: e.target.value })} placeholder={translate("COD amount EGP")} />
+            <button className="btn btn-primary" type="submit">{translate("Create Shipment")}</button>
           </form>
         </Modal>
       )}
 
       {driverModalOpen && (
-        <Modal title={editingDriver ? 'Edit Driver' : 'Add Driver'} onClose={() => setDriverModalOpen(false)}>
+        <Modal title={editingDriver ? translate("Edit Driver") : translate("Add Driver")} onClose={() => setDriverModalOpen(false)}>
           <form onSubmit={saveDriver} style={{ display: 'grid', gap: 12 }}>
-            <input className="input" aria-label="Driver name" value={driverForm.name} onChange={(e) => setDriverForm({ ...driverForm, name: e.target.value })} placeholder="Driver name" required />
-            <input className="input" aria-label="Driver phone" value={driverForm.phone} onChange={(e) => setDriverForm({ ...driverForm, phone: e.target.value })} placeholder="Phone" required />
-            <input className="input" aria-label="Driver zone" value={driverForm.zone} onChange={(e) => setDriverForm({ ...driverForm, zone: e.target.value })} placeholder="Zone" />
-            <select className="input select" aria-label="Driver status" value={driverForm.status} onChange={(e) => setDriverForm({ ...driverForm, status: e.target.value })}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+            <input className="input" aria-label={translate("Driver name")} value={driverForm.name} onChange={(e) => setDriverForm({ ...driverForm, name: e.target.value })} placeholder={translate("Driver name")} required />
+            <input className="input" aria-label={translate("Driver phone")} value={driverForm.phone} onChange={(e) => setDriverForm({ ...driverForm, phone: e.target.value })} placeholder={translate("Phone")} required />
+            <input className="input" aria-label={translate("Driver zone")} value={driverForm.zone} onChange={(e) => setDriverForm({ ...driverForm, zone: e.target.value })} placeholder={translate("Zone")} />
+            <select className="input select" aria-label={translate("Driver status")} value={driverForm.status} onChange={(e) => setDriverForm({ ...driverForm, status: e.target.value })}>
+              <option value="active">{translate("Active")}</option>
+              <option value="inactive">{translate("Inactive")}</option>
             </select>
-            <select className="input select" aria-label="Driver availability" value={driverForm.availability_status} onChange={(e) => setDriverForm({ ...driverForm, availability_status: e.target.value })}>
-              <option value="available">Available</option>
-              <option value="busy">Busy</option>
+            <select className="input select" aria-label={translate("Driver availability")} value={driverForm.availability_status} onChange={(e) => setDriverForm({ ...driverForm, availability_status: e.target.value })}>
+              <option value="available">{translate("Available")}</option>
+              <option value="busy">{translate("Busy")}</option>
             </select>
-            <button className="btn btn-primary" type="submit">{editingDriver ? 'Save Driver' : 'Add Driver'}</button>
+            <button className="btn btn-primary" type="submit">{editingDriver ? translate("Save Driver") : translate("Add Driver")}</button>
           </form>
         </Modal>
       )}
@@ -572,7 +571,7 @@ function SummaryCards({ summary }) {
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 20 }}>
       {cards.map(([label, value, color]) => (
         <div className="card" key={label}>
-          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 8 }}>{label}</p>
+          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 8 }}>{translate(label)}</p>
           <p className="font-mono" style={{ fontSize: 26, fontWeight: 800, color: color || 'var(--color-text)' }}>{value}</p>
         </div>
       ))}
@@ -584,8 +583,8 @@ function DriversPanel({ drivers, openDriverModal, deleteDriver, toggleAvailabili
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
-        <p className="text-label" style={{ color:'var(--color-text-dim)' }}>Drivers</p>
-        <button className="btn btn-primary" onClick={() => openDriverModal()}>Add Driver</button>
+        <p className="text-label" style={{ color:'var(--color-text-dim)' }}>{translate("Drivers")}</p>
+        <button className="btn btn-primary" onClick={() => openDriverModal()}>{translate("Add Driver")}</button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
         {drivers.map(driver => (
@@ -593,24 +592,24 @@ function DriversPanel({ drivers, openDriverModal, deleteDriver, toggleAvailabili
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
               <div>
                 <h3 style={{ fontSize: 18, fontWeight: 800 }}>{driver.name}</h3>
-                <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{driver.phone} · {driver.zone || 'No zone'}</p>
+                <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{driver.phone} · {driver.zone || translate("No zone")}</p>
               </div>
-              <span className={`badge badge-${driver.status === 'active' ? 'success' : 'neutral'}`}>{driver.status}</span>
+              <span className={`badge badge-${driver.status === 'active' ? 'success' : 'neutral'}`}>{translate(driver.status)}</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 18 }}>
-              <DriverMetric label="Total" value={driver.stats?.total_deliveries || 0} />
-              <DriverMetric label="Done" value={driver.stats?.delivered || 0} />
-              <DriverMetric label="Failed" value={driver.stats?.failed || 0} />
-              <DriverMetric label="Rate" value={`${driver.stats?.success_rate || 0}%`} />
+              <DriverMetric label={translate("Total")} value={driver.stats?.total_deliveries || 0} />
+              <DriverMetric label={translate("Done")} value={driver.stats?.delivered || 0} />
+              <DriverMetric label={translate("Failed")} value={driver.stats?.failed || 0} />
+              <DriverMetric label={translate("Rate")} value={`${driver.stats?.success_rate || 0}%`} />
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 18 }}>
               <button className="btn btn-secondary btn-sm" onClick={() => toggleAvailability(driver)}>
-                {driver.availability_status === 'busy' ? 'Mark Available' : 'Mark Busy'}
+                {driver.availability_status === 'busy' ? translate("Mark Available") : translate("Mark Busy")}
               </button>
-              <button className="btn btn-secondary btn-sm" onClick={() => openDriverModal(driver)}>Edit</button>
-              <button className="btn btn-danger btn-sm" onClick={() => deleteDriver(driver)}>Delete</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => openDriverModal(driver)}>{translate("Edit")}</button>
+              <button className="btn btn-danger btn-sm" onClick={() => deleteDriver(driver)}>{translate("Delete")}</button>
               <span className="font-mono" style={{ fontSize: 11, color: 'var(--color-text-muted)', alignSelf: 'center' }}>
-                {driver.uuid_link ? `/driver/${driver.uuid_link}` : 'Driver link unavailable'}
+                {driver.uuid_link ? `/driver/${driver.uuid_link}` : translate("Driver link unavailable")}
               </span>
             </div>
           </div>
@@ -623,7 +622,7 @@ function DriversPanel({ drivers, openDriverModal, deleteDriver, toggleAvailabili
 function DriverMetric({ label, value }) {
   return (
     <div style={{ border: '1px solid var(--color-border-light)', padding: 8 }}>
-      <p className="text-label" style={{ fontSize: 9, color: 'var(--color-text-dim)' }}>{label}</p>
+      <p className="text-label" style={{ fontSize: 9, color: 'var(--color-text-dim)' }}>{translate(label)}</p>
       <p className="font-mono" style={{ fontWeight: 800, marginTop: 4 }}>{value}</p>
     </div>
   );
@@ -634,17 +633,17 @@ function AnalyticsPanel({ analytics, failureChart, costComparison }) {
     <div style={{ display: 'grid', gap: 16 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
         <div className="card">
-          <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>COD Collected</p>
+          <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>{translate("COD Collected")}</p>
           <p className="font-mono" style={{ fontSize: 26, fontWeight: 800 }}>{formatEGP(analytics?.cod?.collected || 0)}</p>
         </div>
         <div className="card">
-          <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>COD Outstanding</p>
+          <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>{translate("COD Outstanding")}</p>
           <p className="font-mono" style={{ fontSize: 26, fontWeight: 800 }}>{formatEGP(analytics?.cod?.outstanding || 0)}</p>
         </div>
       </div>
 
       <div className="card">
-        <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Average Delivery Time per Driver</p>
+        <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>{translate("Average Delivery Time per Driver")}</p>
         <div style={{ height: 280 }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={analytics?.driverAnalytics || []}>
@@ -652,7 +651,7 @@ function AnalyticsPanel({ analytics, failureChart, costComparison }) {
               <XAxis dataKey="name" tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
               <YAxis tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
               <Tooltip contentStyle={TT} />
-              <Bar dataKey="avg_delivery_time_hrs" name="Avg hours" fill="#6366f1" opacity={0.85} radius={[2,2,0,0]} />
+              <Bar dataKey="avg_delivery_time_hrs" name={translate("Avg hours")} fill="#6366f1" opacity={0.85} radius={[2,2,0,0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -660,7 +659,7 @@ function AnalyticsPanel({ analytics, failureChart, costComparison }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
         <div className="card">
-          <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Failed Delivery Rate by Reason</p>
+          <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>{translate("Failed Delivery Rate by Reason")}</p>
           <div style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -675,7 +674,7 @@ function AnalyticsPanel({ analytics, failureChart, costComparison }) {
         </div>
 
         <div className="card">
-          <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Bosta vs Own Driver</p>
+          <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>{translate("Bosta vs Own Driver")}</p>
           <div style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={costComparison}>
@@ -698,10 +697,10 @@ function AnalyticsPanel({ analytics, failureChart, costComparison }) {
 
 function Modal({ title, children, onClose }) {
   return (
-    <AccessibleDialog title={title} onClose={onClose} style={{ maxWidth:520 }}>
+    <AccessibleDialog title={translate(title)} onClose={onClose} style={{ maxWidth:520 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', marginBottom: 18 }}>
-          <h2 className="text-title">{title}</h2>
-          <button className="btn btn-secondary btn-sm" onClick={onClose}>Close</button>
+          <h2 className="text-title">{translate(title)}</h2>
+          <button className="btn btn-secondary btn-sm" onClick={onClose}>{translate("Close")}</button>
         </div>
         {children}
     </AccessibleDialog>

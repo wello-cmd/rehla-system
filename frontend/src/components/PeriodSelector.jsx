@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index.js';
 // PeriodSelector — period-based date range picker
 // Modes: day | month | quarter | half | year | custom
 import { useState, useEffect } from 'react';
@@ -11,12 +12,12 @@ function lastDay(year, month) {
 function getPeriodDates(mode, year, month, quarter, half, dayDate, customStart, customEnd) {
   const pad = n => String(n).padStart(2, '0');
   if (mode === 'day') {
-    return { start: dayDate, end: dayDate, groupBy: 'day', label: dayDate || 'Select a day' };
+    return { start: dayDate, end: dayDate, groupBy: 'day', label: dayDate || translate('Select a day') };
   }
   if (mode === 'month') {
     const start = `${year}-${pad(month)}-01`;
     const end = `${year}-${pad(month)}-${lastDay(year, month)}`;
-    return { start, end, groupBy: 'day', label: `${MONTHS[month - 1]} ${year}` };
+    return { start, end, groupBy: 'day', label: `${translate(MONTHS[month - 1])} ${year}` };
   }
   if (mode === 'quarter') {
     const qStart = (quarter - 1) * 3 + 1;
@@ -31,14 +32,14 @@ function getPeriodDates(mode, year, month, quarter, half, dayDate, customStart, 
     return { start, end, groupBy: 'month', label: `H${half} ${year}` };
   }
   if (mode === 'year') {
-    return { start: `${year}-01-01`, end: `${year}-12-31`, groupBy: 'month', label: `Year ${year}` };
+    return { start: `${year}-01-01`, end: `${year}-12-31`, groupBy: 'month', label: `${translate('Year')} ${year}` };
   }
   // custom
   return {
     start: customStart,
     end: customEnd,
     groupBy: 'month',
-    label: customStart && customEnd ? `${customStart} → ${customEnd}` : 'Set dates'
+    label: customStart && customEnd ? `${customStart} → ${customEnd}` : translate('Set dates')
   };
 }
 
@@ -106,7 +107,7 @@ export default function PeriodSelector({ onChange }) {
       <div className="period-selector-modes" style={{ display: 'flex', gap: '3px' }}>
         {MODES.map(m => (
           <button key={m.id} onClick={() => setMode(m.id)} style={btnStyle(mode === m.id)}>
-            {m.label}
+            {translate(m.label)}
           </button>
         ))}
       </div>
@@ -117,15 +118,15 @@ export default function PeriodSelector({ onChange }) {
       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
         {/* Year */}
         {['month', 'quarter', 'half', 'year'].includes(mode) && (
-          <select aria-label="Year" style={inputStyle} value={year} onChange={e => setYear(Number(e.target.value))}>
+          <select aria-label={translate("Year")} style={inputStyle} value={year} onChange={e => setYear(Number(e.target.value))}>
             {years.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         )}
 
         {/* Month */}
         {mode === 'month' && (
-          <select aria-label="Month" style={inputStyle} value={month} onChange={e => setMonth(Number(e.target.value))}>
-            {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+          <select aria-label={translate("Month")} style={inputStyle} value={month} onChange={e => setMonth(Number(e.target.value))}>
+            {MONTHS.map((m, i) => <option key={i} value={i + 1}>{translate(m)}</option>)}
           </select>
         )}
 
@@ -149,24 +150,24 @@ export default function PeriodSelector({ onChange }) {
 
         {/* Day */}
         {mode === 'day' && (
-          <input aria-label="Report day" type="date" style={inputStyle} value={dayDate} onChange={e => setDayDate(e.target.value)} />
+          <input aria-label={translate("Report day")} type="date" style={inputStyle} value={dayDate} onChange={e => setDayDate(e.target.value)} />
         )}
 
         {/* Custom */}
         {mode === 'custom' && (
           <>
-            <input aria-label="Start date" type="date" style={inputStyle} value={customStart} onChange={e => setCustomStart(e.target.value)} />
+            <input aria-label={translate("Start date")} type="date" style={inputStyle} value={customStart} onChange={e => setCustomStart(e.target.value)} />
             <span style={{ color: 'var(--color-text-dim)', fontSize: '11px' }}>→</span>
-            <input aria-label="End date" type="date" style={inputStyle} value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
-            <button onClick={apply} style={{ ...btnStyle(true), background: 'var(--color-bg-active)' }}>Apply</button>
+            <input aria-label={translate("End date")} type="date" style={inputStyle} value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
+            <button onClick={apply} style={{ ...btnStyle(true), background: 'var(--color-bg-active)' }}>{translate("Apply")}</button>
           </>
         )}
       </div>
 
       {/* Current period label */}
       {mode !== 'custom' && current.label && (
-        <span style={{ marginLeft: 'auto', fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--color-text-dim)' }}>
-          {current.label}
+        <span style={{ marginInlineStart: 'auto', fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--color-text-dim)' }}>
+          {translate(current.label)}
         </span>
       )}
     </div>

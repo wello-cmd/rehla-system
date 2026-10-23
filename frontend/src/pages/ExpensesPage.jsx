@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index.js';
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -25,7 +26,7 @@ export default function ExpensesPage() {
       const data = await api.get('/expenses');
       setExpenses(data);
     } catch (err) {
-      toast.error('Failed to load expenses');
+      toast.error(translate("Failed to load expenses"));
     } finally {
       setLoading(false);
     }
@@ -54,7 +55,7 @@ export default function ExpensesPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!title.trim() || !amount || parseFloat(amount) <= 0 || !date) {
-      toast.error('Please enter a valid title, amount, and date');
+      toast.error(translate("Please enter a valid title, amount, and date"));
       return;
     }
 
@@ -80,7 +81,7 @@ export default function ExpensesPage() {
       setDate(new Date().toISOString().split('T')[0]);
       fetchExpenses();
     } catch (err) {
-      toast.error(err.message || 'Failed to submit expense');
+      toast.error(translate(err.message || 'Failed to submit expense'));
     }
   }
 
@@ -90,18 +91,18 @@ export default function ExpensesPage() {
       toast.success(approve ? 'Expense approved' : 'Expense rejected');
       fetchExpenses();
     } catch (err) {
-      toast.error('Approval action failed');
+      toast.error(translate("Approval action failed"));
     }
   }
 
   async function handleDelete(id) {
-    if (!confirm('Are you sure you want to delete this expense log?')) return;
+    if (!confirm(translate("Are you sure you want to delete this expense log?"))) return;
     try {
       await api.delete(`/expenses/${id}`);
-      toast.success('Expense deleted');
+      toast.success(translate("Expense deleted"));
       fetchExpenses();
     } catch (err) {
-      toast.error('Delete failed');
+      toast.error(translate("Delete failed"));
     }
   }
 
@@ -115,19 +116,19 @@ export default function ExpensesPage() {
   const canApprove = ['ceo', 'admin'].includes(user?.role);
 
   return (
-    <DashboardShell title="Expense Management">
+    <DashboardShell title={translate("Expense Management")}>
       {loading ? renderSkeleton() : (
         <>
           {/* KPI Summary Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '32px' }}>
             <div className="card">
-              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>Approved Expenses</p>
+              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>{translate("Approved Expenses")}</p>
               <p style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-text)' }}>
                 {formatEGP(totals.approved)}
               </p>
             </div>
             <div className="card">
-              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>Pending Approval</p>
+              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>{translate("Pending Approval")}</p>
               <p style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-warning)' }}>
                 {formatEGP(totals.pending)}
               </p>
@@ -143,13 +144,13 @@ export default function ExpensesPage() {
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
               >
-                <option value="">All Categories</option>
-                <option value="Inventory">Inventory</option>
-                <option value="Shipping">Shipping</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Platform">Platform</option>
-                <option value="Operations">Operations</option>
-                <option value="Other">Other</option>
+                <option value="">{translate("All Categories")}</option>
+                <option value="Inventory">{translate("Inventory")}</option>
+                <option value="Shipping">{translate("Shipping")}</option>
+                <option value="Marketing">{translate("Marketing")}</option>
+                <option value="Platform">{translate("Platform")}</option>
+                <option value="Operations">{translate("Operations")}</option>
+                <option value="Other">{translate("Other")}</option>
               </select>
               <select
                 className="input select"
@@ -157,15 +158,13 @@ export default function ExpensesPage() {
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <option value="">All Statuses</option>
-                <option value="approved">Approved</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Rejected</option>
+                <option value="">{translate("All Statuses")}</option>
+                <option value="approved">{translate("Approved")}</option>
+                <option value="pending">{translate("Pending")}</option>
+                <option value="rejected">{translate("Rejected")}</option>
               </select>
             </div>
-            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-              + Log Expense
-            </button>
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}> {translate("+ Log Expense")} </button>
           </div>
 
           {/* Table */}
@@ -174,13 +173,13 @@ export default function ExpensesPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th>Title / Description</th>
-                    <th>Category</th>
-                    <th>Amount</th>
-                    <th>Logged Status</th>
-                    <th>Approved By</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
+                    <th>{translate("Date")}</th>
+                    <th>{translate("Title / Description")}</th>
+                    <th>{translate("Category")}</th>
+                    <th>{translate("Amount")}</th>
+                    <th>{translate("Logged Status")}</th>
+                    <th>{translate("Approved By")}</th>
+                    <th style={{ textAlign: "end" }}>{translate("Actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -199,11 +198,11 @@ export default function ExpensesPage() {
                         <span className={`badge badge-${
                           exp.status === 'approved' ? 'success' : exp.status === 'rejected' ? 'error' : 'warning'
                         }`}>
-                          {exp.status}
+                          {translate(exp.status)}
                         </span>
                       </td>
                       <td>{exp.approved_by || '—'}</td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td style={{ textAlign: "end" }}>
                         <div style={{ display: 'inline-flex', gap: '8px' }}>
                           {exp.status === 'pending' && canApprove && (
                             <>
@@ -211,15 +210,11 @@ export default function ExpensesPage() {
                                 className="btn btn-primary btn-sm"
                                 onClick={() => handleApprove(exp.id, true)}
                                 style={{ background: 'var(--color-success)', border: 'none', color: 'white' }}
-                              >
-                                Approve
-                              </button>
+                              > {translate("Approve")} </button>
                               <button
                                 className="btn btn-danger btn-sm"
                                 onClick={() => handleApprove(exp.id, false)}
-                              >
-                                Reject
-                              </button>
+                              > {translate("Reject")} </button>
                             </>
                           )}
                           {canApprove && (
@@ -236,9 +231,7 @@ export default function ExpensesPage() {
                   ))}
                   {filteredExpenses.length === 0 && (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-dim)' }}>
-                        No expenses found.
-                      </td>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-dim)' }}> {translate("No expenses found.")} </td>
                     </tr>
                   )}
                 </tbody>
@@ -252,37 +245,37 @@ export default function ExpensesPage() {
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '460px' }}>
-            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Log New Expense</p>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>{translate("Log New Expense")}</p>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Expense Title</label>
+                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Expense Title")}</label>
                 <input
                   className="input"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Office Stationery"
+                  placeholder={translate("e.g. Office Stationery")}
                   required
                 />
               </div>
               <div>
-                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Category</label>
+                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Category")}</label>
                 <select
                   className="input select"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   required
                 >
-                  <option value="Inventory">Inventory</option>
-                  <option value="Shipping">Shipping</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Platform">Platform</option>
-                  <option value="Operations">Operations</option>
-                  <option value="Other">Other</option>
+                  <option value="Inventory">{translate("Inventory")}</option>
+                  <option value="Shipping">{translate("Shipping")}</option>
+                  <option value="Marketing">{translate("Marketing")}</option>
+                  <option value="Platform">{translate("Platform")}</option>
+                  <option value="Operations">{translate("Operations")}</option>
+                  <option value="Other">{translate("Other")}</option>
                 </select>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                 <div>
-                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Amount (EGP)</label>
+                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Amount (EGP)")}</label>
                   <input
                     type="number"
                     step="0.01"
@@ -295,7 +288,7 @@ export default function ExpensesPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Expense Date</label>
+                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Expense Date")}</label>
                   <input
                     type="date"
                     className="input"
@@ -306,13 +299,13 @@ export default function ExpensesPage() {
                 </div>
               </div>
               <div>
-                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Additional Notes (Optional)</label>
+                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Additional Notes (Optional)")}</label>
                 <textarea
                   className="input"
                   style={{ height: '70px', resize: 'none' }}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g. Bought pens, notebooks, and folders"
+                  placeholder={translate("e.g. Bought pens, notebooks, and folders")}
                 />
               </div>
 
@@ -321,12 +314,8 @@ export default function ExpensesPage() {
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setShowModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Submit Log
-                </button>
+                > {translate("Cancel")} </button>
+                <button type="submit" className="btn btn-primary"> {translate("Submit Log")} </button>
               </div>
             </form>
           </div>

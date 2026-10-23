@@ -1,3 +1,5 @@
+import LanguageToggle from '../ui/LanguageToggle';
+import { translate } from '../../i18n/index.js';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, Link } from 'react-router-dom';
@@ -126,33 +128,34 @@ export default function Sidebar({ isOpen, onClose }) {
   return (
     <>
       {isOpen && <div className="sidebar-backdrop" onClick={onClose} />}
-      <aside id="primary-navigation" ref={sidebarRef} aria-label="Main navigation" inert={mobile && !isOpen} role={mobile && isOpen ? 'dialog' : undefined} aria-modal={mobile && isOpen ? true : undefined} className={`sidebar ${isOpen ? 'sidebar--open' : ''}`}>
+      <aside id="primary-navigation" ref={sidebarRef} aria-label={translate("Main navigation")} inert={mobile && !isOpen} role={mobile && isOpen ? 'dialog' : undefined} aria-modal={mobile && isOpen ? true : undefined} className={`sidebar ${isOpen ? 'sidebar--open' : ''}`}>
         <div className="sidebar-brand">
-          <Link to="/" className="brand-lockup" aria-label="Rehla workspace">
+          <Link to="/" className="brand-lockup" aria-label={translate("Rehla workspace")}>
             <span className="brand-name">REHLA <span className="brand-mark" aria-hidden="true"><span className="material-symbols-outlined">route</span></span></span>
-            <span className="brand-caption">Management workspace</span>
+            <span className="brand-caption">{translate("Management workspace")}</span>
           </Link>
-          <button className="sidebar-close-btn" onClick={onClose} aria-label="Close menu"><span className="material-symbols-outlined">close</span></button>
+          <button className="sidebar-close-btn" onClick={onClose} aria-label={translate("Close menu")}><span className="material-symbols-outlined">close</span></button>
         </div>
-        <nav aria-label="Main" className="sidebar-nav">
+        <nav aria-label={translate("Main")} className="sidebar-nav">
           {NAV_GROUPS.map(group => {
             const visible = group.items.filter(i => i.roles.includes(user?.role));
             return visible.length ? <div className="nav-group" key={group.label}>
-              <p className="nav-group-label">{group.label}</p>
+              <p className="nav-group-label">{translate(group.label)}</p>
               {visible.map(item => <Link key={item.path} to={item.path} aria-current={isNavigationActive(item.path, location.pathname) ? 'page' : undefined} className="nav-link">
-                <span className="material-symbols-outlined" aria-hidden="true">{item.icon}</span><span>{item.label}</span>
+                <span className="material-symbols-outlined" aria-hidden="true">{item.icon}</span><span>{translate(item.label)}</span>
               </Link>)}
             </div> : null;
           })}
         </nav>
         <div className="sidebar-footer">
+          <LanguageToggle />
           <ThemeToggle />
           <div className="sidebar-profile">
             <span className="profile-avatar" aria-hidden="true">{user?.name?.charAt(0)?.toUpperCase() || 'R'}</span>
-            <div><p>{user?.name}</p><span>{user?.role}</span></div>
-            <button onClick={logout} className="sidebar-signout" aria-label="Sign out" title="Sign out"><span className="material-symbols-outlined">logout</span></button>
+            <div><p>{user?.name}</p><span>{translate(user?.role)}</span></div>
+            <button onClick={logout} className="sidebar-signout" aria-label={translate("Sign out")} title={translate("Sign out")}><span className="material-symbols-outlined">logout</span></button>
           </div>
-          <p className="sidebar-status"><span aria-hidden="true" className={apiStatus === 'API reachable' ? 'status-dot is-reachable' : 'status-dot'} />{apiStatus}</p>
+          <p className="sidebar-status"><span aria-hidden="true" className={apiStatus === 'API reachable' ? 'status-dot is-reachable' : 'status-dot'} />{translate(apiStatus)}</p>
         </div>
       </aside>
     </>

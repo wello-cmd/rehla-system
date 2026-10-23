@@ -1,3 +1,5 @@
+import LanguageToggle from '../components/ui/LanguageToggle';
+import { translate } from '../i18n/index.js';
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
@@ -22,7 +24,7 @@ export default function DriverPage() {
       setDriver(data.driver);
       setDeliveries(data.deliveries);
     } catch (err) {
-      toast.error('Failed to load driver schedule. Link may be invalid.');
+      toast.error(translate("Failed to load driver schedule. Link may be invalid."));
     } finally {
       setLoading(false);
     }
@@ -49,7 +51,7 @@ export default function DriverPage() {
       setNotes('');
       fetchDriverJobs();
     } catch (err) {
-      toast.error(err.message || 'Failed to update status');
+      toast.error(translate(err.message || 'Failed to update status'));
     } finally {
       setUpdating(false);
     }
@@ -78,27 +80,27 @@ export default function DriverPage() {
         height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center',
         justifyContent: 'center', background: 'var(--color-bg)', color: 'var(--color-text)', padding: '24px', textAlign: 'center'
       }}>
-        <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--color-error)' }}>error</span>
-        <h1 style={{ fontSize: '24px', marginTop: '16px', fontWeight: 800 }}>Invalid Link</h1>
-        <p style={{ color: 'var(--color-text-muted)', marginTop: '8px' }}>This driver manifest link is invalid or expired.</p>
+        <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--color-error)' }}>{translate("error")}</span>
+        <LanguageToggle /><h1 style={{ fontSize: '24px', marginTop: '16px', fontWeight: 800 }}>{translate("Invalid Link")}</h1>
+        <p style={{ color: 'var(--color-text-muted)', marginTop: '8px' }}>{translate("This driver manifest link is invalid or expired.")}</p>
       </div>
     );
   }
 
   return (
     <div style={{ background: 'var(--color-bg)', minHeight: '100vh', color: 'var(--color-text)', padding: '16px' }}>
+      <LanguageToggle />
       {/* Mobile Driver Header */}
-      <div className="card" style={{ marginBottom: '24px', background: 'var(--color-bg-elevated)', borderLeft: '4px solid var(--color-text)' }}>
-        <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>Driver Manifest</p>
+      <div className="card" style={{ marginBottom: '24px', background: 'var(--color-bg-elevated)', borderInlineStart: '4px solid var(--color-text)' }}>
+        <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>{translate("Driver Manifest")}</p>
         <h1 style={{ fontSize: '22px', fontWeight: 800, marginTop: '4px' }}>{driver.name}</h1>
         <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '13px', color: 'var(--color-text-muted)' }}>
-          <span><strong>Zone:</strong> {driver.zone || 'Global'}</span>
-          <span><strong>Phone:</strong> {driver.phone}</span>
+          <span><strong>{translate("Zone:")}</strong> {driver.zone || translate("Global")}</span>
+          <span><strong>{translate("Phone:")}</strong> {driver.phone}</span>
         </div>
       </div>
 
-      <h2 className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '12px' }}>
-        Today's Assigned Shipments ({deliveries.length})
+      <h2 className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '12px' }}> {translate("Today's Assigned Shipments (")}{deliveries.length})
       </h2>
 
       {/* Deliveries list cards */}
@@ -107,13 +109,12 @@ export default function DriverPage() {
           <div key={d.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
               <div>
-                <span className="badge badge-neutral" style={{ fontFamily: 'var(--font-mono)' }}>
-                  ORDER {d.orders?.shopify_order_name || `#${d.orders?.order_number || 'N/A'}`}
+                <span className="badge badge-neutral" style={{ fontFamily: 'var(--font-mono)' }}> {translate("ORDER")} {d.orders?.shopify_order_name || `#${d.orders?.order_number || 'N/A'}`}
                 </span>
                 <h3 style={{ fontSize: '16px', fontWeight: 700, marginTop: '6px' }}>{d.orders?.customer_name}</h3>
               </div>
               <span className={`badge badge-${d.status === 'out_for_delivery' ? 'warning' : 'info'}`}>
-                {d.status.replace(/_/g, ' ')}
+                {translate(d.status)}
               </span>
             </div>
 
@@ -131,7 +132,7 @@ export default function DriverPage() {
             </div>
 
             <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '10px' }}>
-              <p className="text-label" style={{ fontSize: '9px', color: 'var(--color-text-dim)', marginBottom: 6 }}>Items</p>
+              <p className="text-label" style={{ fontSize: '9px', color: 'var(--color-text-dim)', marginBottom: 6 }}>{translate("Items")}</p>
               {(Array.isArray(d.orders?.items) ? d.orders.items : JSON.parse(d.orders?.items || '[]')).map((item, index) => (
                 <div key={`${item.sku || item.name}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, gap: 8 }}>
                   <span>{item.quantity}x {item.name}</span>
@@ -145,27 +146,21 @@ export default function DriverPage() {
               borderTop: '1px solid var(--color-border-light)', paddingTop: '10px', marginTop: '4px'
             }}>
               <div>
-                <p className="text-label" style={{ fontSize: '9px', color: 'var(--color-text-dim)' }}>COD to Collect</p>
+                <p className="text-label" style={{ fontSize: '9px', color: 'var(--color-text-dim)' }}>{translate("COD to Collect")}</p>
                 <p className="font-mono" style={{ fontSize: '16px', fontWeight: 700 }}>
                   {formatEGP(d.cod_amount)}
                 </p>
                 {Number(d.cod_amount || 0) > 0 && (
-                  <span className="badge badge-warning" style={{ marginTop: 6 }}>COD</span>
+                  <span className="badge badge-warning" style={{ marginTop: 6 }}>{translate("COD")}</span>
                 )}
               </div>
 
               <div style={{ display: 'grid', gap: 8, minWidth: 150 }}>
                 {d.status === 'assigned' && (
-                  <button className="btn btn-secondary btn-sm" onClick={() => openStatusModal(d, 'out_for_delivery')}>
-                    Out for Delivery
-                  </button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => openStatusModal(d, 'out_for_delivery')}> {translate("Out for Delivery")} </button>
                 )}
-                <button className="btn btn-primary btn-sm" onClick={() => openStatusModal(d, 'delivered')}>
-                  Delivered
-                </button>
-                <button className="btn btn-danger btn-sm" onClick={() => openStatusModal(d, 'failed')}>
-                  Failed
-                </button>
+                <button className="btn btn-primary btn-sm" onClick={() => openStatusModal(d, 'delivered')}> {translate("Delivered")} </button>
+                <button className="btn btn-danger btn-sm" onClick={() => openStatusModal(d, 'failed')}> {translate("Failed")} </button>
               </div>
             </div>
           </div>
@@ -174,7 +169,7 @@ export default function DriverPage() {
         {deliveries.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--color-text-dim)' }}>
             <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>task_alt</span>
-            <p style={{ fontSize: '14px', marginTop: '8px' }}>No active deliveries assigned right now.</p>
+            <p style={{ fontSize: '14px', marginTop: '8px' }}>{translate("No active deliveries assigned right now.")}</p>
           </div>
         )}
       </div>
@@ -183,47 +178,47 @@ export default function DriverPage() {
       {showStatusModal && selectedDelivery && (
         <div className="modal-overlay" style={{ padding: '16px' }}>
           <div className="modal-content" style={{ maxWidth: '400px', width: '100%', padding: '24px' }}>
-            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Update Delivery Status</p>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>{translate("Update Delivery Status")}</p>
             <form onSubmit={handleStatusUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Status</label>
+                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Status")}</label>
                 <select
                   className="input select"
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value)}
                   required
                 >
-                  <option value="out_for_delivery">Out for Delivery</option>
-                  <option value="delivered">Delivered (Success)</option>
-                  <option value="failed">Failed / Refused</option>
+                  <option value="out_for_delivery">{translate("Out for Delivery")}</option>
+                  <option value="delivered">{translate("Delivered (Success)")}</option>
+                  <option value="failed">{translate("Failed / Refused")}</option>
                 </select>
               </div>
 
               {newStatus === 'failed' && (
                 <div>
-                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Failure Reason</label>
+                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Failure Reason")}</label>
                   <select
                     className="input select"
                     value={failedReason}
                     onChange={(e) => setFailedReason(e.target.value)}
                     required
                   >
-                    <option value="not_answered">Phone Not Answered</option>
-                    <option value="wrong_address">Wrong Delivery Address</option>
-                    <option value="refused">Customer Refused Package</option>
-                    <option value="postponed">Delivery Postponed by Customer</option>
+                    <option value="not_answered">{translate("Phone Not Answered")}</option>
+                    <option value="wrong_address">{translate("Wrong Delivery Address")}</option>
+                    <option value="refused">{translate("Customer Refused Package")}</option>
+                    <option value="postponed">{translate("Delivery Postponed by Customer")}</option>
                   </select>
                 </div>
               )}
 
               <div>
-                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Driver Notes (Optional)</label>
+                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Driver Notes (Optional)")}</label>
                 <textarea
                   className="input"
                   style={{ height: '60px', resize: 'none' }}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="e.g. Customer requested call 10 mins before arrival..."
+                  placeholder={translate("e.g. Customer requested call 10 mins before arrival...")}
                 />
               </div>
 
@@ -236,11 +231,9 @@ export default function DriverPage() {
                     setNotes('');
                   }}
                   disabled={updating}
-                >
-                  Cancel
-                </button>
+                > {translate("Cancel")} </button>
                 <button type="submit" className="btn btn-primary" disabled={updating}>
-                  {updating ? 'Saving...' : 'Save Change'}
+                  {updating ? translate("Saving...") : translate("Save Change")}
                 </button>
               </div>
             </form>

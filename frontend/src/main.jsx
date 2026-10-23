@@ -1,7 +1,10 @@
+import { getLanguage, setLanguage } from './i18n/index.js';
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+
+setLanguage(getLanguage());
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

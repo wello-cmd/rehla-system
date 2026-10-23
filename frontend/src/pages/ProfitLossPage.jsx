@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index.js';
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatNumber } from '../lib/formatters';
@@ -31,7 +32,7 @@ export default function ProfitLossPage() {
       setCashflowData(cashflow);
       setTrendData(trend);
     } catch (err) {
-      toast.error('Failed to load financial reports');
+      toast.error(translate("Failed to load financial reports"));
     } finally {
       setLoading(false);
     }
@@ -49,9 +50,9 @@ export default function ProfitLossPage() {
   async function handleDownloadPDF() {
     try {
       await api.downloadBlob('/financial/pl/pdf', 'rehla-pl-report.pdf');
-      toast.success('P&L Report PDF downloaded successfully');
+      toast.success(translate("P&L Report PDF downloaded successfully"));
     } catch (err) {
-      toast.error('Failed to download PDF report');
+      toast.error(translate("Failed to download PDF report"));
     }
   }
 
@@ -63,7 +64,7 @@ export default function ProfitLossPage() {
   );
 
   return (
-    <DashboardShell title="Profit & Loss Statement">
+    <DashboardShell title={translate("Profit & Loss Statement")}>
       {/* Date Filter & Export Row */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
         <form onSubmit={handleFilter} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -76,7 +77,7 @@ export default function ProfitLossPage() {
               style={{ padding: '8px 12px', fontSize: '13px' }}
             />
           </div>
-          <span style={{ color: 'var(--color-text-dim)' }}>to</span>
+          <span style={{ color: 'var(--color-text-dim)' }}>{translate("to")}</span>
           <div>
             <input
               type="date"
@@ -86,15 +87,11 @@ export default function ProfitLossPage() {
               style={{ padding: '8px 12px', fontSize: '13px' }}
             />
           </div>
-          <button type="submit" className="btn btn-primary btn-sm">
-            Filter Range
-          </button>
+          <button type="submit" className="btn btn-primary btn-sm"> {translate("Filter Range")} </button>
         </form>
 
         <button className="btn btn-secondary" onClick={handleDownloadPDF}>
-          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>download</span>
-          Export PDF Report
-        </button>
+          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>download</span> {translate("Export PDF Report")} </button>
       </div>
 
       {loading ? renderSkeleton() : (
@@ -103,32 +100,32 @@ export default function ProfitLossPage() {
           {plData && (
             <div className="card" style={{ marginBottom: '32px' }}>
               <div style={{ borderBottom: '1px solid var(--color-border-light)', paddingBottom: '16px', marginBottom: '24px' }}>
-                <p className="text-label" style={{ color:'var(--color-text-dim)' }}>Income Statement</p>
-                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px' }}>Reporting Period: {plData.period}</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)' }}>{translate("Income Statement")}</p>
+                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px' }}>{translate("Reporting Period:")} {plData.period}</p>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {/* Gross Revenue */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '16px' }}>
-                  <span>Gross Operating Revenue</span>
+                  <span>{translate("Gross Operating Revenue")}</span>
                   <span className="font-mono" style={{ fontWeight: 600 }}>{formatEGP(plData.revenue)}</span>
                 </div>
 
                 {/* COGS */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '16px', color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '12px' }}>
-                  <span>Cost of Goods Sold (COGS)</span>
+                  <span>{translate("Cost of Goods Sold (COGS)")}</span>
                   <span className="font-mono" style={{ fontWeight: 600 }}>−{formatEGP(plData.cogs)}</span>
                 </div>
 
                 {/* Gross Profit */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '18px', fontWeight: 700 }}>
-                  <span>Gross Profit</span>
+                  <span>{translate("Gross Profit")}</span>
                   <span className="font-mono">{formatEGP(plData.grossProfit)}</span>
                 </div>
 
                 {/* Operating Expenses */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '16px', color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '12px' }}>
-                  <span>Total Operating Expenses</span>
+                  <span>{translate("Total Operating Expenses")}</span>
                   <span className="font-mono" style={{ fontWeight: 600 }}>−{formatEGP(plData.expenses)}</span>
                 </div>
 
@@ -137,18 +134,18 @@ export default function ProfitLossPage() {
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '22px', fontWeight: 800,
                   color: plData.netProfit >= 0 ? 'var(--color-success)' : 'var(--color-error)'
                 }}>
-                  <span>Net Operating Income</span>
+                  <span>{translate("Net Operating Income")}</span>
                   <span className="font-mono">{formatEGP(plData.netProfit)}</span>
                 </div>
 
                 {/* Margins breakdown */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', borderTop: '1px solid var(--color-border-light)', paddingTop: '20px', marginTop: '10px' }}>
                   <div className="card" style={{ background: 'var(--color-bg)' }}>
-                    <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '6px' }}>Gross Margin</p>
+                    <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '6px' }}>{translate("Gross Margin")}</p>
                     <p className="font-mono" style={{ fontSize: '20px', fontWeight: 700 }}>{plData.grossMargin?.toFixed(1)}%</p>
                   </div>
-                  <div className="card" style={{ background: 'var(--color-bg)', borderLeft: `3px solid ${plData.netProfit >= 0 ? 'var(--color-success)' : 'var(--color-error)'}` }}>
-                    <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '6px' }}>Net Profit Margin</p>
+                  <div className="card" style={{ background: 'var(--color-bg)', borderInlineStart: `3px solid ${plData.netProfit >= 0 ? 'var(--color-success)' : 'var(--color-error)'}` }}>
+                    <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '6px' }}>{translate("Net Profit Margin")}</p>
                     <p className="font-mono" style={{ fontSize: '20px', fontWeight: 700 }}>{plData.netMargin?.toFixed(1)}%</p>
                   </div>
                 </div>
@@ -160,7 +157,7 @@ export default function ProfitLossPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
             {/* Cash Flow */}
             <div className="card">
-              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>Cash Flow Trend (Inflow vs Outflow)</p>
+              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>{translate("Cash Flow Trend (Inflow vs Outflow)")}</p>
               <ResponsiveContainer width="100%" height={260}>
                 <AreaChart data={cashflowData}>
                   <defs>
@@ -178,15 +175,15 @@ export default function ProfitLossPage() {
                   <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
                   <Tooltip contentStyle={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }} />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  <Area type="monotone" dataKey="money_in" name="Inflow (Revenue)" stroke="var(--color-success)" fillOpacity={1} fill="url(#colorIn)" />
-                  <Area type="monotone" dataKey="money_out" name="Outflow (Expenses)" stroke="var(--color-error)" fillOpacity={1} fill="url(#colorOut)" />
+                  <Area type="monotone" dataKey="money_in" name={translate("Inflow (Revenue)")} stroke="var(--color-success)" fillOpacity={1} fill="url(#colorIn)" />
+                  <Area type="monotone" dataKey="money_out" name={translate("Outflow (Expenses)")} stroke="var(--color-error)" fillOpacity={1} fill="url(#colorOut)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
 
             {/* Monthly Profit trend */}
             <div className="card">
-              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>Monthly Profit Trend (Net Profitability)</p>
+              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>{translate("Monthly Profit Trend (Net Profitability)")}</p>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
@@ -194,7 +191,7 @@ export default function ProfitLossPage() {
                   <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
                   <Tooltip contentStyle={{ background:'var(--color-bg-elevated)', border:'1px solid var(--color-border)', color:'var(--color-text)', fontSize:12, borderRadius:6 }} />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  <Bar dataKey="profit" name="Net Profit (EGP)" radius={[2,2,0,0]}>
+                  <Bar dataKey="profit" name={translate("Net Profit (EGP)")} radius={[2,2,0,0]}>
                     {trendData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? '#3fb950' : '#f85149'} />
                     ))}

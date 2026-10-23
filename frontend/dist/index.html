@@ -6,6 +6,9 @@
     // Apply saved theme before paint to avoid a flash of the wrong theme
     (function () {
       try {
+        var locale = localStorage.getItem('rehla-language') === 'ar' ? 'ar' : 'en';
+        document.documentElement.lang = locale;
+        document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
         var t = localStorage.getItem('theme') || 'light';
         document.documentElement.classList.remove('dark', 'light');
         document.documentElement.classList.add(t);
@@ -20,10 +23,10 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-  <script type="module" crossorigin src="/assets/index-DBPInitb.js"></script>
+  <script type="module" crossorigin src="/assets/index-B8NGqyme.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-XKyaHtl9.js">
-  <link rel="modulepreload" crossorigin href="/assets/jsx-runtime-CVzwfepx.js">
-  <link rel="stylesheet" crossorigin href="/assets/index-rO0Kbmy3.css">
+  <link rel="modulepreload" crossorigin href="/assets/jsx-runtime-D2hLb3XM.js">
+  <link rel="stylesheet" crossorigin href="/assets/index-C0-UimyR.css">
 </head>
 <body>
   <div id="root"></div>

@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index.js';
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatDate } from '../lib/formatters';
@@ -46,7 +47,7 @@ export default function ReturnsPage() {
       setScanSession(prev => [{ ...item, ts: new Date().toLocaleTimeString() }, ...prev]);
       toast.success(`✓ ${item.name} restocked (${item.current_stock} in stock)`);
     } catch (err) {
-      toast.error(err.message || 'Return scan failed');
+      toast.error(translate(err.message || 'Return scan failed'));
     } finally {
       setScanning(false);
       setScanInput('');
@@ -72,7 +73,7 @@ export default function ReturnsPage() {
       const data = await api.get(`/returns${params}`);
       setReturns(data);
     } catch (err) {
-      toast.error(err.message || 'Failed to load returns');
+      toast.error(translate(err.message || 'Failed to load returns'));
     } finally {
       setLoading(false);
     }
@@ -114,7 +115,7 @@ export default function ReturnsPage() {
       }));
       setItems(lineItems.length ? lineItems : [{ sku: '', name: '', quantity: 1 }]);
     } catch {
-      toast.error('Could not load order items — enter them manually.');
+      toast.error(translate("Could not load order items — enter them manually."));
     }
   }
 
@@ -134,7 +135,7 @@ export default function ReturnsPage() {
     e.preventDefault();
     const validItems = items.filter(it => it.sku.trim());
     if (!validItems.length || !form.reason) {
-      toast.error('At least one item with a SKU and a reason are required.');
+      toast.error(translate("At least one item with a SKU and a reason are required."));
       return;
     }
     try {
@@ -143,11 +144,11 @@ export default function ReturnsPage() {
         order_id: form.order_id || undefined,
         items: validItems.map(it => ({ ...it, quantity: Number(it.quantity) }))
       });
-      toast.success('Return created');
+      toast.success(translate("Return created"));
       setShowCreateModal(false);
       fetchReturns();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(translate(err.message));
     }
   }
 
@@ -156,45 +157,43 @@ export default function ReturnsPage() {
     if (!window.confirm(`${labels[action] || action} this return?`)) return;
     try {
       await api.patch(`/returns/${id}/${action}`, {});
-      toast.success('Updated');
+      toast.success(translate("Updated"));
       fetchReturns();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(translate(err.message));
     }
   }
 
   return (
-    <DashboardShell title="Returns">
+    <DashboardShell title={translate("Returns")}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <select className="input" style={{ maxWidth: 180 }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="restocked">Restocked</option>
-            <option value="refunded">Refunded</option>
+            <option value="">{translate("All Statuses")}</option>
+            <option value="pending">{translate("Pending")}</option>
+            <option value="approved">{translate("Approved")}</option>
+            <option value="restocked">{translate("Restocked")}</option>
+            <option value="refunded">{translate("Refunded")}</option>
           </select>
-          <button className="btn btn-secondary btn-sm" onClick={fetchReturns}>⟲ Refresh</button>
+          <button className="btn btn-secondary btn-sm" onClick={fetchReturns}>{translate("⟲ Refresh")}</button>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary btn-sm" onClick={() => setScanOpen(v => !v)}>
-            {scanOpen ? '✕ Close Scanner' : '📷 Scan Returns'}
+            {scanOpen ? translate("✕ Close Scanner") : translate("📷 Scan Returns")}
           </button>
-          <button className="btn btn-primary btn-sm" onClick={openCreate}>+ New Return</button>
+          <button className="btn btn-primary btn-sm" onClick={openCreate}>{translate("+ New Return")}</button>
         </div>
       </div>
 
       {/* Scan-to-restock station */}
       {scanOpen && (
         <div className="card" style={{ marginBottom: 20, maxWidth: 640 }}>
-          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 12 }}>
-            Scan returned items back into stock
-          </p>
+          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 12 }}> {translate("Scan returned items back into stock")} </p>
 
           {/* Delivery method that brought the items back */}
           <div style={{ marginBottom: 14 }}>
-            <p style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 6 }}>Returned via</p>
+            <p style={{ fontSize: 11, color: 'var(--color-text-dim)', marginBottom: 6 }}>{translate("Returned via")}</p>
             <div style={{ display: 'flex', gap: 8 }}>
               {[{ id: 'bosta', label: '🚚 Bosta' }, { id: 'own_driver', label: '🏠 Rehla' }].map(m => (
                 <button
@@ -208,7 +207,7 @@ export default function ReturnsPage() {
                     color: scanMethod === m.id ? 'var(--color-text)' : 'var(--color-text-muted)',
                   }}
                 >
-                  {m.label}
+                  {translate(m.label)}
                 </button>
               ))}
             </div>
@@ -220,17 +219,15 @@ export default function ReturnsPage() {
               className="input"
               value={scanInput}
               onChange={e => setScanInput(e.target.value)}
-              placeholder="Scan or type SKU..."
+              placeholder={translate("Scan or type SKU...")}
               autoFocus
               disabled={scanning}
               style={{ fontSize: 18, fontFamily: 'var(--font-mono)', padding: 16, flex: '1 1 180px', minWidth: 0 }}
             />
             <button className="btn btn-secondary" type="button" onClick={() => setShowScanner(true)} disabled={scanning} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>photo_camera</span>
-              Scan
-            </button>
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>photo_camera</span> {translate("Scan")} </button>
             <button className="btn btn-primary" type="submit" disabled={scanning}>
-              {scanning ? '...' : 'RESTOCK'}
+              {scanning ? '...' : translate("RESTOCK")}
             </button>
           </form>
 
@@ -238,20 +235,20 @@ export default function ReturnsPage() {
           {scanSession.length > 0 && (
             <div style={{ marginTop: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span className="text-label" style={{ color: 'var(--color-text-dim)' }}>This session</span>
-                <span className="font-mono" style={{ fontSize: 13, fontWeight: 700 }}>{scanSession.length} item(s) restocked</span>
+                <span className="text-label" style={{ color: 'var(--color-text-dim)' }}>{translate("This session")}</span>
+                <span className="font-mono" style={{ fontSize: 13, fontWeight: 700 }}>{scanSession.length} {translate("item(s) restocked")}</span>
               </div>
               {scanSession.map((s, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < scanSession.length - 1 ? '1px solid var(--color-border-light)' : 'none' }}>
                   <div>
-                    <span className="font-mono" style={{ fontSize: 12, marginRight: 8, color: 'var(--color-text-muted)' }}>{s.sku}</span>
+                    <span className="font-mono" style={{ fontSize: 12, marginInlineEnd: 8, color: 'var(--color-text-muted)' }}>{s.sku}</span>
                     <span style={{ fontSize: 13 }}>{s.name}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                     <span className={`badge badge-${s.delivery_method === 'bosta' ? 'info' : 'success'}`} style={{ fontSize: 10 }}>
-                      {s.delivery_method === 'bosta' ? 'Bosta' : 'Rehla'}
+                      {s.delivery_method === 'bosta' ? translate("Bosta") : translate("Rehla")}
                     </span>
-                    <span className="font-mono" style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{s.current_stock} in stock</span>
+                    <span className="font-mono" style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{s.current_stock} {translate("in stock")}</span>
                   </div>
                 </div>
               ))}
@@ -271,9 +268,9 @@ export default function ReturnsPage() {
         {['pending', 'approved', 'restocked', 'refunded'].map(s => {
           const count = returns.filter(r => r.status === s).length;
           return (
-            <div key={s} style={{ padding: '6px 14px', borderRadius: 4, background: 'var(--color-bg-inset)', borderLeft: `3px solid ${STATUS_COLORS[s]}`, fontSize: 13 }}>
-              <span style={{ color: 'var(--color-text-dim)', textTransform: 'capitalize' }}>{s}</span>
-              <span className="font-mono" style={{ fontWeight: 700, marginLeft: 8 }}>{count}</span>
+            <div key={s} style={{ padding: '6px 14px', borderRadius: 4, background: 'var(--color-bg-inset)', borderInlineStart: `3px solid ${STATUS_COLORS[s]}`, fontSize: 13 }}>
+              <span style={{ color: 'var(--color-text-dim)', textTransform: 'capitalize' }}>{translate(s)}</span>
+              <span className="font-mono" style={{ fontWeight: 700, marginInlineStart: 8 }}>{count}</span>
             </div>
           );
         })}
@@ -288,13 +285,13 @@ export default function ReturnsPage() {
             <table className="data-table t-returns">
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Customer</th>
-                  <th>Order</th>
-                  <th>Items</th>
-                  <th>Reason</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>{translate("Date")}</th>
+                  <th>{translate("Customer")}</th>
+                  <th>{translate("Order")}</th>
+                  <th>{translate("Items")}</th>
+                  <th>{translate("Reason")}</th>
+                  <th>{translate("Status")}</th>
+                  <th>{translate("Actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -310,29 +307,29 @@ export default function ReturnsPage() {
                         <div key={i}><span className="font-mono">{it.sku}</span> × {it.quantity}{it.name ? ` — ${it.name}` : ''}</div>
                       ))}
                     </td>
-                    <td style={{ fontSize: 13 }}>{r.reason}</td>
+                    <td style={{ fontSize: 13 }}>{translate(r.reason)}</td>
                     <td>
                       <span style={{ padding: '3px 10px', borderRadius: 3, fontSize: 11, fontWeight: 700, textTransform: 'capitalize', background: STATUS_COLORS[r.status] + '22', color: STATUS_COLORS[r.status] }}>
-                        {r.status}
+                        {translate(r.status)}
                       </span>
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
                         {r.status === 'pending' && (
-                          <button className="btn btn-secondary btn-sm" style={{ fontSize: 11 }} onClick={() => handleAction(r.id, 'approve')}>Approve</button>
+                          <button className="btn btn-secondary btn-sm" style={{ fontSize: 11 }} onClick={() => handleAction(r.id, 'approve')}>{translate("Approve")}</button>
                         )}
                         {['pending', 'approved'].includes(r.status) && !r.restocked && (
-                          <button className="btn btn-secondary btn-sm" style={{ fontSize: 11 }} onClick={() => handleAction(r.id, 'restock')}>Restock</button>
+                          <button className="btn btn-secondary btn-sm" style={{ fontSize: 11 }} onClick={() => handleAction(r.id, 'restock')}>{translate("Restock")}</button>
                         )}
                         {r.status !== 'refunded' && (
-                          <button className="btn btn-secondary btn-sm" style={{ fontSize: 11 }} onClick={() => handleAction(r.id, 'refund')}>Refund</button>
+                          <button className="btn btn-secondary btn-sm" style={{ fontSize: 11 }} onClick={() => handleAction(r.id, 'refund')}>{translate("Refund")}</button>
                         )}
                       </div>
                     </td>
                   </tr>
                 ))}
                 {returns.length === 0 && (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-dim)' }}>No returns found.</td></tr>
+                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-dim)' }}>{translate("No returns found.")}</td></tr>
                 )}
               </tbody>
             </table>
@@ -344,17 +341,17 @@ export default function ReturnsPage() {
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal-content" style={{ maxWidth: 600, width: '95%' }} onClick={e => e.stopPropagation()}>
-            <h2 className="text-title" style={{ marginBottom: 20 }}>New Return</h2>
+            <h2 className="text-title" style={{ marginBottom: 20 }}>{translate("New Return")}</h2>
             <form onSubmit={handleCreate} style={{ display: 'grid', gap: 16 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label className="text-label" style={{ display: 'block', marginBottom: 6 }}>Customer Name</label>
-                  <input className="input" value={form.customer_name} onChange={e => setForm(p => ({ ...p, customer_name: e.target.value }))} placeholder="Walk-in / name" />
+                  <label className="text-label" style={{ display: 'block', marginBottom: 6 }}>{translate("Customer Name")}</label>
+                  <input className="input" value={form.customer_name} onChange={e => setForm(p => ({ ...p, customer_name: e.target.value }))} placeholder={translate("Walk-in / name")} />
                 </div>
                 <div>
-                  <label className="text-label" style={{ display: 'block', marginBottom: 6 }}>Linked Order (optional)</label>
+                  <label className="text-label" style={{ display: 'block', marginBottom: 6 }}>{translate("Linked Order (optional)")}</label>
                   <select className="input" value={form.order_id} onChange={e => onSelectOrder(e.target.value)}>
-                    <option value="">— No linked order —</option>
+                    <option value="">{translate("— No linked order —")}</option>
                     {orders.map(o => (
                       <option key={o.id} value={o.id}>{o.shopify_order_name || `#${o.order_number}`} — {o.customer_name}</option>
                     ))}
@@ -363,28 +360,28 @@ export default function ReturnsPage() {
               </div>
 
               <div>
-                <label className="text-label" style={{ display: 'block', marginBottom: 6 }}>Return Reason *</label>
+                <label className="text-label" style={{ display: 'block', marginBottom: 6 }}>{translate("Return Reason *")}</label>
                 <select className="input" required value={form.reason} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))}>
-                  <option value="">Select reason...</option>
-                  <option value="damaged">Damaged / Defective</option>
-                  <option value="wrong_item">Wrong Item Sent</option>
-                  <option value="customer_changed_mind">Customer Changed Mind</option>
-                  <option value="size_issue">Size / Fit Issue</option>
-                  <option value="quality_issue">Quality Issue</option>
-                  <option value="other">Other</option>
+                  <option value="">{translate("Select reason...")}</option>
+                  <option value="damaged">{translate("Damaged / Defective")}</option>
+                  <option value="wrong_item">{translate("Wrong Item Sent")}</option>
+                  <option value="customer_changed_mind">{translate("Customer Changed Mind")}</option>
+                  <option value="size_issue">{translate("Size / Fit Issue")}</option>
+                  <option value="quality_issue">{translate("Quality Issue")}</option>
+                  <option value="other">{translate("Other")}</option>
                 </select>
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <label className="text-label">Returned Items *</label>
-                  <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: 11 }} onClick={addItem}>+ Add Item</button>
+                  <label className="text-label">{translate("Returned Items *")}</label>
+                  <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: 11 }} onClick={addItem}>{translate("+ Add Item")}</button>
                 </div>
                 {items.map((item, i) => (
                   <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 3fr 1fr auto', gap: 8, marginBottom: 8 }}>
-                    <input className="input" placeholder="SKU" value={item.sku} onChange={e => updateItem(i, 'sku', e.target.value.toUpperCase())} />
-                    <input className="input" placeholder="Product name (optional)" value={item.name} onChange={e => updateItem(i, 'name', e.target.value)} />
-                    <input className="input" type="number" min="1" placeholder="Qty" value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} />
+                    <input className="input" placeholder={translate("SKU")} value={item.sku} onChange={e => updateItem(i, 'sku', e.target.value.toUpperCase())} />
+                    <input className="input" placeholder={translate("Product name (optional)")} value={item.name} onChange={e => updateItem(i, 'name', e.target.value)} />
+                    <input className="input" type="number" min="1" placeholder={translate("Qty")} value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} />
                     {items.length > 1 && (
                       <button type="button" className="btn btn-secondary btn-sm" onClick={() => removeItem(i)}>✕</button>
                     )}
@@ -393,13 +390,13 @@ export default function ReturnsPage() {
               </div>
 
               <div>
-                <label className="text-label" style={{ display: 'block', marginBottom: 6 }}>Notes</label>
-                <input className="input" value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Optional notes..." />
+                <label className="text-label" style={{ display: 'block', marginBottom: 6 }}>{translate("Notes")}</label>
+                <input className="input" value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder={translate("Optional notes...")} />
               </div>
 
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowCreateModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary btn-sm">Create Return</button>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowCreateModal(false)}>{translate("Cancel")}</button>
+                <button type="submit" className="btn btn-primary btn-sm">{translate("Create Return")}</button>
               </div>
             </form>
           </div>

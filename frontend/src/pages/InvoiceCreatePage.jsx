@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index.js';
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { formatEGP } from '../lib/formatters';
@@ -23,7 +24,7 @@ export default function InvoiceCreatePage() {
         const data = await api.get('/clients');
         setClients(data);
       } catch (err) {
-        toast.error('Failed to load B2B clients');
+        toast.error(translate("Failed to load B2B clients"));
       }
     }
     fetchClients();
@@ -76,13 +77,13 @@ export default function InvoiceCreatePage() {
 
     // Validations
     if (!customerName.trim()) {
-      toast.error('Customer name is required');
+      toast.error(translate("Customer name is required"));
       return;
     }
 
     const invalidItem = items.some(item => !item.description.trim() || item.quantity <= 0 || !item.unit_price || parseFloat(item.unit_price) <= 0);
     if (invalidItem) {
-      toast.error('Please fill all line items with valid description, quantity and unit price.');
+      toast.error(translate("Please fill all line items with valid description, quantity and unit price."));
       return;
     }
 
@@ -103,26 +104,26 @@ export default function InvoiceCreatePage() {
       };
 
       await api.post('/invoices', payload);
-      toast.success('Invoice created successfully');
+      toast.success(translate("Invoice created successfully"));
       navigate('/invoices');
     } catch (err) {
-      toast.error(err.message || 'Failed to create invoice');
+      toast.error(translate(err.message || 'Failed to create invoice'));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <DashboardShell title="Create invoice" actions={<Link className="btn btn-secondary" to="/invoices">Back to invoices</Link>}>
+    <DashboardShell title={translate("Create invoice")} actions={<Link className="btn btn-secondary" to="/invoices">{translate("Back to invoices")}</Link>}>
       <form onSubmit={handleSubmit} style={{ maxWidth: '800px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '32px' }}>
           {/* Client Selection & Customer details */}
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>Client Information</p>
+            <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>{translate("Client Information")}</p>
             <div>
-              <label htmlFor="invoice-client" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>B2B Client (Optional)</label>
+              <label htmlFor="invoice-client" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("B2B Client (Optional)")}</label>
               <select id="invoice-client" className="input select" value={clientId} onChange={handleClientChange}>
-                <option value="">-- Custom/Individual Customer --</option>
+                <option value="">{translate("-- Custom/Individual Customer --")}</option>
                 {clients.map(c => (
                   <option key={c.id} value={c.id}>
                     {c.company_name} ({c.contact_person})
@@ -131,17 +132,17 @@ export default function InvoiceCreatePage() {
               </select>
             </div>
             <div>
-              <label htmlFor="invoice-customer" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Customer Contact Name</label>
+              <label htmlFor="invoice-customer" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Customer Contact Name")}</label>
               <input id="invoice-customer"
                 className="input"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="e.g. John Doe"
+                placeholder={translate("e.g. John Doe")}
                 required
               />
             </div>
             <div>
-              <label htmlFor="invoice-email" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Customer Email (Optional)</label>
+              <label htmlFor="invoice-email" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Customer Email (Optional)")}</label>
               <input id="invoice-email"
                 type="email"
                 className="input"
@@ -154,9 +155,9 @@ export default function InvoiceCreatePage() {
 
           {/* Dates & Notes */}
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>Dates & Notes</p>
+            <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>{translate("Dates & Notes")}</p>
             <div>
-              <label htmlFor="invoice-issued" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Issue Date</label>
+              <label htmlFor="invoice-issued" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Issue Date")}</label>
               <input id="invoice-issued"
                 type="date"
                 className="input"
@@ -166,7 +167,7 @@ export default function InvoiceCreatePage() {
               />
             </div>
             <div>
-              <label htmlFor="invoice-due" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Due Date</label>
+              <label htmlFor="invoice-due" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Due Date")}</label>
               <input id="invoice-due"
                 type="date"
                 className="input"
@@ -176,13 +177,13 @@ export default function InvoiceCreatePage() {
               />
             </div>
             <div>
-              <label htmlFor="invoice-notes" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Memo / Notes</label>
+              <label htmlFor="invoice-notes" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Memo / Notes")}</label>
               <textarea id="invoice-notes"
                 className="input"
                 style={{ height: '78px', resize: 'none' }}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="e.g. Thank you for your business"
+                placeholder={translate("e.g. Thank you for your business")}
               />
             </div>
           </div>
@@ -191,10 +192,8 @@ export default function InvoiceCreatePage() {
         {/* Line Items Card */}
         <div className="card" style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>Line Items</p>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={addItem}>
-              + Add Item
-            </button>
+            <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>{translate("Line Items")}</p>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={addItem}> {translate("+ Add Item")} </button>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -206,7 +205,7 @@ export default function InvoiceCreatePage() {
                     aria-label={`Description for item ${index + 1}`}
                     value={item.description}
                     onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                    placeholder="Description / Product name"
+                    placeholder={translate("Description / Product name")}
                     required
                   />
                 </div>
@@ -219,7 +218,7 @@ export default function InvoiceCreatePage() {
                       aria-label={`Quantity for item ${index + 1}`}
                       value={item.quantity}
                       onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value, 10) || '')}
-                      placeholder="Qty"
+                      placeholder={translate("Qty")}
                       required
                     />
                   </div>
@@ -232,7 +231,7 @@ export default function InvoiceCreatePage() {
                       aria-label={`Unit price for item ${index + 1}`}
                       value={item.unit_price}
                       onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
-                      placeholder="Unit Price"
+                      placeholder={translate("Unit Price")}
                       required
                     />
                   </div>
@@ -255,8 +254,8 @@ export default function InvoiceCreatePage() {
 
           {/* Subtotal row */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--color-border-light)', marginTop: '20px', paddingTop: '16px' }}>
-            <div style={{ textAlign: 'right' }}>
-              <span className="text-label" style={{ color: 'var(--color-text-dim)', marginRight: '16px' }}>Grand Total:</span>
+            <div style={{ textAlign: "end" }}>
+              <span className="text-label" style={{ color: 'var(--color-text-dim)', marginInlineEnd: '16px' }}>{translate("Grand Total:")}</span>
               <span className="font-mono" style={{ fontSize: '22px', fontWeight: 800 }}>{formatEGP(total)}</span>
             </div>
           </div>
@@ -264,11 +263,9 @@ export default function InvoiceCreatePage() {
 
         {/* Submit Actions */}
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate('/invoices')} disabled={loading}>
-            Cancel
-          </button>
+          <button type="button" className="btn btn-secondary" onClick={() => navigate('/invoices')} disabled={loading}> {translate("Cancel")} </button>
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'CREATING...' : 'GENERATE INVOICE'}
+            {loading ? translate("CREATING...") : translate("GENERATE INVOICE")}
           </button>
         </div>
       </form>

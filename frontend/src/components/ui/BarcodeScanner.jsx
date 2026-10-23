@@ -1,3 +1,4 @@
+import { translate } from '../../i18n/index.js';
 import { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 
@@ -45,10 +46,10 @@ export default function BarcodeScanner({ onDetect, onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: 440, width: '94%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-        <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 12 }}>Scan Barcode</p>
+        <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 12 }}>{translate("Scan Barcode")}</p>
 
         {error ? (
-          <p style={{ color: 'var(--color-error)', fontSize: 13, padding: '24px 8px', lineHeight: 1.5 }}>{error}</p>
+          <p style={{ color: 'var(--color-error)', fontSize: 13, padding: '24px 8px', lineHeight: 1.5 }}>{translate(error)}</p>
         ) : (
           <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', background: '#000', aspectRatio: '4 / 3' }}>
             <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} muted playsInline />
@@ -60,10 +61,8 @@ export default function BarcodeScanner({ onDetect, onClose }) {
           </div>
         )}
 
-        <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 12 }}>
-          Point the rear camera at the barcode.
-        </p>
-        <button className="btn btn-secondary btn-sm" style={{ marginTop: 12 }} onClick={onClose}>Cancel</button>
+        <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 12 }}> {translate("Point the rear camera at the barcode.")} </p>
+        <button className="btn btn-secondary btn-sm" style={{ marginTop: 12 }} onClick={onClose}>{translate("Cancel")}</button>
       </div>
     </div>
   );

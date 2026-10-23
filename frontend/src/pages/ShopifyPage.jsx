@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index.js';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatDate, formatDateTime, getStatusColor, timeAgo } from '../lib/formatters';
@@ -13,7 +14,7 @@ const PAYMENT_STATUS_OPTIONS = ['paid', 'pending', 'failed', 'refunded'];
 const CHART_COLORS = ['#6366f1','#3fb950','#f0883e','#58a6ff','#f85149','#a371f7','#38bdf8'];
 // Card payments (incl. former "installment") are shown as Visa
 const PM_LABELS = { cash: 'Cash', card: 'Visa', installment: 'Visa', bank_transfer: 'Bank Transfer' };
-const pmLabel = (m) => PM_LABELS[m] || (m || '').replace('_', ' ');
+const pmLabel = (m) => translate(PM_LABELS[m] || m || '');
 const TT = { background:'var(--color-bg-elevated)', border:'1px solid var(--color-border)', color:'var(--color-text)', fontSize:12, borderRadius:6 };
 
 export default function ShopifyPage() {
@@ -39,7 +40,7 @@ export default function ShopifyPage() {
       setAnalytics(analyticsData);
       setSyncLog(logData || []);
     } catch (err) {
-      toast.error(err.message || 'Failed to load Shopify data');
+      toast.error(translate(err.message || 'Failed to load Shopify data'));
     } finally {
       setLoading(false);
     }
@@ -58,7 +59,7 @@ export default function ShopifyPage() {
       setOrdersTotal(data.total || 0);
       setOffset(newOffset);
     } catch (err) {
-      toast.error(err.message || 'Failed to load orders');
+      toast.error(translate(err.message || 'Failed to load orders'));
     } finally {
       setOrdersLoading(false);
     }
@@ -66,7 +67,7 @@ export default function ShopifyPage() {
 
   async function triggerSync() {
     setSyncing(true);
-    const t = toast.loading('Syncing Shopify products & orders...');
+    const t = toast.loading(translate('Syncing Shopify products & orders...'));
     try {
       const result = await api.post('/shopify/sync', {});
       toast.success(
@@ -75,7 +76,7 @@ export default function ShopifyPage() {
       );
       fetchOverview();
     } catch (err) {
-      toast.error(err.message || 'Sync failed', { id: t });
+      toast.error(translate(err.message || 'Sync failed'), { id: t });
     } finally {
       setSyncing(false);
     }
@@ -94,7 +95,7 @@ export default function ShopifyPage() {
   );
 
   return (
-    <DashboardShell title="Shopify Channel">
+    <DashboardShell title={translate("Shopify Channel")}>
       <div style={{ display:'flex', gap:4, borderBottom:'1px solid var(--color-border-light)', paddingBottom:4, marginBottom:24 }}>
         {[
           { id:'overview', label:'Overview' },
@@ -111,23 +112,23 @@ export default function ShopifyPage() {
               color:       activeTab === tab.id ? 'var(--color-text)'      : 'var(--color-text-muted)',
             }}
           >
-            {tab.label}
+            {translate(tab.label)}
           </button>
         ))}
-        <button className="btn btn-primary btn-sm" onClick={triggerSync} disabled={syncing} style={{ marginLeft:'auto' }}>
+        <button className="btn btn-primary btn-sm" onClick={triggerSync} disabled={syncing} style={{ marginInlineStart:'auto' }}>
           <span className="material-symbols-outlined" style={{ fontSize:15 }}>{syncing ? 'hourglass_top' : 'sync'}</span>
-          {syncing ? 'Syncing…' : 'Sync Now'}
+          {syncing ? translate("Syncing…") : translate("Sync Now")}
         </button>
       </div>
 
       {activeTab === 'overview' && (
-        loading ? <p style={{ color: 'var(--color-text-dim)' }}>Loading analytics...</p> : (
+        loading ? <p style={{ color: 'var(--color-text-dim)' }}>{translate("Loading analytics...")}</p> : (
           <div style={{ display: 'grid', gap: 20 }}>
             <SummaryCards analytics={analytics} />
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16 }}>
               <div className="card">
-                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Revenue — Last 30 Days</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>{translate("Revenue — Last 30 Days")}</p>
                 <div style={{ height: 240 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={analytics?.revenueChart || []}>
@@ -135,14 +136,14 @@ export default function ShopifyPage() {
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
                       <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
                       <Tooltip contentStyle={TT} formatter={(v) => [formatEGP(v), 'Revenue']} />
-                      <Bar dataKey="revenue" name="Revenue" fill="#6366f1" opacity={0.9} radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="revenue" name={translate("Revenue")} fill="#6366f1" opacity={0.9} radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               <div className="card">
-                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Orders per Day — Last 30 Days</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>{translate("Orders per Day — Last 30 Days")}</p>
                 <div style={{ height: 240 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={analytics?.revenueChart || []}>
@@ -150,7 +151,7 @@ export default function ShopifyPage() {
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
                       <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                       <Tooltip contentStyle={TT} />
-                      <Bar dataKey="orders" name="Orders" fill="#3fb950" opacity={0.85} radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="orders" name={translate("Orders")} fill="#3fb950" opacity={0.85} radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -159,7 +160,7 @@ export default function ShopifyPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
               <div className="card">
-                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Order Status Breakdown</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>{translate("Order Status Breakdown")}</p>
                 <div style={{ height: 220 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -174,7 +175,7 @@ export default function ShopifyPage() {
               </div>
 
               <div className="card">
-                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Payment Method Breakdown</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>{translate("Payment Method Breakdown")}</p>
                 <div style={{ height: 220 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={paymentMethodData} layout="vertical">
@@ -182,7 +183,7 @@ export default function ShopifyPage() {
                       <XAxis type="number" tick={{ fill:'var(--color-text-muted)', fontSize: 10 }} allowDecimals={false} />
                       <YAxis type="category" dataKey="name" tick={{ fill:'var(--color-text-muted)', fontSize: 11 }} width={80} />
                       <Tooltip contentStyle={TT} />
-                      <Bar dataKey="value" name="Orders" fill="#58a6ff" radius={[0, 2, 2, 0]} />
+                      <Bar dataKey="value" name={translate("Orders")} fill="#58a6ff" radius={[0, 2, 2, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -190,21 +191,21 @@ export default function ShopifyPage() {
             </div>
 
             <div className="card">
-              <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Top 10 Products by Revenue</p>
+              <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>{translate("Top 10 Products by Revenue")}</p>
               <div className="table-container">
                 <table className="data-table">
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>SKU</th>
-                      <th>Name</th>
-                      <th>Units Sold</th>
-                      <th>Revenue</th>
+                      <th>{translate("SKU")}</th>
+                      <th>{translate("Name")}</th>
+                      <th>{translate("Units Sold")}</th>
+                      <th>{translate("Revenue")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(analytics?.topProducts || []).length === 0 ? (
-                      <tr><td colSpan="5" style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-dim)' }}>No product data yet.</td></tr>
+                      <tr><td colSpan="5" style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-dim)' }}>{translate("No product data yet.")}</td></tr>
                     ) : (analytics?.topProducts || []).map((p, i) => (
                       <tr key={p.sku}>
                         <td className="font-mono" style={{ color: 'var(--color-text-dim)' }}>{i + 1}</td>
@@ -230,46 +231,46 @@ export default function ShopifyPage() {
             style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}
           >
             <select className="input select" value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
-              <option value="">All statuses</option>
-              {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
+              <option value="">{translate("All statuses")}</option>
+              {STATUS_OPTIONS.map(s => <option key={s} value={s}>{translate(s)}</option>)}
             </select>
             <select className="input select" value={filters.payment_status} onChange={e => setFilters({ ...filters, payment_status: e.target.value })}>
-              <option value="">All payment statuses</option>
-              {PAYMENT_STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              <option value="">{translate("All payment statuses")}</option>
+              {PAYMENT_STATUS_OPTIONS.map(s => <option key={s} value={s}>{translate(s)}</option>)}
             </select>
             <input className="input" type="date" value={filters.start} onChange={e => setFilters({ ...filters, start: e.target.value })} />
             <input className="input" type="date" value={filters.end} onChange={e => setFilters({ ...filters, end: e.target.value })} />
-            <button className="btn btn-primary" type="submit">Apply</button>
+            <button className="btn btn-primary" type="submit">{translate("Apply")}</button>
           </form>
 
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="text-label" style={{ color: 'var(--color-text-dim)' }}>{ordersTotal} Shopify Orders</span>
+              <span className="text-label" style={{ color: 'var(--color-text-dim)' }}>{ordersTotal} {translate("Shopify Orders")}</span>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-secondary btn-sm" disabled={offset === 0} onClick={() => fetchOrders(offset - LIMIT)}>Prev</button>
+                <button className="btn btn-secondary btn-sm" disabled={offset === 0} onClick={() => fetchOrders(offset - LIMIT)}>{translate("Prev")}</button>
                 <span className="font-mono" style={{ fontSize: 12, alignSelf: 'center' }}>{offset + 1}–{Math.min(offset + LIMIT, ordersTotal)}</span>
-                <button className="btn btn-secondary btn-sm" disabled={offset + LIMIT >= ordersTotal} onClick={() => fetchOrders(offset + LIMIT)}>Next</button>
+                <button className="btn btn-secondary btn-sm" disabled={offset + LIMIT >= ordersTotal} onClick={() => fetchOrders(offset + LIMIT)}>{translate("Next")}</button>
               </div>
             </div>
             <div className="table-container">
               <table className="data-table t-shopify-orders">
                 <thead>
                   <tr>
-                    <th>Order</th>
-                    <th>Customer</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Payment</th>
-                    <th>Method</th>
-                    <th>Date</th>
+                    <th>{translate("Order")}</th>
+                    <th>{translate("Customer")}</th>
+                    <th>{translate("Items")}</th>
+                    <th>{translate("Total")}</th>
+                    <th>{translate("Status")}</th>
+                    <th>{translate("Payment")}</th>
+                    <th>{translate("Method")}</th>
+                    <th>{translate("Date")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {ordersLoading ? (
-                    <tr><td colSpan="8" style={{ padding: 32, textAlign: 'center' }}>Loading...</td></tr>
+                    <tr><td colSpan="8" style={{ padding: 32, textAlign: 'center' }}>{translate("Loading...")}</td></tr>
                   ) : orders.length === 0 ? (
-                    <tr><td colSpan="8" style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-dim)' }}>No orders found.</td></tr>
+                    <tr><td colSpan="8" style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-dim)' }}>{translate("No orders found.")}</td></tr>
                   ) : orders.map(o => (
                     <tr key={o.id}>
                       <td className="font-mono">{o.shopify_order_name || `#${o.order_number}`}</td>
@@ -282,12 +283,12 @@ export default function ShopifyPage() {
                           <div key={i}>{item.quantity}x {item.name}</div>
                         ))}
                         {(Array.isArray(o.items) ? o.items : []).length > 2 && (
-                          <div style={{ color: 'var(--color-text-dim)' }}>+{o.items.length - 2} more</div>
+                          <div style={{ color: 'var(--color-text-dim)' }}>+{o.items.length - 2} {translate("more")}</div>
                         )}
                       </td>
                       <td className="font-mono">{formatEGP(o.total)}</td>
-                      <td><span className={`badge badge-${getStatusColor(o.status)}`}>{o.status}</span></td>
-                      <td><span className={`badge badge-${getStatusColor(o.payment_status)}`}>{o.payment_status}</span></td>
+                      <td><span className={`badge badge-${getStatusColor(o.status)}`}>{translate(o.status)}</span></td>
+                      <td><span className={`badge badge-${getStatusColor(o.payment_status)}`}>{translate(o.payment_status)}</span></td>
                       <td style={{ fontSize: 12 }}>{pmLabel(o.payment_method)}</td>
                       <td style={{ fontSize: 12 }}>{formatDate(o.created_at)}</td>
                     </tr>
@@ -303,44 +304,42 @@ export default function ShopifyPage() {
         <div style={{ display: 'grid', gap: 16 }}>
           <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ flex: 1 }}>
-              <p className="text-label" style={{ color:'var(--color-text-dim)' }}>Manual Sync</p>
-              <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 4 }}>
-                Pull latest products and orders from Shopify. Rate-limited to 2 req/s with exponential backoff.
-              </p>
+              <p className="text-label" style={{ color:'var(--color-text-dim)' }}>{translate("Manual Sync")}</p>
+              <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 4 }}> {translate("Pull latest products and orders from Shopify. Rate-limited to 2 req/s with exponential backoff.")} </p>
             </div>
             <button className="btn btn-primary" onClick={triggerSync} disabled={syncing}>
-              {syncing ? 'Syncing...' : 'Run Full Sync'}
+              {syncing ? translate("Syncing...") : translate("Run Full Sync")}
             </button>
           </div>
 
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border-light)' }}>
-              <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Sync History</p>
+              <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>{translate("Sync History")}</p>
             </div>
             <div className="table-container">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Time</th>
-                    <th>Triggered By</th>
-                    <th>Status</th>
-                    <th>Products Updated</th>
-                    <th>Products Created</th>
-                    <th>Products Skipped</th>
-                    <th>Orders Synced</th>
-                    <th>Customers Synced</th>
-                    <th>Duration</th>
-                    <th>Error</th>
+                    <th>{translate("Time")}</th>
+                    <th>{translate("Triggered By")}</th>
+                    <th>{translate("Status")}</th>
+                    <th>{translate("Products Updated")}</th>
+                    <th>{translate("Products Created")}</th>
+                    <th>{translate("Products Skipped")}</th>
+                    <th>{translate("Orders Synced")}</th>
+                    <th>{translate("Customers Synced")}</th>
+                    <th>{translate("Duration")}</th>
+                    <th>{translate("Error")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {syncLog.length === 0 ? (
-                    <tr><td colSpan="10" style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-dim)' }}>No sync history.</td></tr>
+                    <tr><td colSpan="10" style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-dim)' }}>{translate("No sync history.")}</td></tr>
                   ) : syncLog.map(log => (
                     <tr key={log.id}>
                       <td style={{ fontSize: 12 }} title={formatDateTime(log.synced_at)}>{timeAgo(log.synced_at)}</td>
                       <td style={{ fontSize: 12 }}>{log.triggered_by}</td>
-                      <td><span className={`badge badge-${log.status === 'success' ? 'success' : 'error'}`}>{log.status}</span></td>
+                      <td><span className={`badge badge-${log.status === 'success' ? 'success' : 'error'}`}>{translate(log.status)}</span></td>
                       <td className="font-mono">{log.products_updated ?? '—'}</td>
                       <td className="font-mono">{log.products_created ?? '—'}</td>
                       <td className="font-mono">{log.products_skipped ?? '—'}</td>
@@ -377,7 +376,7 @@ function SummaryCards({ analytics }) {
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
       {cards.map(([label, value, color]) => (
         <div className="card" key={label}>
-          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>{label}</p>
+          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>{translate(label)}</p>
           <p className="font-mono" style={{ fontSize: 22, fontWeight: 800, color: color || 'var(--color-text)' }}>{value}</p>
         </div>
       ))}

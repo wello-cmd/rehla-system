@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index.js';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { jsPDF } from 'jspdf';
@@ -71,7 +72,7 @@ export default function FinancialDashboardPage() {
       setCashflowData(cf.data);
       setInventoryData(inv.data);
     } catch (err) {
-      toast.error('Failed to load financial data');
+      toast.error(translate("Failed to load financial data"));
       console.error(err);
     } finally {
       setLoading(false);
@@ -91,7 +92,7 @@ export default function FinancialDashboardPage() {
   async function handleExpenseSubmit(e) {
     e.preventDefault();
     if (!expTitle.trim() || !expAmount || parseFloat(expAmount) <= 0 || !expDate) {
-      toast.error('Please fill all fields with valid data');
+      toast.error(translate("Please fill all fields with valid data"));
       return;
     }
 
@@ -105,26 +106,26 @@ export default function FinancialDashboardPage() {
     try {
       if (editingExpenseId) {
         await api.put(`/expenses/${editingExpenseId}`, payload);
-        toast.success('Expense updated successfully');
+        toast.success(translate("Expense updated successfully"));
       } else {
         await api.post(`/expenses`, payload);
-        toast.success('Expense logged successfully');
+        toast.success(translate("Expense logged successfully"));
       }
       closeExpenseModal();
       fetchAllData();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to save expense');
+      toast.error(translate(err.response?.data?.error || 'Failed to save expense'));
     }
   }
 
   async function handleExpenseDelete(id) {
-    if (!confirm('Are you sure you want to delete this expense?')) return;
+    if (!confirm(translate("Are you sure you want to delete this expense?"))) return;
     try {
       await api.delete(`/expenses/${id}`);
-      toast.success('Expense deleted');
+      toast.success(translate("Expense deleted"));
       fetchAllData();
     } catch (err) {
-      toast.error('Failed to delete expense');
+      toast.error(translate("Failed to delete expense"));
     }
   }
 
@@ -164,16 +165,16 @@ export default function FinancialDashboardPage() {
     doc.setFontSize(14);
     
     doc.text('Gross Revenue:', 20, y);
-    doc.text(formatEGP(pnlData.revenue), 190, y, { align: 'right' });
+    doc.text(formatEGP(pnlData.revenue, 'en-GB'), 190, y, { align: 'right' });
     y += 15;
     
     doc.text('Cost of Goods Sold (COGS):', 20, y);
-    doc.text(`- ${formatEGP(pnlData.cogs)}`, 190, y, { align: 'right' });
+    doc.text(`- ${formatEGP(pnlData.cogs, 'en-GB')}`, 190, y, { align: 'right' });
     y += 15;
     
     doc.setFont(undefined, 'bold');
     doc.text('Gross Profit:', 20, y);
-    doc.text(formatEGP(pnlData.grossProfit), 190, y, { align: 'right' });
+    doc.text(formatEGP(pnlData.grossProfit, 'en-GB'), 190, y, { align: 'right' });
     doc.setFont(undefined, 'normal');
     y += 15;
     
@@ -181,19 +182,19 @@ export default function FinancialDashboardPage() {
     y += 25;
     
     doc.text('Total Expenses:', 20, y);
-    doc.text(`- ${formatEGP(pnlData.expenses)}`, 190, y, { align: 'right' });
+    doc.text(`- ${formatEGP(pnlData.expenses, 'en-GB')}`, 190, y, { align: 'right' });
     y += 15;
     
     doc.setFont(undefined, 'bold');
     doc.text('Net Profit:', 20, y);
-    doc.text(formatEGP(pnlData.netProfit), 190, y, { align: 'right' });
+    doc.text(formatEGP(pnlData.netProfit, 'en-GB'), 190, y, { align: 'right' });
     doc.setFont(undefined, 'normal');
     y += 15;
     
     doc.text(`Net Margin: ${pnlData.netMargin?.toFixed(1)}%`, 20, y);
     
     doc.save('rehla-pnl-summary.pdf');
-    toast.success('P&L PDF exported successfully');
+    toast.success(translate("P&L PDF exported successfully"));
   }
 
   const renderSkeleton = () => (
@@ -204,7 +205,7 @@ export default function FinancialDashboardPage() {
   );
 
   return (
-    <DashboardShell title="Financial Dashboard">
+    <DashboardShell title={translate("Financial Dashboard")}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
         <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '4px' }}>
           {['revenue', 'expenses', 'pnl', 'inventory', 'cashflow'].map(tab => (
@@ -219,7 +220,7 @@ export default function FinancialDashboardPage() {
                 textTransform: 'capitalize'
               }}
             >
-              {tab.replace('-', ' ')}
+              {translate(tab)}
             </button>
           ))}
         </div>
@@ -232,7 +233,7 @@ export default function FinancialDashboardPage() {
             onChange={(e) => setStartDate(e.target.value)}
             style={{ padding: '8px 12px', fontSize: '13px' }}
           />
-          <span style={{ color: 'var(--color-text-dim)' }}>to</span>
+          <span style={{ color: 'var(--color-text-dim)' }}>{translate("to")}</span>
           <input
             type="date"
             className="input"
@@ -240,7 +241,7 @@ export default function FinancialDashboardPage() {
             onChange={(e) => setEndDate(e.target.value)}
             style={{ padding: '8px 12px', fontSize: '13px' }}
           />
-          <button type="submit" className="btn btn-primary btn-sm">Filter</button>
+          <button type="submit" className="btn btn-primary btn-sm">{translate("Filter")}</button>
         </form>
       </div>
 
@@ -252,25 +253,25 @@ export default function FinancialDashboardPage() {
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
                 <div className="card">
-                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>Total Revenue</p>
+                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>{translate("Total Revenue")}</p>
                   <p style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{formatEGP(revenueData.totalRevenue)}</p>
                 </div>
                 <div className="card">
-                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>Order Count</p>
+                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>{translate("Order Count")}</p>
                   <p style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{formatNumber(revenueData.orderCount)}</p>
                 </div>
                 <div className="card">
-                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>Avg Order Value</p>
+                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>{translate("Avg Order Value")}</p>
                   <p style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{formatEGP(revenueData.avgOrderValue)}</p>
                 </div>
-                <div className="card" style={{ borderLeft: '3px solid var(--color-error)' }}>
-                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>Refunded Orders</p>
+                <div className="card" style={{ borderInlineStart: '3px solid var(--color-error)' }}>
+                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>{translate("Refunded Orders")}</p>
                   <p style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-error)' }}>{formatEGP(revenueData.totalRefunded)}</p>
                 </div>
               </div>
 
               <div className="card">
-                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>Revenue Trend</p>
+                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>{translate("Revenue Trend")}</p>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={revenueData.chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
@@ -278,14 +279,14 @@ export default function FinancialDashboardPage() {
                     <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
                     <Tooltip contentStyle={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }} />
                     <Legend wrapperStyle={{ fontSize: '11px' }} />
-                    <Line type="monotone" dataKey="revenue" name="Revenue (EGP)" stroke="#333" strokeWidth={3} dot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="revenue" name={translate("Revenue (EGP)")} stroke="#333" strokeWidth={3} dot={{ r: 4 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
                 <div className="card">
-                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '16px' }}>Top 5 Products (Revenue)</p>
+                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '16px' }}>{translate("Top 5 Products (Revenue)")}</p>
                   <ResponsiveContainer width="100%" height={240}>
                     <BarChart data={revenueData.topProductsRevenue} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
@@ -298,7 +299,7 @@ export default function FinancialDashboardPage() {
                 </div>
 
                 <div className="card">
-                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '16px' }}>Top 5 Products (Quantity)</p>
+                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '16px' }}>{translate("Top 5 Products (Quantity)")}</p>
                   <ResponsiveContainer width="100%" height={240}>
                     <BarChart data={revenueData.topProductsQty} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
@@ -317,13 +318,13 @@ export default function FinancialDashboardPage() {
           {activeTab === 'expenses' && expenseData && (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 className="text-title">Expense Management</h3>
-                <button className="btn btn-primary" onClick={() => setShowExpenseModal(true)}>+ Add Expense</button>
+                <h3 className="text-title">{translate("Expense Management")}</h3>
+                <button className="btn btn-primary" onClick={() => setShowExpenseModal(true)}>{translate("+ Add Expense")}</button>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
                 <div className="card">
-                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '16px' }}>Expenses by Category</p>
+                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '16px' }}>{translate("Expenses by Category")}</p>
                   <ResponsiveContainer width="100%" height={240}>
                     <PieChart>
                       <Pie data={expenseData.donutData} dataKey="amount" nameKey="category" cx="50%" cy="50%" innerRadius={60} outerRadius={80} label>
@@ -338,17 +339,17 @@ export default function FinancialDashboardPage() {
                 </div>
 
                 <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>Month-over-Month Expenses</p>
+                  <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>{translate("Month-over-Month Expenses")}</p>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                    <span>This Month</span>
+                    <span>{translate("This Month")}</span>
                     <span className="font-mono" style={{ fontWeight: 'bold' }}>{formatEGP(expenseData.mom.thisMonth)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                    <span>Last Month</span>
+                    <span>{translate("Last Month")}</span>
                     <span className="font-mono">{formatEGP(expenseData.mom.lastMonth)}</span>
                   </div>
                   <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>MoM Growth</span>
+                    <span>{translate("MoM Growth")}</span>
                     <span className="font-mono" style={{ color: expenseData.mom.growth > 0 ? 'var(--color-error)' : 'var(--color-success)', fontWeight: 'bold' }}>
                       {expenseData.mom.growth > 0 ? '+' : ''}{expenseData.mom.growth.toFixed(1)}%
                     </span>
@@ -361,11 +362,11 @@ export default function FinancialDashboardPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Date</th>
-                        <th>Description</th>
-                        <th>Category</th>
-                        <th>Amount</th>
-                        <th style={{ textAlign: 'right' }}>Actions</th>
+                        <th>{translate("Date")}</th>
+                        <th>{translate("Description")}</th>
+                        <th>{translate("Category")}</th>
+                        <th>{translate("Amount")}</th>
+                        <th style={{ textAlign: "end" }}>{translate("Actions")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -375,16 +376,16 @@ export default function FinancialDashboardPage() {
                           <td>{exp.title || exp.description}</td>
                           <td><span className="badge badge-neutral">{exp.category}</span></td>
                           <td className="font-mono">{formatEGP(exp.amount)}</td>
-                          <td style={{ textAlign: 'right' }}>
+                          <td style={{ textAlign: "end" }}>
                             <div style={{ display: 'inline-flex', gap: '8px' }}>
-                              <button className="btn btn-secondary btn-sm" onClick={() => openEditExpense(exp)}>Edit</button>
-                              <button className="btn btn-danger btn-sm" onClick={() => handleExpenseDelete(exp.id)}>Delete</button>
+                              <button className="btn btn-secondary btn-sm" onClick={() => openEditExpense(exp)}>{translate("Edit")}</button>
+                              <button className="btn btn-danger btn-sm" onClick={() => handleExpenseDelete(exp.id)}>{translate("Delete")}</button>
                             </div>
                           </td>
                         </tr>
                       ))}
                       {expenseData.expenses.length === 0 && (
-                        <tr><td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>No expenses found.</td></tr>
+                        <tr><td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>{translate("No expenses found.")}</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -397,39 +398,37 @@ export default function FinancialDashboardPage() {
           {activeTab === 'pnl' && pnlData && (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 className="text-title">Profit & Loss Summary</h3>
-                <button className="btn btn-secondary" onClick={exportPnlPdf}>
-                  Export PDF Summary
-                </button>
+                <h3 className="text-title">{translate("Profit & Loss Summary")}</h3>
+                <button className="btn btn-secondary" onClick={exportPnlPdf}> {translate("Export PDF Summary")} </button>
               </div>
 
               <div className="card">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px' }}>
-                    <span>Revenue</span>
+                    <span>{translate("Revenue")}</span>
                     <span className="font-mono">{formatEGP(pnlData.revenue)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', color: 'var(--color-text-muted)' }}>
-                    <span>Cost of Goods Sold (COGS)</span>
+                    <span>{translate("Cost of Goods Sold (COGS)")}</span>
                     <span className="font-mono">−{formatEGP(pnlData.cogs)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', borderTop: '1px solid var(--color-border-light)', paddingTop: '16px' }}>
-                    <span>Gross Profit</span>
+                    <span>{translate("Gross Profit")}</span>
                     <span className="font-mono">{formatEGP(pnlData.grossProfit)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', color: 'var(--color-text-muted)' }}>
-                    <span>Expenses</span>
+                    <span>{translate("Expenses")}</span>
                     <span className="font-mono">−{formatEGP(pnlData.expenses)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '22px', fontWeight: 'bold', borderTop: '1px solid var(--color-border-light)', paddingTop: '16px', color: pnlData.netProfit >= 0 ? 'var(--color-success)' : 'var(--color-error)' }}>
-                    <span>Net Profit</span>
+                    <span>{translate("Net Profit")}</span>
                     <span className="font-mono">{formatEGP(pnlData.netProfit)}</span>
                   </div>
                 </div>
               </div>
 
               <div className="card">
-                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>Monthly P&L Trend</p>
+                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>{translate("Monthly P&L Trend")}</p>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={pnlData.trendChart}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
@@ -437,9 +436,9 @@ export default function FinancialDashboardPage() {
                     <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
                     <Tooltip contentStyle={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }} />
                     <Legend wrapperStyle={{ fontSize: '11px' }} />
-                    <Bar dataKey="revenue" name="Revenue" fill="#333" />
-                    <Bar dataKey="expenses" name="Expenses" fill="#888" />
-                    <Bar dataKey="netProfit" name="Net Profit" fill="#4caf50" />
+                    <Bar dataKey="revenue" name={translate("Revenue")} fill="#333" />
+                    <Bar dataKey="expenses" name={translate("Expenses")} fill="#888" />
+                    <Bar dataKey="netProfit" name={translate("Net Profit")} fill="#4caf50" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -450,19 +449,19 @@ export default function FinancialDashboardPage() {
           {activeTab === 'inventory' && inventoryData && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
               <div className="card">
-                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>Total Cost Value (COGS)</p>
+                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>{translate("Total Cost Value (COGS)")}</p>
                 <p style={{ fontSize: '32px', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{formatEGP(inventoryData.costValue)}</p>
-                <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '8px' }}>Amount tied up in current stock</p>
+                <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '8px' }}>{translate("Amount tied up in current stock")}</p>
               </div>
               <div className="card">
-                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>Potential Revenue</p>
+                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>{translate("Potential Revenue")}</p>
                 <p style={{ fontSize: '32px', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{formatEGP(inventoryData.retailValue)}</p>
-                <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '8px' }}>Total retail value of current stock</p>
+                <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '8px' }}>{translate("Total retail value of current stock")}</p>
               </div>
               <div className="card" style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-success)' }}>
-                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>Potential Profit</p>
+                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '8px' }}>{translate("Potential Profit")}</p>
                 <p style={{ fontSize: '32px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-success)' }}>{formatEGP(inventoryData.potentialProfit)}</p>
-                <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '8px' }}>If all stock is sold at retail price</p>
+                <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '8px' }}>{translate("If all stock is sold at retail price")}</p>
               </div>
             </div>
           )}
@@ -471,7 +470,7 @@ export default function FinancialDashboardPage() {
           {activeTab === 'cashflow' && cashflowData && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div className="card">
-                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>Monthly Cash Flow (In vs Out)</p>
+                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>{translate("Monthly Cash Flow (In vs Out)")}</p>
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={cashflowData.cashflow}>
                     <defs>
@@ -489,21 +488,21 @@ export default function FinancialDashboardPage() {
                     <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
                     <Tooltip contentStyle={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }} />
                     <Legend wrapperStyle={{ fontSize: '11px' }} />
-                    <Area type="monotone" dataKey="moneyIn" name="Money In (Revenue)" stroke="#4caf50" fillOpacity={1} fill="url(#colorIn)" />
-                    <Area type="monotone" dataKey="moneyOut" name="Money Out (Expenses)" stroke="#ef5350" fillOpacity={1} fill="url(#colorOut)" />
+                    <Area type="monotone" dataKey="moneyIn" name={translate("Money In (Revenue)")} stroke="#4caf50" fillOpacity={1} fill="url(#colorIn)" />
+                    <Area type="monotone" dataKey="moneyOut" name={translate("Money Out (Expenses)")} stroke="#ef5350" fillOpacity={1} fill="url(#colorOut)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
 
               <div className="card">
-                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>Running Balance</p>
+                <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '20px' }}>{translate("Running Balance")}</p>
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={cashflowData.cashflow}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
                     <XAxis dataKey="month" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
                     <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
                     <Tooltip contentStyle={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }} />
-                    <Bar dataKey="runningBalance" name="Running Balance">
+                    <Bar dataKey="runningBalance" name={translate("Running Balance")}>
                       {cashflowData.cashflow.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.runningBalance >= 0 ? '#4caf50' : '#ef5350'} />
                       ))}
@@ -521,34 +520,34 @@ export default function FinancialDashboardPage() {
       {showExpenseModal && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '400px' }}>
-            <h3 className="text-title" style={{ marginBottom: '16px' }}>{editingExpenseId ? 'Edit Expense' : 'Add Expense'}</h3>
+            <h3 className="text-title" style={{ marginBottom: '16px' }}>{editingExpenseId ? translate("Edit Expense") : translate("Add Expense")}</h3>
             <form onSubmit={handleExpenseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label className="text-label">Date</label>
+                <label className="text-label">{translate("Date")}</label>
                 <input type="date" className="input" required value={expDate} onChange={e => setExpDate(e.target.value)} />
               </div>
               <div>
-                <label className="text-label">Description</label>
-                <input className="input" required placeholder="e.g. Office rent" value={expTitle} onChange={e => setExpTitle(e.target.value)} />
+                <label className="text-label">{translate("Description")}</label>
+                <input className="input" required placeholder={translate("e.g. Office rent")} value={expTitle} onChange={e => setExpTitle(e.target.value)} />
               </div>
               <div>
-                <label className="text-label">Category</label>
+                <label className="text-label">{translate("Category")}</label>
                 <select className="input select" required value={expCategory} onChange={e => setExpCategory(e.target.value)}>
-                  <option value="Inventory">Inventory</option>
-                  <option value="Shipping">Shipping</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Platform">Platform</option>
-                  <option value="Operations">Operations</option>
-                  <option value="Other">Other</option>
+                  <option value="Inventory">{translate("Inventory")}</option>
+                  <option value="Shipping">{translate("Shipping")}</option>
+                  <option value="Marketing">{translate("Marketing")}</option>
+                  <option value="Platform">{translate("Platform")}</option>
+                  <option value="Operations">{translate("Operations")}</option>
+                  <option value="Other">{translate("Other")}</option>
                 </select>
               </div>
               <div>
-                <label className="text-label">Amount (EGP)</label>
+                <label className="text-label">{translate("Amount (EGP)")}</label>
                 <input type="number" step="0.01" className="input" required value={expAmount} onChange={e => setExpAmount(e.target.value)} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
-                <button type="button" className="btn btn-secondary" onClick={closeExpenseModal}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Save Expense</button>
+                <button type="button" className="btn btn-secondary" onClick={closeExpenseModal}>{translate("Cancel")}</button>
+                <button type="submit" className="btn btn-primary">{translate("Save Expense")}</button>
               </div>
             </form>
           </div>

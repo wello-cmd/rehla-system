@@ -1,3 +1,4 @@
+import { translate } from '../../i18n/index.js';
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -39,7 +40,7 @@ export default function AccessibleDialog({ children, onClose, title, style, clas
       {...props}
       ref={dialogRef}
       className="modal-overlay accessible-dialog"
-      aria-label={props['aria-labelledby'] ? undefined : title}
+      aria-label={props['aria-labelledby'] ? undefined : translate(title)}
       aria-modal="true"
       tabIndex={-1}
       onCancel={event => { event.preventDefault(); onCloseRef.current?.(); }}

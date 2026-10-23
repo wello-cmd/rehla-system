@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index.js';
 import { useState } from 'react';
 import { api } from '../lib/api';
 import DashboardShell from '../components/layout/DashboardShell';
@@ -33,7 +34,7 @@ export default function AiPage() {
         data: response.data || []
       }]);
     } catch (err) {
-      toast.error('AI query execution failed');
+      toast.error(translate("AI query execution failed"));
       setMessages(prev => [...prev, {
         sender: 'assistant',
         title: 'Error',
@@ -45,7 +46,7 @@ export default function AiPage() {
   }
 
   return (
-    <DashboardShell title="CEO AI Assistant">
+    <DashboardShell title={translate("CEO AI Assistant")}>
       <div style={{ maxWidth: '800px', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 200px)' }}>
         {/* Terminal/Console Messages Area */}
         <div className="card" style={{
@@ -68,13 +69,13 @@ export default function AiPage() {
             }}>
               {msg.sender === 'user' ? (
                 <div style={{ background: 'var(--color-bg-active)', padding: '12px 16px', borderRadius: '4px', display: 'inline-block' }}>
-                  <span style={{ color: 'var(--color-text-dim)', marginRight: '6px' }}>&gt;</span>
+                  <span style={{ color: 'var(--color-text-dim)', marginInlineEnd: '6px' }}>&gt;</span>
                   <span>{msg.answer}</span>
                 </div>
               ) : (
                 <div>
                   <div style={{ color: 'var(--color-success)', fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
-                    🤖 {msg.title || 'Assistant Response'}
+                    🤖 {msg.title || translate("Assistant Response")}
                   </div>
                   <div style={{ background: 'var(--color-bg)', padding: '16px', border: '1px solid var(--color-border-light)', borderRadius: '4px' }}>
                     <p style={{ fontSize: '14px', lineHeight: '1.5', color: 'var(--color-text)' }}>{msg.answer}</p>
@@ -111,7 +112,7 @@ export default function AiPage() {
           ))}
           {loading && (
             <div style={{ alignSelf: 'flex-start' }}>
-              <div style={{ color: 'var(--color-success)', fontSize: '12px', marginBottom: '6px' }}>🤖 EXECUTING QUERY...</div>
+              <div style={{ color: 'var(--color-success)', fontSize: '12px', marginBottom: '6px' }}>{translate("🤖 EXECUTING QUERY...")}</div>
               <div className="skeleton" style={{ height: '40px', width: '160px' }}></div>
             </div>
           )}
@@ -123,14 +124,12 @@ export default function AiPage() {
             className="input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ask anything, e.g., 'show best products', 'what is low in stock?', 'show profit margins'..."
+            placeholder={translate("Ask anything, e.g., 'show best products', 'what is low in stock?', 'show profit margins'...")}
             disabled={loading}
             style={{ fontSize: '15px' }}
             autoFocus
           />
-          <button type="submit" className="btn btn-primary" disabled={loading} style={{ padding: '0 32px' }}>
-            SEND
-          </button>
+          <button type="submit" className="btn btn-primary" disabled={loading} style={{ padding: '0 32px' }}> {translate("SEND")} </button>
         </form>
       </div>
     </DashboardShell>

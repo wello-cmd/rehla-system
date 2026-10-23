@@ -1,3 +1,5 @@
+import { formatDate } from '../lib/formatters';
+import { translate } from '../i18n/index.js';
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import DashboardShell from '../components/layout/DashboardShell';
@@ -24,7 +26,7 @@ export default function UsersPage() {
       const data = await api.get('/auth/users'); // rateLimit
       setUsers(data);
     } catch (err) {
-      toast.error('Failed to load user directory');
+      toast.error(translate("Failed to load user directory"));
     } finally {
       setLoading(false);
     }
@@ -68,7 +70,7 @@ export default function UsersPage() {
 
     if (editingUser) {
       if (!name.trim() || !staffId.trim() || !role) {
-        toast.error('Please fill in all required fields');
+        toast.error(translate("Please fill in all required fields"));
         return;
       }
       setSaving(true);
@@ -79,11 +81,11 @@ export default function UsersPage() {
           role,
           phone: phone.trim() || ''
         });
-        toast.success('User updated');
+        toast.success(translate("User updated"));
         setShowModal(false);
         fetchUsers();
       } catch (err) {
-        toast.error(err.message || 'Update failed');
+        toast.error(translate(err.message || 'Update failed'));
       } finally {
         setSaving(false);
       }
@@ -91,7 +93,7 @@ export default function UsersPage() {
     }
 
     if (!email.trim() || !password.trim() || !name.trim() || !staffId.trim() || !role) {
-      toast.error('Please fill in all required fields');
+      toast.error(translate("Please fill in all required fields"));
       return;
     }
 
@@ -105,11 +107,11 @@ export default function UsersPage() {
         role,
         phone: phone.trim() || undefined
       });
-      toast.success('User registered successfully');
+      toast.success(translate("User registered successfully"));
       setShowModal(false);
       fetchUsers();
     } catch (err) {
-      toast.error(err.message || 'Registration failed');
+      toast.error(translate(err.message || 'Registration failed'));
     } finally {
       setSaving(false);
     }
@@ -119,10 +121,10 @@ export default function UsersPage() {
     if (!window.confirm(`Delete user ${u.name} (${u.staff_id})? This permanently removes their login and cannot be undone.`)) return;
     try {
       await api.delete(`/auth/users/${u.id}`);
-      toast.success('User deleted');
+      toast.success(translate("User deleted"));
       fetchUsers();
     } catch (err) {
-      toast.error(err.message || 'Delete failed');
+      toast.error(translate(err.message || 'Delete failed'));
     }
   }
 
@@ -134,7 +136,7 @@ export default function UsersPage() {
   );
 
   return (
-    <DashboardShell title="Staff & User Registry">
+    <DashboardShell title={translate("Staff & User Registry")}>
       {loading ? renderSkeleton() : (
         <>
           {/* Action Row */}
@@ -144,11 +146,9 @@ export default function UsersPage() {
               style={{ maxWidth: '300px' }}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search staff, email, role..."
+              placeholder={translate("Search staff, email, role...")}
             />
-            <button className="btn btn-primary" onClick={openCreateModal}>
-              + Add Staff User
-            </button>
+            <button className="btn btn-primary" onClick={openCreateModal}> {translate("+ Add Staff User")} </button>
           </div>
 
           {/* Table */}
@@ -157,13 +157,13 @@ export default function UsersPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Staff ID</th>
-                    <th>Full Name</th>
-                    <th className="hide-mobile">Email Address</th>
-                    <th>Role</th>
-                    <th className="hide-mobile">Phone</th>
-                    <th className="hide-mobile">Registered At</th>
-                    <th>Actions</th>
+                    <th>{translate("Staff ID")}</th>
+                    <th>{translate("Full Name")}</th>
+                    <th className="hide-mobile">{translate("Email Address")}</th>
+                    <th>{translate("Role")}</th>
+                    <th className="hide-mobile">{translate("Phone")}</th>
+                    <th className="hide-mobile">{translate("Registered At")}</th>
+                    <th>{translate("Actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -184,21 +184,19 @@ export default function UsersPage() {
                       </td>
                       <td className="font-mono hide-mobile">{u.phone || '—'}</td>
                       <td className="font-mono hide-mobile" style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-                        {new Date(u.created_at).toLocaleDateString()}
+                        {formatDate(u.created_at)}
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '6px' }}>
-                          <button className="btn btn-secondary btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => openEditModal(u)}>Edit</button>
-                          <button className="btn btn-secondary btn-sm" style={{ padding: '4px 10px', fontSize: '11px', color: 'var(--color-error)' }} onClick={() => handleDelete(u)}>Delete</button>
+                          <button className="btn btn-secondary btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => openEditModal(u)}>{translate("Edit")}</button>
+                          <button className="btn btn-secondary btn-sm" style={{ padding: '4px 10px', fontSize: '11px', color: 'var(--color-error)' }} onClick={() => handleDelete(u)}>{translate("Delete")}</button>
                         </div>
                       </td>
                     </tr>
                   ))}
                   {filteredUsers.length === 0 && (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-dim)' }}>
-                        No staff users found.
-                      </td>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-dim)' }}> {translate("No staff users found.")} </td>
                     </tr>
                   )}
                 </tbody>
@@ -212,21 +210,21 @@ export default function UsersPage() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-content" style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
-            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>{editingUser ? 'Edit Staff User' : 'Register Staff User'}</p>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>{editingUser ? translate("Edit Staff User") : translate("Register Staff User")}</p>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Full Name</label>
+                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Full Name")}</label>
                 <input
                   className="input"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. John Doe"
+                  placeholder={translate("e.g. John Doe")}
                   required
                 />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                 <div>
-                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Staff ID / Code</label>
+                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Staff ID / Code")}</label>
                   <input
                     className="input"
                     value={staffId}
@@ -236,24 +234,24 @@ export default function UsersPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>System Role</label>
+                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("System Role")}</label>
                   <select
                     className="input select"
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
                     required
                   >
-                    <option value="worker">Worker</option>
-                    <option value="dispatcher">Dispatcher</option>
-                    <option value="accountant">Accountant</option>
-                    <option value="admin">Admin</option>
-                    <option value="ceo">CEO</option>
-                    <option value="driver">Driver</option>
+                    <option value="worker">{translate("Worker")}</option>
+                    <option value="dispatcher">{translate("Dispatcher")}</option>
+                    <option value="accountant">{translate("Accountant")}</option>
+                    <option value="admin">{translate("Admin")}</option>
+                    <option value="ceo">{translate("CEO")}</option>
+                    <option value="driver">{translate("Driver")}</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Email Address</label>
+                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Email Address")}</label>
                 <input
                   type="email"
                   className="input"
@@ -262,25 +260,25 @@ export default function UsersPage() {
                   placeholder="e.g. user@rehla.com"
                   required={!editingUser}
                   disabled={!!editingUser}
-                  title={editingUser ? 'Email cannot be changed' : undefined}
+                  title={editingUser ? translate("Email cannot be changed") : undefined}
                 />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                 {!editingUser && (
                   <div>
-                    <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Password</label>
+                    <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Password")}</label>
                     <input
                       type="password"
                       className="input"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Min 6 characters"
+                      placeholder={translate("Min 6 characters")}
                       required
                     />
                   </div>
                 )}
                 <div>
-                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Phone Number (Optional)</label>
+                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Phone Number (Optional)")}</label>
                   <input
                     className="input"
                     value={phone}
@@ -296,11 +294,9 @@ export default function UsersPage() {
                   className="btn btn-secondary"
                   onClick={() => setShowModal(false)}
                   disabled={saving}
-                >
-                  Cancel
-                </button>
+                > {translate("Cancel")} </button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Saving...' : (editingUser ? 'Save Changes' : 'Register User')}
+                  {saving ? translate("Saving...") : (editingUser ? translate("Save Changes") : translate("Register User"))}
                 </button>
               </div>
             </form>

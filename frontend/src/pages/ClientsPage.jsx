@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index.js';
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import DashboardShell from '../components/layout/DashboardShell';
@@ -26,7 +27,7 @@ export default function ClientsPage() {
       const data = await api.get('/clients');
       setClients(data);
     } catch (err) {
-      toast.error('Failed to load B2B client list');
+      toast.error(translate("Failed to load B2B client list"));
     } finally {
       setLoading(false);
     }
@@ -73,7 +74,7 @@ export default function ClientsPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!companyName.trim() || !contactPerson.trim()) {
-      toast.error('Company name and contact person are required');
+      toast.error(translate("Company name and contact person are required"));
       return;
     }
 
@@ -92,15 +93,15 @@ export default function ClientsPage() {
     try {
       if (editingClient) {
         await api.put(`/clients/${editingClient.id}`, payload);
-        toast.success('B2B Client updated successfully');
+        toast.success(translate("B2B Client updated successfully"));
       } else {
         await api.post('/clients', payload);
-        toast.success('B2B Client registered successfully');
+        toast.success(translate("B2B Client registered successfully"));
       }
       setShowModal(false);
       fetchClients();
     } catch (err) {
-      toast.error(err.message || 'Failed to save client');
+      toast.error(translate(err.message || 'Failed to save client'));
     }
   }
 
@@ -108,10 +109,10 @@ export default function ClientsPage() {
     if (!confirm(`Are you sure you want to delete client: ${client.company_name}?`)) return;
     try {
       await api.delete(`/clients/${client.id}`);
-      toast.success('B2B Client deleted successfully');
+      toast.success(translate("B2B Client deleted successfully"));
       fetchClients();
     } catch (err) {
-      toast.error('Failed to delete B2B Client');
+      toast.error(translate("Failed to delete B2B Client"));
     }
   }
 
@@ -123,7 +124,7 @@ export default function ClientsPage() {
   );
 
   return (
-    <DashboardShell title="B2B Client Registry">
+    <DashboardShell title={translate("B2B Client Registry")}>
       {loading ? renderSkeleton() : (
         <>
           {/* Action Row */}
@@ -133,11 +134,9 @@ export default function ClientsPage() {
               style={{ maxWidth: '300px' }}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by company name, contact..."
+              placeholder={translate("Search by company name, contact...")}
             />
-            <button className="btn btn-primary" onClick={openCreateModal}>
-              + Add Client
-            </button>
+            <button className="btn btn-primary" onClick={openCreateModal}> {translate("+ Add Client")} </button>
           </div>
 
           {/* Table */}
@@ -146,15 +145,15 @@ export default function ClientsPage() {
               <table className="data-table t-clients">
                 <thead>
                   <tr>
-                    <th>Company Name</th>
-                    <th>Contact Person</th>
-                    <th>Email Address</th>
-                    <th>Phone Number</th>
-                    <th>Address</th>
-                    <th>Tax Number</th>
-                    <th>3PL Commission</th>
-                    <th>3PL Rent (M/U)</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
+                    <th>{translate("Company Name")}</th>
+                    <th>{translate("Contact Person")}</th>
+                    <th>{translate("Email Address")}</th>
+                    <th>{translate("Phone Number")}</th>
+                    <th>{translate("Address")}</th>
+                    <th>{translate("Tax Number")}</th>
+                    <th>{translate("3PL Commission")}</th>
+                    <th>{translate("3PL Rent (M/U)")}</th>
+                    <th style={{ textAlign: "end" }}>{translate("Actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -173,29 +172,23 @@ export default function ClientsPage() {
                           : '—'
                         }
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td style={{ textAlign: "end" }}>
                         <div style={{ display: 'inline-flex', gap: '8px' }}>
                           <button
                             className="btn btn-secondary btn-sm"
                             onClick={() => openEditModal(c)}
-                          >
-                            Edit
-                          </button>
+                          > {translate("Edit")} </button>
                           <button
                             className="btn btn-danger btn-sm"
                             onClick={() => handleDelete(c)}
-                          >
-                            Delete
-                          </button>
+                          > {translate("Delete")} </button>
                         </div>
                       </td>
                     </tr>
                   ))}
                   {filteredClients.length === 0 && (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-dim)' }}>
-                        No B2B clients found.
-                      </td>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-dim)' }}> {translate("No B2B clients found.")} </td>
                     </tr>
                   )}
                 </tbody>
@@ -210,32 +203,32 @@ export default function ClientsPage() {
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '500px' }}>
             <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>
-              {editingClient ? 'Edit B2B Client' : 'Register New B2B Client'}
+              {editingClient ? translate("Edit B2B Client") : translate("Register New B2B Client")}
             </p>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Company Name</label>
+                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Company Name")}</label>
                 <input
                   className="input"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="e.g. Acme Corp"
+                  placeholder={translate("e.g. Acme Corp")}
                   required
                 />
               </div>
               <div>
-                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Contact Person Name</label>
+                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Contact Person Name")}</label>
                 <input
                   className="input"
                   value={contactPerson}
                   onChange={(e) => setContactPerson(e.target.value)}
-                  placeholder="e.g. Jane Smith"
+                  placeholder={translate("e.g. Jane Smith")}
                   required
                 />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                 <div>
-                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Email</label>
+                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Email")}</label>
                   <input
                     type="email"
                     className="input"
@@ -245,7 +238,7 @@ export default function ClientsPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Phone</label>
+                  <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Phone")}</label>
                   <input
                     className="input"
                     value={phone}
@@ -255,16 +248,16 @@ export default function ClientsPage() {
                 </div>
               </div>
               <div>
-                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Address</label>
+                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Address")}</label>
                 <input
                   className="input"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="e.g. Zamalek, Cairo"
+                  placeholder={translate("e.g. Zamalek, Cairo")}
                 />
               </div>
               <div>
-                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Tax Number</label>
+                <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Tax Number")}</label>
                 <input
                   className="input"
                   value={taxNumber}
@@ -275,18 +268,18 @@ export default function ClientsPage() {
 
               {/* 3PL Fulfillment Fees */}
               <div style={{ padding: '16px', background: 'var(--color-bg-inset)', borderRadius: '12px', marginTop: '8px' }}>
-                <p className="text-label" style={{ marginBottom: '12px', color: 'var(--color-text-dim)' }}>3PL Fulfillment Settings</p>
+                <p className="text-label" style={{ marginBottom: '12px', color: 'var(--color-text-dim)' }}>{translate("3PL Fulfillment Settings")}</p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
                   <div>
-                    <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Commission (%)</label>
+                    <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Commission (%)")}</label>
                     <input type="number" step="0.01" className="input" value={fulfillmentFee} onChange={(e) => setFulfillmentFee(e.target.value)} placeholder="0.00" />
                   </div>
                   <div>
-                    <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Monthly Rent (Flat)</label>
+                    <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Monthly Rent (Flat)")}</label>
                     <input type="number" step="0.01" className="input" value={storageFeeMonthly} onChange={(e) => setStorageFeeMonthly(e.target.value)} placeholder="0.00" />
                   </div>
                   <div>
-                    <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Per-Unit Fee</label>
+                    <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>{translate("Per-Unit Fee")}</label>
                     <input type="number" step="0.01" className="input" value={storageFeePerUnit} onChange={(e) => setStorageFeePerUnit(e.target.value)} placeholder="0.00" />
                   </div>
                 </div>
@@ -297,12 +290,8 @@ export default function ClientsPage() {
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setShowModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Save Client
-                </button>
+                > {translate("Cancel")} </button>
+                <button type="submit" className="btn btn-primary"> {translate("Save Client")} </button>
               </div>
             </form>
           </div>

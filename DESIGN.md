@@ -132,3 +132,7 @@ Six aligned metrics separated by fine rules, preserving live values, unavailable
 - **Don't** count delivery providers as additional sales channels.
 - **Don't** ship illustrative mockup figures, fabricated growth comparisons or placeholder product photos.
 - **Don't** present configured integrations as verified healthy credentials.
+
+## Arabic interface
+
+English and Arabic share Dispatch Desk. Keep the chosen language across sessions, mirror navigation and spacing in RTL, use a legible Arabic system font, and keep identifiers, email and numeric entry isolated LTR. Switching language preserves current work. Translate UI labels only; business records and API codes remain unchanged. See `docs/I18N.md` for the scope of exports and provider-message fallbacks.

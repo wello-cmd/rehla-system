@@ -1,3 +1,5 @@
+import useLanguage from './i18n/useLanguage';
+import { translate } from './i18n/index.js';
 import { lazy, Suspense } from 'react';
 import { getRoleLandingPath, INVOICE_CREATE_ROLES } from './lib/roles';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
@@ -63,9 +65,9 @@ function ForbiddenPage() {
   const { logout } = useAuth();
   return (
     <main style={{ maxWidth: 520, margin: '15vh auto', padding: 24 }}>
-      <h1>Access unavailable</h1>
-      <p style={{ margin: '16px 0' }}>Your account does not have access to this workspace. Contact your administrator for help. Drivers should use their delivery link.</p>
-      <button className="btn btn-secondary" onClick={logout}>Sign out</button>
+      <h1>{translate("Access unavailable")}</h1>
+      <p style={{ margin: '16px 0' }}>{translate("Your account does not have access to this workspace. Contact your administrator for help. Drivers should use their delivery link.")}</p>
+      <button className="btn btn-secondary" onClick={logout}>{translate("Sign out")}</button>
     </main>
   );
 }
@@ -85,7 +87,7 @@ function AppContent() {
           },
         }}
       />
-      <Suspense fallback={<div role="status" style={{ padding: 32 }}>Loading page…</div>}>
+      <Suspense fallback={<div role="status" style={{ padding: 32 }}>{translate("Loading page…")}</div>}>
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -231,6 +233,7 @@ function AppContent() {
 }
 
 export default function App() {
+  useLanguage();
   return (
     <Router>
       <AuthProvider>

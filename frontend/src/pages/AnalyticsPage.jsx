@@ -1,3 +1,5 @@
+import { getIntlLocale } from '../i18n/index.js';
+import { translate } from '../i18n/index.js';
 import { useState } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatNumber } from '../lib/formatters';
@@ -11,15 +13,15 @@ import {
 
 const COLORS = ['#6366f1','#3fb950','#f0883e','#58a6ff','#f85149','#a371f7','#38bdf8','#fbbf24'];
 const TT = { background:'var(--color-bg-elevated)', border:'1px solid var(--color-border)', color:'var(--color-text)', fontSize:12, borderRadius:6 };
-const egp = v => `EGP ${Number(v).toLocaleString('en-EG', { minimumFractionDigits:0, maximumFractionDigits:0 })}`;
+const egp = v => `${translate('EGP')} ${Number(v).toLocaleString(getIntlLocale(), { minimumFractionDigits:0, maximumFractionDigits:0 })}`;
 const kTick = v => `${(v/1000).toFixed(0)}k`;
 
 function KpiCard({ label, value, sub, color }) {
   return (
     <div className="card">
-      <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:6 }}>{label}</p>
+      <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:6 }}>{translate(label)}</p>
       <p style={{ fontSize:24, fontWeight:800, fontFamily:'var(--font-mono)', color: color || 'inherit' }}>{value}</p>
-      {sub && <p style={{ fontSize:11, color:'var(--color-text-muted)', marginTop:4 }}>{sub}</p>}
+      {sub && <p style={{ fontSize:11, color:'var(--color-text-muted)', marginTop:4 }}>{translate(sub)}</p>}
     </div>
   );
 }
@@ -54,7 +56,7 @@ export default function AnalyticsPage() {
     : '0.0';
 
   return (
-    <DashboardShell title="Analytics">
+    <DashboardShell title={translate("Analytics")}>
       <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
 
         {/* Period selector */}
@@ -68,27 +70,27 @@ export default function AnalyticsPage() {
               borderColor:  activeTab===t ? 'var(--color-border)'    : 'transparent',
               color:        activeTab===t ? 'var(--color-text)'      : 'var(--color-text-muted)',
             }}>
-              {t.toUpperCase()}
+              {translate(t)}
             </button>
           ))}
           {period.label && (
-            <span style={{ marginLeft:'auto', fontSize:11, fontFamily:'var(--font-mono)', color:'var(--color-text-dim)', alignSelf:'center' }}>
-              {period.label}
+            <span style={{ marginInlineStart:'auto', fontSize:11, fontFamily:'var(--font-mono)', color:'var(--color-text-dim)', alignSelf:'center' }}>
+              {translate(period.label)}
             </span>
           )}
         </div>
 
         {error && (
           <div className="card" role="alert">
-            <p>Could not load {requestedPeriod.label || 'the requested period'}. {error}</p>
-            <p>{appliedPeriod ? `Showing the last successful report: ${appliedPeriod.label || 'All time'}. These results have not refreshed.` : 'No analytics report is available. Values are unavailable until loading succeeds.'}</p>
-            <button className="btn btn-secondary btn-sm" onClick={() => loader.load(requestedPeriod)}>Retry</button>
+            <p>{translate("Could not load")} {requestedPeriod.label || translate("the requested period")}. {translate(error)}</p>
+            <p>{appliedPeriod ? translate('Showing the last successful report: {period}. These results have not refreshed.', {period:appliedPeriod.label || translate('All time')}) : translate("No analytics report is available. Values are unavailable until loading succeeds.")}</p>
+            <button className="btn btn-secondary btn-sm" onClick={() => loader.load(requestedPeriod)}>{translate("Retry")}</button>
           </div>
         )}
 
         {loading && (
           <div style={{ padding:'60px 0', textAlign:'center', color:'var(--color-text-dim)' }}>
-            <p role="status">Loading {requestedPeriod.label || 'analytics'}…</p>
+            <p role="status">{translate("Loading")} {requestedPeriod.label || 'analytics'}…</p>
             <div className="skeleton" style={{ height:40, marginBottom:16 }} />
             <div className="skeleton" style={{ height:300 }} />
           </div>
@@ -103,13 +105,13 @@ export default function AnalyticsPage() {
                 {/* KPI cards */}
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(190px,1fr))', gap:12 }}>
                   <KpiCard
-                    label="GMV"
+                    label={translate("GMV")}
                     value={formatEGP(salesData.grossRevenue || salesData.totalRevenue)}
                     sub={`${salesData.totalOrders} orders · incl. cancelled (matches Shopify)`}
                   />
                   {(salesData.cancelledCount > 0) && (
                     <KpiCard
-                      label="Cancelled (counted)"
+                      label={translate("Cancelled (counted)")}
                       value={formatEGP(salesData.cancelledRevenue || 0)}
                       sub={`${salesData.cancelledCount} orders included in sales`}
                       color="var(--color-warning)"
@@ -117,23 +119,23 @@ export default function AnalyticsPage() {
                   )}
                   {(salesData.refundsTotal > 0) && (
                     <KpiCard
-                      label="Returns"
+                      label={translate("Returns")}
                       value={`−${formatEGP(salesData.refundsTotal)}`}
                       sub={`${salesData.refundsCount} refund events`}
                       color="var(--color-error)"
                     />
                   )}
                   <KpiCard
-                    label="Net Revenue"
+                    label={translate("Net Revenue")}
                     value={formatEGP(salesData.totalRevenue)}
-                    sub="matches Shopify Total sales"
+                    sub={translate("matches Shopify Total sales")}
                     color="var(--color-success)"
                   />
-                  <KpiCard label="Paid / Collected" value={formatEGP(salesData.paidRevenue || 0)} sub={`${salesData.paidOrders || 0} paid orders`} />
-                  <KpiCard label="Avg Order Value"  value={formatEGP(salesData.avgOrderValue)}  />
+                  <KpiCard label={translate("Paid / Collected")} value={formatEGP(salesData.paidRevenue || 0)} sub={`${salesData.paidOrders || 0} paid orders`} />
+                  <KpiCard label={translate("Avg Order Value")}  value={formatEGP(salesData.avgOrderValue)}  />
                   {finTotal.revenue > 0 && (
                     <KpiCard
-                      label="Net Profit"
+                      label={translate("Net Profit")}
                       value={formatEGP(finTotal.profit)}
                       sub={`${finTotal.margin}% margin`}
                       color={finTotal.profit >= 0 ? 'var(--color-success)' : 'var(--color-error)'}
@@ -143,13 +145,12 @@ export default function AnalyticsPage() {
 
                 {/* Revenue trend */}
                 <div className="card">
-                  <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>
-                    Revenue Trend — {
-                      period.groupBy === 'day'   ? 'Daily' :
-                      period.groupBy === 'week'  ? 'Weekly' :
-                      period.groupBy === 'month' ? 'Monthly' :
-                      period.groupBy === 'quarter' ? 'Quarterly' :
-                      period.groupBy === 'half'  ? 'Half-Year' : 'Grouped'
+                  <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}> {translate("Revenue Trend —")} {
+                      period.groupBy === 'day'   ? translate("Daily") :
+                      period.groupBy === 'week'  ? translate("Weekly") :
+                      period.groupBy === 'month' ? translate("Monthly") :
+                      period.groupBy === 'quarter' ? translate("Quarterly") :
+                      period.groupBy === 'half'  ? translate("Half-Year") : translate("Grouped")
                     }
                   </p>
                   {salesData.trend?.length > 0 ? (
@@ -161,13 +162,13 @@ export default function AnalyticsPage() {
                         <YAxis yAxisId="right" orientation="right"   tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
                         <Tooltip contentStyle={TT} formatter={(v, n) => [n === 'Revenue' ? egp(v) : v, n]} />
                         <Legend wrapperStyle={{ fontSize:11 }} />
-                        <Bar      yAxisId="left"  dataKey="revenue" name="Revenue" fill="#6366f1" opacity={0.9} radius={[2,2,0,0]} />
-                        <Line     yAxisId="right" type="monotone" dataKey="orders" name="Orders"
+                        <Bar      yAxisId="left"  dataKey="revenue" name={translate("Revenue")} fill="#6366f1" opacity={0.9} radius={[2,2,0,0]} />
+                        <Line     yAxisId="right" type="monotone" dataKey="orders" name={translate("Orders")}
                           stroke="#3fb950" strokeWidth={2} dot={{ r:3, fill:'#3fb950' }} />
                       </ComposedChart>
                     </ResponsiveContainer>
                   ) : (
-                    <p style={{ textAlign:'center', padding:'40px 0', color:'var(--color-text-dim)' }}>No data for this period</p>
+                    <p style={{ textAlign:'center', padding:'40px 0', color:'var(--color-text-dim)' }}>{translate("No data for this period")}</p>
                   )}
                 </div>
 
@@ -175,7 +176,7 @@ export default function AnalyticsPage() {
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px,1fr))', gap:16 }}>
                   {salesData.categoryRevenue?.length > 0 && (
                     <div className="card">
-                      <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>Revenue by Category</p>
+                      <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>{translate("Revenue by Category")}</p>
                       <ResponsiveContainer width="100%" height={260}>
                         <BarChart data={salesData.categoryRevenue} layout="vertical" margin={{ left:4 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
@@ -191,7 +192,7 @@ export default function AnalyticsPage() {
                   )}
 
                   <div className="card">
-                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>Weekly Sales Pattern</p>
+                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>{translate("Weekly Sales Pattern")}</p>
                     <ResponsiveContainer width="100%" height={260}>
                       <BarChart data={salesData.heatmap}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
@@ -200,8 +201,8 @@ export default function AnalyticsPage() {
                         <YAxis yAxisId="r" orientation="right" tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
                         <Tooltip contentStyle={TT} formatter={(v, n) => [n==='Revenue (EGP)' ? egp(v) : v, n]} />
                         <Legend wrapperStyle={{ fontSize:11 }} />
-                        <Bar yAxisId="l" dataKey="revenue" name="Revenue (EGP)" fill="#6366f1" opacity={0.9} radius={[2,2,0,0]} />
-                        <Bar yAxisId="r" dataKey="orders"  name="Orders"        fill="#3fb950" opacity={0.8} radius={[2,2,0,0]} />
+                        <Bar yAxisId="l" dataKey="revenue" name={translate("Revenue (EGP)")} fill="#6366f1" opacity={0.9} radius={[2,2,0,0]} />
+                        <Bar yAxisId="r" dataKey="orders"  name={translate("Orders")}        fill="#3fb950" opacity={0.8} radius={[2,2,0,0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -210,7 +211,7 @@ export default function AnalyticsPage() {
                 {/* Hour-of-day chart (only relevant for short periods) */}
                 {period.groupBy === 'day' && salesData.hourly?.some(h => h.orders > 0) && (
                   <div className="card">
-                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>Orders by Hour of Day</p>
+                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>{translate("Orders by Hour of Day")}</p>
                     <ResponsiveContainer width="100%" height={200}>
                       <BarChart data={salesData.hourly}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
@@ -230,7 +231,7 @@ export default function AnalyticsPage() {
               <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px,1fr))', gap:16 }}>
                   <div className="card">
-                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>Top 10 by Revenue</p>
+                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>{translate("Top 10 by Revenue")}</p>
                     {topProducts.byRevenue?.length > 0 ? (
                       <ResponsiveContainer width="100%" height={320}>
                         <BarChart data={topProducts.byRevenue} layout="vertical" margin={{ left:4 }}>
@@ -242,12 +243,12 @@ export default function AnalyticsPage() {
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      <p style={{ textAlign:'center', padding:'40px 0', color:'var(--color-text-dim)' }}>No sales in this period</p>
+                      <p style={{ textAlign:'center', padding:'40px 0', color:'var(--color-text-dim)' }}>{translate("No sales in this period")}</p>
                     )}
                   </div>
 
                   <div className="card">
-                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>Top 10 by Units Sold</p>
+                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>{translate("Top 10 by Units Sold")}</p>
                     {topProducts.byUnits?.length > 0 ? (
                       <ResponsiveContainer width="100%" height={320}>
                         <BarChart data={topProducts.byUnits} layout="vertical" margin={{ left:4 }}>
@@ -259,17 +260,17 @@ export default function AnalyticsPage() {
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      <p style={{ textAlign:'center', padding:'40px 0', color:'var(--color-text-dim)' }}>No sales in this period</p>
+                      <p style={{ textAlign:'center', padding:'40px 0', color:'var(--color-text-dim)' }}>{translate("No sales in this period")}</p>
                     )}
                   </div>
                 </div>
 
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px,1fr))', gap:16 }}>
                   <div className="card">
-                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:12 }}>Slow Movers (All Time)</p>
+                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:12 }}>{translate("Slow Movers (All Time)")}</p>
                     <div style={{ maxHeight:260, overflowY:'auto' }}>
                       <table className="data-table" style={{ fontSize:12 }}>
-                        <thead><tr><th>SKU</th><th>Name</th><th>Sold</th><th>Stock</th><th>Sell-Through</th></tr></thead>
+                        <thead><tr><th>{translate("SKU")}</th><th>{translate("Name")}</th><th>{translate("Sold")}</th><th>{translate("Stock")}</th><th>{translate("Sell-Through")}</th></tr></thead>
                         <tbody>
                           {productData.worstPerformers?.map((p, i) => (
                             <tr key={i}>
@@ -290,16 +291,14 @@ export default function AnalyticsPage() {
                   </div>
 
                   <div className="card">
-                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:12 }}>
-                      Dead Stock — Zero Sales
-                      <span className="badge badge-error" style={{ marginLeft:8, fontSize:10 }}>{productData.zeroSales?.length || 0}</span>
+                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:12 }}> {translate("Dead Stock — Zero Sales")} <span className="badge badge-error" style={{ marginInlineStart:8, fontSize:10 }}>{productData.zeroSales?.length || 0}</span>
                     </p>
                     <div style={{ maxHeight:260, overflowY:'auto' }}>
                       <table className="data-table" style={{ fontSize:12 }}>
-                        <thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Stock</th></tr></thead>
+                        <thead><tr><th>{translate("SKU")}</th><th>{translate("Name")}</th><th>{translate("Category")}</th><th>{translate("Stock")}</th></tr></thead>
                         <tbody>
                           {productData.zeroSales?.length === 0 ? (
-                            <tr><td colSpan="4" style={{ textAlign:'center', padding:'24px', color:'var(--color-text-dim)' }}>No dead stock</td></tr>
+                            <tr><td colSpan="4" style={{ textAlign:'center', padding:'24px', color:'var(--color-text-dim)' }}>{translate("No dead stock")}</td></tr>
                           ) : productData.zeroSales?.map((p, i) => (
                             <tr key={i}>
                               <td className="font-mono">{p.sku}</td>
@@ -322,29 +321,29 @@ export default function AnalyticsPage() {
 
                 {/* Status summary cards */}
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(150px,1fr))', gap:12 }}>
-                  <KpiCard label="Total Shipments"   value={formatNumber(deliveryData.total)} />
-                  <KpiCard label="Delivered"
+                  <KpiCard label={translate("Total Shipments")}   value={formatNumber(deliveryData.total)} />
+                  <KpiCard label={translate("Delivered")}
                     value={formatNumber(deliveryData.delivered)}
                     color="var(--color-success)"
                     sub={deliveryData.total > 0 ? `${((deliveryData.delivered/deliveryData.total)*100).toFixed(1)}% rate` : undefined}
                   />
-                  <KpiCard label="Failed"
+                  <KpiCard label={translate("Failed")}
                     value={formatNumber(deliveryData.failed)}
                     color={deliveryData.failed > 0 ? 'var(--color-error)' : undefined}
                   />
-                  <KpiCard label="Own Drivers COD" value={formatEGP(costComp.own_driver?.cod_collected || 0)} />
-                  <KpiCard label="Bosta COD"        value={formatEGP(costComp.bosta?.cod_collected || 0)} />
+                  <KpiCard label={translate("Own Drivers COD")} value={formatEGP(costComp.own_driver?.cod_collected || 0)} />
+                  <KpiCard label={translate("Bosta COD")}        value={formatEGP(costComp.bosta?.cod_collected || 0)} />
                 </div>
 
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px,1fr))', gap:16 }}>
                   {/* Status pie */}
                   <div className="card">
-                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>Status Breakdown</p>
+                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>{translate("Status Breakdown")}</p>
                     {Object.keys(deliveryData.statusBreakdown || {}).length > 0 ? (
                       <ResponsiveContainer width="100%" height={240}>
                         <PieChart>
                           <Pie
-                            data={Object.entries(deliveryData.statusBreakdown).map(([name, value]) => ({ name: name.replace(/_/g,' '), value }))}
+                            data={Object.entries(deliveryData.statusBreakdown).map(([name, value]) => ({ name: translate(name), value }))}
                             dataKey="value" cx="50%" cy="50%" outerRadius={85}
                             label={({ name, percent }) => `${name} ${(percent*100).toFixed(0)}%`}
                             labelLine={false}
@@ -355,13 +354,13 @@ export default function AnalyticsPage() {
                         </PieChart>
                       </ResponsiveContainer>
                     ) : (
-                      <p style={{ textAlign:'center', padding:'40px 0', color:'var(--color-text-dim)' }}>No delivery data</p>
+                      <p style={{ textAlign:'center', padding:'40px 0', color:'var(--color-text-dim)' }}>{translate("No delivery data")}</p>
                     )}
                   </div>
 
                   {/* Bosta vs own */}
                   <div className="card">
-                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>Bosta vs Own Drivers</p>
+                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>{translate("Bosta vs Own Drivers")}</p>
                     <ResponsiveContainer width="100%" height={240}>
                       <BarChart data={[
                         { name:'Own Drivers', delivered: costComp.own_driver?.delivered||0, failed: costComp.own_driver?.failed||0, total: costComp.own_driver?.total||0 },
@@ -372,9 +371,9 @@ export default function AnalyticsPage() {
                         <YAxis tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
                         <Tooltip contentStyle={TT} />
                         <Legend wrapperStyle={{ fontSize:11 }} />
-                        <Bar dataKey="delivered" name="Delivered" fill="#3fb950" radius={[2,2,0,0]} />
-                        <Bar dataKey="failed"    name="Failed"    fill="#f85149" radius={[2,2,0,0]} />
-                        <Bar dataKey="total"     name="Total"     fill="#6366f1" opacity={0.5} radius={[2,2,0,0]} />
+                        <Bar dataKey="delivered" name={translate("Delivered")} fill="#3fb950" radius={[2,2,0,0]} />
+                        <Bar dataKey="failed"    name={translate("Failed")}    fill="#f85149" radius={[2,2,0,0]} />
+                        <Bar dataKey="total"     name={translate("Total")}     fill="#6366f1" opacity={0.5} radius={[2,2,0,0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -382,11 +381,11 @@ export default function AnalyticsPage() {
 
                 {/* Driver table */}
                 <div className="card">
-                  <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>Driver Performance</p>
+                  <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>{translate("Driver Performance")}</p>
                   <div style={{ overflowX:'auto' }}>
                     <table className="data-table">
                       <thead>
-                        <tr><th>Driver</th><th>Zone</th><th>Total</th><th>Delivered</th><th>Failed</th><th>Success Rate</th><th>Avg Transit</th></tr>
+                        <tr><th>{translate("Driver")}</th><th>{translate("Zone")}</th><th>{translate("Total")}</th><th>{translate("Delivered")}</th><th>{translate("Failed")}</th><th>{translate("Success Rate")}</th><th>{translate("Avg Transit")}</th></tr>
                       </thead>
                       <tbody>
                         {deliveryData.driverAnalytics?.map((dr, i) => (
@@ -403,7 +402,7 @@ export default function AnalyticsPage() {
                           </tr>
                         ))}
                         {deliveryData.driverAnalytics?.length === 0 && (
-                          <tr><td colSpan="7" style={{ textAlign:'center', padding:24, color:'var(--color-text-dim)' }}>No delivery data</td></tr>
+                          <tr><td colSpan="7" style={{ textAlign:'center', padding:24, color:'var(--color-text-dim)' }}>{translate("No delivery data")}</td></tr>
                         )}
                       </tbody>
                     </table>
@@ -413,14 +412,14 @@ export default function AnalyticsPage() {
                 {/* Failure reasons */}
                 {Object.keys(deliveryData.failedReasons || {}).length > 0 && (
                   <div className="card">
-                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:12 }}>Failure Reasons</p>
+                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:12 }}>{translate("Failure Reasons")}</p>
                     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                       {Object.entries(deliveryData.failedReasons).sort((a,b) => b[1]-a[1]).map(([reason, count], i) => {
                         const total = Object.values(deliveryData.failedReasons).reduce((s,v)=>s+v,0);
                         return (
                           <div key={i}>
                             <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                              <span style={{ fontSize:13, textTransform:'capitalize' }}>{reason.replace(/_/g,' ')}</span>
+                              <span style={{ fontSize:13, textTransform:'capitalize' }}>{translate(reason)}</span>
                               <span className="font-mono" style={{ fontSize:12, color:'var(--color-error)' }}>{count}</span>
                             </div>
                             <div style={{ height:4, background:'var(--color-border-light)', borderRadius:2 }}>
@@ -441,21 +440,21 @@ export default function AnalyticsPage() {
 
                 {/* Summary KPI cards */}
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px,1fr))', gap:12 }}>
-                  <KpiCard label="Total Revenue"  value={formatEGP(finTotal.revenue)} />
-                  <KpiCard label="Total Expenses" value={formatEGP(finTotal.expenses)} color="var(--color-error)" />
+                  <KpiCard label={translate("Total Revenue")}  value={formatEGP(finTotal.revenue)} />
+                  <KpiCard label={translate("Total Expenses")} value={formatEGP(finTotal.expenses)} color="var(--color-error)" />
                   <KpiCard
-                    label="Net Profit"
+                    label={translate("Net Profit")}
                     value={formatEGP(finTotal.profit)}
                     color={finTotal.profit >= 0 ? 'var(--color-success)' : 'var(--color-error)'}
                   />
                   <KpiCard
-                    label="Profit Margin"
+                    label={translate("Profit Margin")}
                     value={`${finTotal.margin}%`}
                     color={parseFloat(finTotal.margin) >= 0 ? 'var(--color-success)' : 'var(--color-error)'}
                   />
                   {finTotal.revenue > 0 && (
                     <KpiCard
-                      label="Expense Ratio"
+                      label={translate("Expense Ratio")}
                       value={`${(finTotal.expenses / finTotal.revenue * 100).toFixed(1)}%`}
                     />
                   )}
@@ -463,7 +462,7 @@ export default function AnalyticsPage() {
 
                 {/* Revenue vs Expenses vs Profit chart */}
                 <div className="card">
-                  <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>Revenue · Expenses · Profit</p>
+                  <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>{translate("Revenue · Expenses · Profit")}</p>
                   {finKpis.length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
                       <ComposedChart data={finKpis} margin={{ bottom:24 }}>
@@ -472,27 +471,27 @@ export default function AnalyticsPage() {
                         <YAxis tickFormatter={kTick} tick={{ fill:'var(--color-text-muted)', fontSize:10 }} />
                         <Tooltip contentStyle={TT} formatter={(v, n) => [egp(v), n]} />
                         <Legend wrapperStyle={{ fontSize:11 }} />
-                        <Bar  dataKey="revenue"  name="Revenue"  fill="#6366f1" opacity={0.9} radius={[2,2,0,0]} />
-                        <Bar  dataKey="expenses" name="Expenses" fill="#f85149" opacity={0.75} radius={[2,2,0,0]} />
-                        <Line dataKey="profit"   name="Profit"   stroke="#3fb950" strokeWidth={2.5} dot={{ r:3, fill:'#3fb950' }} type="monotone" />
+                        <Bar  dataKey="revenue"  name={translate("Revenue")}  fill="#6366f1" opacity={0.9} radius={[2,2,0,0]} />
+                        <Bar  dataKey="expenses" name={translate("Expenses")} fill="#f85149" opacity={0.75} radius={[2,2,0,0]} />
+                        <Line dataKey="profit"   name={translate("Profit")}   stroke="#3fb950" strokeWidth={2.5} dot={{ r:3, fill:'#3fb950' }} type="monotone" />
                       </ComposedChart>
                     </ResponsiveContainer>
                   ) : (
-                    <p style={{ textAlign:'center', padding:'40px 0', color:'var(--color-text-dim)' }}>No data for this period</p>
+                    <p style={{ textAlign:'center', padding:'40px 0', color:'var(--color-text-dim)' }}>{translate("No data for this period")}</p>
                   )}
                 </div>
 
                 {/* Profit margin trend */}
                 {finKpis.length > 1 && (
                   <div className="card">
-                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>Profit Margin Trend (%)</p>
+                    <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom:14 }}>{translate("Profit Margin Trend (%)")}</p>
                     <ResponsiveContainer width="100%" height={200}>
                       <LineChart data={finKpis} margin={{ bottom:24 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
                         <XAxis dataKey="period" tick={{ fill:'var(--color-text-muted)', fontSize:10 }} angle={-20} textAnchor="end" height={45} interval="preserveStartEnd" />
                         <YAxis tick={{ fill:'var(--color-text-muted)', fontSize:10 }} unit="%" />
                         <Tooltip contentStyle={TT} formatter={v => [`${v}%`, 'Margin']} />
-                        <Line dataKey="profit_margin" name="Profit Margin" stroke="#3fb950" strokeWidth={2.5} dot={{ r:3, fill:'#3fb950' }} type="monotone" />
+                        <Line dataKey="profit_margin" name={translate("Profit Margin")} stroke="#3fb950" strokeWidth={2.5} dot={{ r:3, fill:'#3fb950' }} type="monotone" />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -504,18 +503,18 @@ export default function AnalyticsPage() {
                     <table className="data-table">
                       <thead>
                         <tr>
-                          <th>Period</th>
-                          <th>Revenue</th>
-                          <th>Expenses</th>
-                          <th>Profit</th>
-                          <th>Margin</th>
-                          <th>Expense Ratio</th>
-                          <th>Growth</th>
+                          <th>{translate("Period")}</th>
+                          <th>{translate("Revenue")}</th>
+                          <th>{translate("Expenses")}</th>
+                          <th>{translate("Profit")}</th>
+                          <th>{translate("Margin")}</th>
+                          <th>{translate("Expense Ratio")}</th>
+                          <th>{translate("Growth")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {finKpis.length === 0 && (
-                          <tr><td colSpan="7" style={{ textAlign:'center', padding:40, color:'var(--color-text-dim)' }}>No data for this period</td></tr>
+                          <tr><td colSpan="7" style={{ textAlign:'center', padding:40, color:'var(--color-text-dim)' }}>{translate("No data for this period")}</td></tr>
                         )}
                         {finKpis.map((kpi, i) => (
                           <tr key={i}>

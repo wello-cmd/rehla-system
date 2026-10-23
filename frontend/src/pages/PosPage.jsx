@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index.js';
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
 import { prepareCheckoutAttempt } from '../lib/checkoutAttempt';
@@ -33,7 +34,7 @@ export default function PosPage() {
       const data = await api.get('/inventory');
       setProducts(data);
     } catch (err) {
-      toast.error('Failed to load products');
+      toast.error(translate("Failed to load products"));
     } finally {
       setLoading(false);
     }
@@ -68,7 +69,7 @@ export default function PosPage() {
       addToCart(exactMatch);
       setSearchTerm('');
     } else {
-      toast.error('Product not found!');
+      toast.error(translate("Product not found!"));
     }
 
     if (searchInputRef.current) {
@@ -78,13 +79,13 @@ export default function PosPage() {
 
   function addToCart(product) {
     if (product.stock_quantity <= 0) {
-      toast.error('Out of stock');
+      toast.error(translate("Out of stock"));
       return;
     }
     const existing = cart.find(item => item.id === product.id);
     if (existing) {
       if (existing.quantity >= product.stock_quantity) {
-        toast.error(`Only ${product.stock_quantity} available in stock`);
+        toast.error(translate(`Only ${product.stock_quantity} available in stock`));
         return;
       }
       setCart(cart.map(item =>
@@ -102,7 +103,7 @@ export default function PosPage() {
       return;
     }
     if (product && qty > product.stock_quantity) {
-      toast.error(`Only ${product.stock_quantity} available in stock`);
+      toast.error(translate(`Only ${product.stock_quantity} available in stock`));
       return;
     }
     setCart(cart.map(item =>
@@ -123,7 +124,7 @@ export default function PosPage() {
     e.preventDefault();
     if (checkoutInFlightRef.current) return;
     if (cart.length === 0) {
-      toast.error('Cart is empty');
+      toast.error(translate("Cart is empty"));
       return;
     }
 
@@ -146,7 +147,7 @@ export default function PosPage() {
       const result = await api.post('/pos/checkout', attempt.payload);
       checkoutAttemptRef.current = null;
       setCheckoutResult({ ...result, amount_received: attempt.payload.amount_received });
-      toast.success('Sale recorded successfully!');
+      toast.success(translate("Sale recorded successfully!"));
       // Reset POS cart and fields
       setCart([]);
       setCustomerName('');
@@ -157,7 +158,7 @@ export default function PosPage() {
       setDiscountReason('');
       fetchProducts();
     } catch (err) {
-      toast.error(err.message || 'Checkout failed');
+      toast.error(translate(err.message || 'Checkout failed'));
     } finally {
       checkoutInFlightRef.current = false;
       setSubmitting(false);
@@ -172,23 +173,23 @@ export default function PosPage() {
   );
 
   return (
-    <DashboardShell title="POS Checkout (Register)">
+    <DashboardShell title={translate("POS Checkout (Register)")}>
       {loading ? renderSkeleton() : (
         <fieldset disabled={submitting} aria-busy={submitting} style={{ minWidth: 0, border: 0, padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '24px', alignItems: 'start' }}>
           {/* Products Finder catalog */}
           <div className="card" style={{ padding: '20px' }}>
-            <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '12px' }}>Scan Barcode or Search</p>
+            <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: '12px' }}>{translate("Scan Barcode or Search")}</p>
             <form onSubmit={handleBarcodeSubmit} style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
               <input
                 ref={searchInputRef}
                 className="input"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Scan barcode or type SKU..."
+                placeholder={translate("Scan barcode or type SKU...")}
                 style={{ flex: 1 }}
                 autoFocus
               />
-              <button type="submit" className="btn btn-secondary">Enter</button>
+              <button type="submit" className="btn btn-secondary">{translate("Enter")}</button>
             </form>
 
             <div style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -200,32 +201,31 @@ export default function PosPage() {
                   onClick={() => addToCart(p)}
                   className="card card-hover"
                   style={{
-                    padding: '12px 16px', textAlign: 'left', color: 'inherit', font: 'inherit', display: 'flex', justifyContent: 'space-between',
+                    padding: '12px 16px', textAlign: "start", color: 'inherit', font: 'inherit', display: 'flex', justifyContent: 'space-between',
                     alignItems: 'center', cursor: 'pointer', background: 'var(--color-bg)',
                     opacity: p.stock_quantity <= 0 ? 0.5 : 1
                   }}
                 >
                   <div>
                     <p style={{ fontWeight: 600, fontSize: '14px' }}>{p.name}</p>
-                    <p className="font-mono" style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                      SKU: {p.sku} · Stock: {p.stock_quantity}
+                    <p className="font-mono" style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}> {translate("SKU:")} {p.sku} {translate("· Stock:")} {p.stock_quantity}
                     </p>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ textAlign: "end" }}>
                     <p className="font-mono" style={{ fontWeight: 700 }}>{formatEGP(p.price)}</p>
-                    {p.stock_quantity <= 0 && <span className="badge badge-error" style={{ fontSize: '9px', marginTop: '4px' }}>Out of stock</span>}
+                    {p.stock_quantity <= 0 && <span className="badge badge-error" style={{ fontSize: '9px', marginTop: '4px' }}>{translate("Out of stock")}</span>}
                   </div>
                 </button>
               ))}
               {filteredProducts.length === 0 && (
-                <p style={{ color: 'var(--color-text-dim)', fontSize: '13px', textAlign: 'center', padding: '30px' }}>No products found.</p>
+                <p style={{ color: 'var(--color-text-dim)', fontSize: '13px', textAlign: 'center', padding: '30px' }}>{translate("No products found.")}</p>
               )}
             </div>
           </div>
 
           {/* Cart & Billing detail side pane */}
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>Billing Details & Cart</p>
+            <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>{translate("Billing Details & Cart")}</p>
 
             {/* Cart Items */}
             <div style={{ maxHeight: '180px', overflowY: 'auto', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '12px' }}>
@@ -255,34 +255,34 @@ export default function PosPage() {
                 </div>
               ))}
               {cart.length === 0 && (
-                <p style={{ color: 'var(--color-text-dim)', fontSize: '13px', padding: '20px 0', textAlign: 'center' }}>Cart is empty.</p>
+                <p style={{ color: 'var(--color-text-dim)', fontSize: '13px', padding: '20px 0', textAlign: 'center' }}>{translate("Cart is empty.")}</p>
               )}
             </div>
 
             {/* Subtotal / Discount / Total */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-dim)' }}>
-                <span>Subtotal</span>
+                <span>{translate("Subtotal")}</span>
                 <span className="font-mono">{formatEGP(subtotal)}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8 }}>
                 <div>
-                  <label className="text-label" style={{ fontSize: 9, display: 'block', marginBottom: 4 }}>Discount (EGP)</label>
+                  <label className="text-label" style={{ fontSize: 9, display: 'block', marginBottom: 4 }}>{translate("Discount (EGP)")}</label>
                   <input type="number" step="0.01" min="0" className="input" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)} placeholder="0" />
                 </div>
                 <div>
-                  <label className="text-label" style={{ fontSize: 9, display: 'block', marginBottom: 4 }}>Discount Reason</label>
-                  <input className="input" value={discountReason} onChange={e => setDiscountReason(e.target.value)} placeholder="Promo / loyalty / staff..." />
+                  <label className="text-label" style={{ fontSize: 9, display: 'block', marginBottom: 4 }}>{translate("Discount Reason")}</label>
+                  <input className="input" value={discountReason} onChange={e => setDiscountReason(e.target.value)} placeholder={translate("Promo / loyalty / staff...")} />
                 </div>
               </div>
               {discount > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-error)' }}>
-                  <span>Discount</span>
+                  <span>{translate("Discount")}</span>
                   <span className="font-mono">− {formatEGP(discount)}</span>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTop: '1px solid var(--color-border-light)' }}>
-                <span style={{ fontWeight: 700 }}>Total</span>
+                <span style={{ fontWeight: 700 }}>{translate("Total")}</span>
                 <span className="font-mono" style={{ fontSize: 20, fontWeight: 800 }}>{formatEGP(total)}</span>
               </div>
             </div>
@@ -291,16 +291,16 @@ export default function PosPage() {
             <form onSubmit={handleCheckout} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
                 <div>
-                  <label className="text-label" style={{ fontSize: '9px', display: 'block', marginBottom: '4px' }}>Customer Name</label>
+                  <label className="text-label" style={{ fontSize: '9px', display: 'block', marginBottom: '4px' }}>{translate("Customer Name")}</label>
                   <input
                     className="input"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Walk-in Customer"
+                    placeholder={translate("Walk-in Customer")}
                   />
                 </div>
                 <div>
-                  <label className="text-label" style={{ fontSize: '9px', display: 'block', marginBottom: '4px' }}>Customer Phone</label>
+                  <label className="text-label" style={{ fontSize: '9px', display: 'block', marginBottom: '4px' }}>{translate("Customer Phone")}</label>
                   <input
                     className="input"
                     value={customerPhone}
@@ -311,30 +311,30 @@ export default function PosPage() {
               </div>
 
               <div>
-                <label className="text-label" style={{ fontSize: '9px', display: 'block', marginBottom: '4px' }}>Delivery Address (Optional)</label>
+                <label className="text-label" style={{ fontSize: '9px', display: 'block', marginBottom: '4px' }}>{translate("Delivery Address (Optional)")}</label>
                 <input
                   className="input"
                   value={deliveryAddress}
                   onChange={(e) => setDeliveryAddress(e.target.value)}
-                  placeholder="Enter address if shipping required..."
+                  placeholder={translate("Enter address if shipping required...")}
                 />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
                 <div>
-                  <label className="text-label" style={{ fontSize: '9px', display: 'block', marginBottom: '4px' }}>Payment Method</label>
+                  <label className="text-label" style={{ fontSize: '9px', display: 'block', marginBottom: '4px' }}>{translate("Payment Method")}</label>
                   <select
                     className="input select"
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                   >
-                    <option value="Cash">Cash</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Cash">{translate("Cash")}</option>
+                    <option value="Bank Transfer">{translate("Bank Transfer")}</option>
                   </select>
                 </div>
                 {paymentMethod === 'Cash' && (
                   <div>
-                    <label className="text-label" style={{ fontSize: '9px', display: 'block', marginBottom: '4px' }}>Amount Received (EGP)</label>
+                    <label className="text-label" style={{ fontSize: '9px', display: 'block', marginBottom: '4px' }}>{translate("Amount Received (EGP)")}</label>
                     <input
                       type="number"
                       step="0.01"
@@ -349,7 +349,7 @@ export default function PosPage() {
 
               {paymentMethod === 'Cash' && amountReceived && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: 'var(--color-bg)', borderRadius: '4px' }}>
-                  <span style={{ fontSize: '13px' }}>Change Due:</span>
+                  <span style={{ fontSize: '13px' }}>{translate("Change Due:")}</span>
                   <span className="font-mono" style={{ fontWeight: 700, color: 'var(--color-success)' }}>{formatEGP(change)}</span>
                 </div>
               )}
@@ -360,7 +360,7 @@ export default function PosPage() {
                 disabled={cart.length === 0 || submitting}
                 style={{ width: '100%', marginTop: '8px' }}
               >
-                {submitting ? 'Recording sale…' : 'PROCEED CHECKOUT'}
+                {submitting ? translate("Recording sale…") : translate("PROCEED CHECKOUT")}
               </button>
             </form>
           </div>
@@ -369,36 +369,34 @@ export default function PosPage() {
 
       {/* Sale Receipt Dialog Modal */}
       {checkoutResult && (
-        <AccessibleDialog title="Payment received" onClose={() => setCheckoutResult(null)} style={{ maxWidth: '420px', textAlign: 'center' }}>
+        <AccessibleDialog title={translate("Payment received")} onClose={() => setCheckoutResult(null)} style={{ maxWidth: '420px', textAlign: 'center' }}>
             <div className="pulse-dot" style={{ background: 'var(--color-success)', margin: '0 auto 12px' }}></div>
-            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>Payment Received</p>
-            <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '24px' }}>
-              Invoice <strong>{checkoutResult.invoice_number}</strong> generated successfully.
-            </p>
+            <p className="text-label" style={{ color:"var(--color-text-dim)", marginBottom: 14 }}>{translate("Payment Received")}</p>
+            <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '24px' }}> {translate("Invoice")} <strong>{checkoutResult.invoice_number}</strong> {translate("generated successfully.")} </p>
 
-            <div className="card" style={{ background: 'var(--color-bg)', textAlign: 'left', padding: '16px', marginBottom: '24px', fontSize: '13px' }}>
+            <div className="card" style={{ background: 'var(--color-bg)', textAlign: "start", padding: '16px', marginBottom: '24px', fontSize: '13px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span>Subtotal:</span>
+                <span>{translate("Subtotal:")}</span>
                 <span className="font-mono">{formatEGP(checkoutResult.total + (checkoutResult.discount_amount || 0))}</span>
               </div>
               {checkoutResult.discount_amount > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--color-error)' }}>
-                  <span>Discount:</span>
+                  <span>{translate("Discount:")}</span>
                   <span className="font-mono">− {formatEGP(checkoutResult.discount_amount)}</span>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '8px', marginBottom: '8px', fontWeight: 700 }}>
-                <span>Total:</span>
+                <span>{translate("Total:")}</span>
                 <span className="font-mono">{formatEGP(checkoutResult.total)}</span>
               </div>
               {checkoutResult.amount_received != null && (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span>Amount Received:</span>
+                    <span>{translate("Amount Received:")}</span>
                     <span className="font-mono">{formatEGP(checkoutResult.amount_received)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-success)', fontWeight: 600 }}>
-                    <span>Change Returned:</span>
+                    <span>{translate("Change Returned:")}</span>
                     <span className="font-mono">{formatEGP(checkoutResult.change)}</span>
                   </div>
                 </>
@@ -409,9 +407,7 @@ export default function PosPage() {
               className="btn btn-primary"
               style={{ width: '100%' }}
               onClick={() => setCheckoutResult(null)}
-            >
-              Start New Sale
-            </button>
+            > {translate("Start New Sale")} </button>
         </AccessibleDialog>
       )}
     </DashboardShell>

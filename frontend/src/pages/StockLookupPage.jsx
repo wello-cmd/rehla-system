@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index.js';
 import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatNumber } from '../lib/formatters';
@@ -24,7 +25,7 @@ export default function StockLookupPage() {
       const res = await api.get(`/inventory/scan-lookup/${encodeURIComponent(val.toUpperCase())}`);
       setData(res);
     } catch (err) {
-      toast.error(err.message || 'Not found');
+      toast.error(translate(err.message || 'Not found'));
       setData(null);
     } finally {
       setLoading(false);
@@ -41,29 +42,25 @@ export default function StockLookupPage() {
   const variantLabel = (v) => [v.size, v.color].filter(Boolean).join(' / ') || v.variant_name || '—';
 
   return (
-    <DashboardShell title="Stock Lookup">
+    <DashboardShell title={translate("Stock Lookup")}>
       {/* Scanner — read only */}
       <div className="card" style={{ marginBottom: 20, maxWidth: 640 }}>
-        <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 12 }}>
-          Scan an item to see its exact stock — nothing is deducted
-        </p>
+        <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 12 }}> {translate("Scan an item to see its exact stock — nothing is deducted")} </p>
         <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <input
             ref={inputRef}
             className="input"
             value={scanInput}
             onChange={(e) => setScanInput(e.target.value)}
-            placeholder="Scan or type SKU / barcode..."
+            placeholder={translate("Scan or type SKU / barcode...")}
             autoFocus
             disabled={loading}
             style={{ fontSize: 18, fontFamily: 'var(--font-mono)', padding: 16, flex: '1 1 180px', minWidth: 0 }}
           />
-          <button className="btn btn-secondary" type="button" onClick={() => setShowScanner(true)} disabled={loading} title="Scan with camera" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>photo_camera</span>
-            Scan
-          </button>
+          <button className="btn btn-secondary" type="button" onClick={() => setShowScanner(true)} disabled={loading} title={translate("Scan with camera")} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>photo_camera</span> {translate("Scan")} </button>
           <button className="btn btn-primary" type="submit" disabled={loading}>
-            {loading ? '...' : 'Look up'}
+            {loading ? '...' : translate("Look up")}
           </button>
         </form>
       </div>
@@ -91,8 +88,8 @@ export default function StockLookupPage() {
                 {p.warehouse && <span className="badge badge-info" style={{ fontSize: 10 }}>📍 {p.warehouse}</span>}
               </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <p className="text-label" style={{ color: 'var(--color-text-dim)', fontSize: 10 }}>Total in stock</p>
+            <div style={{ textAlign: "end" }}>
+              <p className="text-label" style={{ color: 'var(--color-text-dim)', fontSize: 10 }}>{translate("Total in stock")}</p>
               <p className="font-mono" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1.1, color: p.total_stock < 10 ? 'var(--color-error)' : 'var(--color-success)' }}>
                 {formatNumber(p.total_stock)}
               </p>
@@ -103,17 +100,15 @@ export default function StockLookupPage() {
           {/* Variant breakdown */}
           {data.variants.length > 0 && (
             <div style={{ marginTop: 18 }}>
-              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 8 }}>
-                Stock by size / colour
-              </p>
+              <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 8 }}> {translate("Stock by size / colour")} </p>
               <div className="table-container" style={{ borderRadius: 8, border: '1px solid var(--color-border-light)' }}>
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Variant</th>
-                      <th>SKU</th>
-                      <th style={{ textAlign: 'right' }}>Stock</th>
-                      <th style={{ textAlign: 'right' }}>Price</th>
+                      <th>{translate("Variant")}</th>
+                      <th>{translate("SKU")}</th>
+                      <th style={{ textAlign: "end" }}>{translate("Stock")}</th>
+                      <th style={{ textAlign: "end" }}>{translate("Price")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -122,14 +117,14 @@ export default function StockLookupPage() {
                       return (
                         <tr key={v.id} style={isScanned ? { background: 'var(--color-brand-dim)' } : undefined}>
                           <td>
-                            {isScanned && <span style={{ color: 'var(--color-brand-hover)', marginRight: 6 }}>▸</span>}
+                            {isScanned && <span style={{ color: 'var(--color-brand-hover)', marginInlineEnd: 6 }}>▸</span>}
                             <span style={{ fontWeight: isScanned ? 700 : 500 }}>{variantLabel(v)}</span>
                           </td>
                           <td className="font-mono" style={{ fontSize: 12 }}>{v.sku}</td>
-                          <td className={`font-mono ${v.stock_quantity < 10 ? 'low-stock' : ''}`} style={{ textAlign: 'right', fontWeight: 700 }}>
+                          <td className={`font-mono ${v.stock_quantity < 10 ? 'low-stock' : ''}`} style={{ textAlign: "end", fontWeight: 700 }}>
                             {formatNumber(v.stock_quantity)}
                           </td>
-                          <td className="font-mono" style={{ textAlign: 'right', color: 'var(--color-text-muted)' }}>
+                          <td className="font-mono" style={{ textAlign: "end", color: 'var(--color-text-muted)' }}>
                             {v.price ? formatEGP(v.price) : '—'}
                           </td>
                         </tr>
@@ -139,9 +134,7 @@ export default function StockLookupPage() {
                 </table>
               </div>
               {scannedId && (
-                <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginTop: 8 }}>
-                  ▸ The scanned item is highlighted.
-                </p>
+                <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginTop: 8 }}> {translate("▸ The scanned item is highlighted.")} </p>
               )}
             </div>
           )}

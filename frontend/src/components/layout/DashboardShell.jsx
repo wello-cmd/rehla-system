@@ -1,3 +1,4 @@
+import { translate } from '../../i18n/index.js';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getPageParent } from '../../lib/navigation';
@@ -11,7 +12,7 @@ export default function DashboardShell({ children, title, subtitle, actions }) {
 
   return (
     <div className="workspace-shell">
-      <a className="skip-link" href="#main-content">Skip to content</a>
+      <a className="skip-link" href="#main-content">{translate("Skip to content")}</a>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <main id="main-content" tabIndex={-1} className="main-content">
@@ -20,7 +21,7 @@ export default function DashboardShell({ children, title, subtitle, actions }) {
           <button
             className="hamburger-btn"
             onClick={() => setSidebarOpen(true)}
-            aria-label="Open menu"
+            aria-label={translate("Open menu")}
             aria-expanded={sidebarOpen}
             aria-controls="primary-navigation"
           >
@@ -33,8 +34,8 @@ export default function DashboardShell({ children, title, subtitle, actions }) {
         </div>
 
         <div className="workspace-bar">
-          <p>Workspace <span aria-hidden="true">/</span> {parent && <><Link to={parent.path}>{parent.label}</Link><span aria-hidden="true">/</span></>}<strong>{title === 'Business overview' ? 'Overview' : title || 'Rehla'}</strong></p>
-          <span className="workspace-currency">EGP <span className="material-symbols-outlined" aria-hidden="true">language</span></span>
+          <p>{translate("Workspace")} <span aria-hidden="true">/</span> {parent && <><Link to={parent.path}>{translate(parent.label)}</Link><span aria-hidden="true">/</span></>}<strong>{title === 'Business overview' ? translate("Overview") : title || translate("Rehla")}</strong></p>
+          <span className="workspace-currency">{translate("EGP")} <span className="material-symbols-outlined" aria-hidden="true">language</span></span>
         </div>
 
         {/* Page header */}
@@ -47,9 +48,9 @@ export default function DashboardShell({ children, title, subtitle, actions }) {
             }}
           >
             <div>
-              <h1 className="page-heading">{title}</h1>
+              <h1 className="page-heading">{translate(title)}</h1>
               {subtitle && (
-                <p style={{ fontSize:13, color:'var(--color-text-muted)', marginTop:4 }}>{subtitle}</p>
+                <p style={{ fontSize:13, color:'var(--color-text-muted)', marginTop:4 }}>{translate(subtitle)}</p>
               )}
             </div>
             {actions && (
@@ -71,7 +72,7 @@ export default function DashboardShell({ children, title, subtitle, actions }) {
             background: 'var(--color-bg-elevated)',
             color: 'var(--color-text)',
             border: '1px solid var(--color-border)',
-            fontFamily: 'Inter, sans-serif',
+            fontFamily: 'var(--font-sans)',
             fontSize: '13px',
             borderRadius: '6px',
             boxShadow: 'var(--shadow-lg)',

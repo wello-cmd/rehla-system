@@ -1,3 +1,4 @@
+import { translate } from '../../i18n/index.js';
 import { useEffect, useState } from 'react';
 
 function currentTheme() {
@@ -20,12 +21,12 @@ export default function ThemeToggle({ style }) {
       onClick={() => setTheme(next)}
       className="btn btn-ghost btn-sm"
       style={{ width: '100%', justifyContent: 'flex-start', color: 'var(--color-text-dim)', fontSize: 12, ...style }}
-      aria-label={`Switch to ${next} mode`}
+      aria-label={translate(`Switch to ${next} mode`)}
     >
       <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
         {theme === 'dark' ? 'light_mode' : 'dark_mode'}
       </span>
-      {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+      {theme === 'dark' ? translate("Light Mode") : translate("Dark Mode")}
     </button>
   );
 }

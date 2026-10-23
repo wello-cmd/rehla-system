@@ -1,3 +1,4 @@
+import { translate } from '../i18n/index.js';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatDate, formatDateTime, getStatusColor, timeAgo } from '../lib/formatters';
@@ -34,7 +35,7 @@ export default function BostaPage() {
       const data = await api.get('/bosta/analytics');
       setAnalytics(data);
     } catch (err) {
-      toast.error(err.message || 'Failed to load Bosta analytics');
+      toast.error(translate(err.message || 'Failed to load Bosta analytics'));
     } finally {
       setLoading(false);
     }
@@ -50,7 +51,7 @@ export default function BostaPage() {
       const data = await api.get(`/bosta/shipments${params.toString() ? `?${params}` : ''}`);
       setShipments(data || []);
     } catch (err) {
-      toast.error(err.message || 'Failed to load shipments');
+      toast.error(translate(err.message || 'Failed to load shipments'));
     } finally {
       setShipmentsLoading(false);
     }
@@ -59,38 +60,38 @@ export default function BostaPage() {
   async function triggerSync() {
     setSyncing(true);
     setSyncResult(null);
-    const t = toast.loading('Syncing active Bosta shipments...');
+    const t = toast.loading(translate('Syncing active Bosta shipments...'));
     try {
       const result = await api.post('/bosta/sync', {});
       setSyncResult(result);
       toast.success(`Sync complete — ${result.syncedCount ?? 0} shipments updated`, { id: t });
       fetchAnalytics();
     } catch (err) {
-      toast.error(err.message || 'Sync failed', { id: t });
+      toast.error(translate(err.message || 'Sync failed'), { id: t });
     } finally {
       setSyncing(false);
     }
   }
 
   async function trackShipment(shipment) {
-    if (!shipment.tracking_number) return toast.error('No tracking number');
+    if (!shipment.tracking_number) return toast.error(translate("No tracking number"));
     setTrackingLoading(prev => ({ ...prev, [shipment.id]: true }));
     try {
       const data = await api.get(`/delivery/bosta/track/${shipment.tracking_number}`);
       setTracking(prev => ({ ...prev, [shipment.id]: data }));
     } catch (err) {
-      toast.error(err.message || 'Failed to fetch tracking');
+      toast.error(translate(err.message || 'Failed to fetch tracking'));
     } finally {
       setTrackingLoading(prev => ({ ...prev, [shipment.id]: false }));
     }
   }
 
   async function downloadLabel(shipment) {
-    if (!shipment.bosta_shipment_id) return toast.error('No shipment ID');
+    if (!shipment.bosta_shipment_id) return toast.error(translate("No shipment ID"));
     try {
       await api.downloadBlob(`/delivery/bosta/label/${shipment.bosta_shipment_id}`, `bosta-label-${shipment.bosta_shipment_id}.pdf`);
     } catch (err) {
-      toast.error(err.message || 'Failed to download label');
+      toast.error(translate(err.message || 'Failed to download label'));
     }
   }
 
@@ -99,20 +100,20 @@ export default function BostaPage() {
 
   const statusChartData = useMemo(() =>
     Object.entries(analytics?.statusBreakdown || {}).map(([name, value]) => ({
-      name: name.replace(/_/g, ' '), value, color: STATUS_COLORS[name] || '#6366f1'
+      name: translate(name), value, color: STATUS_COLORS[name] || '#6366f1'
     })),
     [analytics]
   );
 
   const failureChartData = useMemo(() =>
     Object.entries(analytics?.failureReasons || {}).map(([name, value]) => ({
-      name: name.replace(/_/g, ' '), value
+      name: translate(name), value
     })),
     [analytics]
   );
 
   return (
-    <DashboardShell title="Bosta Channel">
+    <DashboardShell title={translate("Bosta Channel")}>
       <div style={{ display:'flex', gap:4, borderBottom:'1px solid var(--color-border-light)', paddingBottom:4, marginBottom:24 }}>
         {[
           { id:'overview',  label:'Overview'  },
@@ -129,23 +130,23 @@ export default function BostaPage() {
               color:       activeTab === tab.id ? 'var(--color-text)'      : 'var(--color-text-muted)',
             }}
           >
-            {tab.label}
+            {translate(tab.label)}
           </button>
         ))}
-        <button className="btn btn-primary btn-sm" onClick={triggerSync} disabled={syncing} style={{ marginLeft:'auto' }}>
+        <button className="btn btn-primary btn-sm" onClick={triggerSync} disabled={syncing} style={{ marginInlineStart:'auto' }}>
           <span className="material-symbols-outlined" style={{ fontSize:15 }}>{syncing ? 'hourglass_top' : 'sync'}</span>
-          {syncing ? 'Syncing…' : 'Sync Tracking'}
+          {syncing ? translate("Syncing…") : translate("Sync Tracking")}
         </button>
       </div>
 
       {activeTab === 'overview' && (
-        loading ? <p style={{ color: 'var(--color-text-dim)' }}>Loading analytics...</p> : (
+        loading ? <p style={{ color: 'var(--color-text-dim)' }}>{translate("Loading analytics...")}</p> : (
           <div style={{ display: 'grid', gap: 20 }}>
             <BostaSummaryCards analytics={analytics} />
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
               <div className="card">
-                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Shipment Status Distribution</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>{translate("Shipment Status Distribution")}</p>
                 <div style={{ height: 240 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -160,17 +161,17 @@ export default function BostaPage() {
               </div>
 
               <div className="card">
-                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>COD Overview</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>{translate("COD Overview")}</p>
                 <div style={{ display: 'grid', gap: 16 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div style={{ padding: 16, border: '1px solid var(--color-border-light)', borderRadius: 4 }}>
-                      <p className="text-label" style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>COD Collected</p>
+                      <p className="text-label" style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>{translate("COD Collected")}</p>
                       <p className="font-mono" style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-success)', marginTop: 4 }}>
                         {formatEGP(analytics?.summary?.cod_collected || 0)}
                       </p>
                     </div>
                     <div style={{ padding: 16, border: '1px solid var(--color-border-light)', borderRadius: 4 }}>
-                      <p className="text-label" style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>COD Outstanding</p>
+                      <p className="text-label" style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>{translate("COD Outstanding")}</p>
                       <p className="font-mono" style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-warning)', marginTop: 4 }}>
                         {formatEGP(analytics?.summary?.cod_outstanding || 0)}
                       </p>
@@ -196,7 +197,7 @@ export default function BostaPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
               <div className="card">
-                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Daily Volume — Last 30 Days</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>{translate("Daily Volume — Last 30 Days")}</p>
                 <div style={{ height: 240 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={analytics?.dailyVolume || []}>
@@ -205,18 +206,18 @@ export default function BostaPage() {
                       <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                       <Tooltip contentStyle={TT} />
                       <Legend />
-                      <Bar dataKey="total" name="Total" fill="#6366f1" opacity={0.5} radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="delivered" name="Delivered" fill="#3fb950" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="failed" name="Failed" fill="#f85149" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="total" name={translate("Total")} fill="#6366f1" opacity={0.5} radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="delivered" name={translate("Delivered")} fill="#3fb950" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="failed" name={translate("Failed")} fill="#f85149" radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               <div className="card">
-                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>Failure Reasons</p>
+                <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 14 }}>{translate("Failure Reasons")}</p>
                 {failureChartData.length === 0 ? (
-                  <p style={{ color: 'var(--color-text-dim)', fontSize: 13 }}>No failed shipments.</p>
+                  <p style={{ color: 'var(--color-text-dim)', fontSize: 13 }}>{translate("No failed shipments.")}</p>
                 ) : (
                   <div style={{ height: 240 }}>
                     <ResponsiveContainer width="100%" height="100%">
@@ -232,10 +233,9 @@ export default function BostaPage() {
                 )}
                 {analytics?.avgDeliveryTimeHrs !== null && analytics?.avgDeliveryTimeHrs !== undefined && (
                   <div style={{ marginTop: 16, padding: 12, border: '1px solid var(--color-border-light)', borderRadius: 4 }}>
-                    <p className="text-label" style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>Avg Delivery Time</p>
+                    <p className="text-label" style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>{translate("Avg Delivery Time")}</p>
                     <p className="font-mono" style={{ fontSize: 20, fontWeight: 800, marginTop: 4 }}>
-                      {analytics.avgDeliveryTimeHrs} hrs
-                    </p>
+                      {analytics.avgDeliveryTimeHrs} {translate("hrs")} </p>
                   </div>
                 )}
               </div>
@@ -252,12 +252,12 @@ export default function BostaPage() {
             style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}
           >
             <select className="input select" value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
-              <option value="">All statuses</option>
-              {BOSTA_STATUSES.map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
+              <option value="">{translate("All statuses")}</option>
+              {BOSTA_STATUSES.map(s => <option key={s} value={s}>{translate(s)}</option>)}
             </select>
             <input className="input" type="date" value={filters.start} onChange={e => setFilters({ ...filters, start: e.target.value })} />
             <input className="input" type="date" value={filters.end} onChange={e => setFilters({ ...filters, end: e.target.value })} />
-            <button className="btn btn-primary" type="submit">Apply</button>
+            <button className="btn btn-primary" type="submit">{translate("Apply")}</button>
           </form>
 
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -265,21 +265,21 @@ export default function BostaPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Order</th>
-                    <th>Customer</th>
-                    <th>Address</th>
-                    <th>Tracking #</th>
-                    <th>COD</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
+                    <th>{translate("Order")}</th>
+                    <th>{translate("Customer")}</th>
+                    <th>{translate("Address")}</th>
+                    <th>{translate("Tracking #")}</th>
+                    <th>{translate("COD")}</th>
+                    <th>{translate("Status")}</th>
+                    <th>{translate("Created")}</th>
+                    <th style={{ textAlign: "end" }}>{translate("Actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {shipmentsLoading ? (
-                    <tr><td colSpan="8" style={{ padding: 32, textAlign: 'center' }}>Loading...</td></tr>
+                    <tr><td colSpan="8" style={{ padding: 32, textAlign: 'center' }}>{translate("Loading...")}</td></tr>
                   ) : shipments.length === 0 ? (
-                    <tr><td colSpan="8" style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-dim)' }}>No Bosta shipments found.</td></tr>
+                    <tr><td colSpan="8" style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-dim)' }}>{translate("No Bosta shipments found.")}</td></tr>
                   ) : shipments.map(s => (
                     <tr key={s.id}>
                       <td className="font-mono">
@@ -303,21 +303,21 @@ export default function BostaPage() {
                       <td>
                         <span className="font-mono">{formatEGP(s.cod_amount)}</span>
                         <div style={{ fontSize: 11, color: s.cod_collected ? 'var(--color-success)' : 'var(--color-text-dim)' }}>
-                          {s.cod_collected ? 'Collected' : 'Outstanding'}
+                          {s.cod_collected ? translate("Collected") : translate("Outstanding")}
                         </div>
                       </td>
                       <td>
                         <span className={`badge badge-${getStatusColor(s.status)}`}>
-                          {s.status.replace(/_/g, ' ')}
+                          {translate(s.status)}
                         </span>
                         {s.failed_reason && (
                           <div style={{ fontSize: 10, color: 'var(--color-error)', marginTop: 2 }}>
-                            {s.failed_reason.replace(/_/g, ' ')}
+                            {translate(s.failed_reason)}
                           </div>
                         )}
                       </td>
                       <td style={{ fontSize: 12 }} title={formatDateTime(s.created_at)}>{timeAgo(s.created_at)}</td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td style={{ textAlign: "end" }}>
                         <div style={{ display: 'inline-flex', gap: 6 }}>
                           {s.tracking_number && (
                             <button
@@ -325,13 +325,11 @@ export default function BostaPage() {
                               onClick={() => trackShipment(s)}
                               disabled={trackingLoading[s.id]}
                             >
-                              {trackingLoading[s.id] ? '...' : 'Track'}
+                              {trackingLoading[s.id] ? '...' : translate("Track")}
                             </button>
                           )}
                           {s.bosta_shipment_id && (
-                            <button className="btn btn-secondary btn-sm" onClick={() => downloadLabel(s)}>
-                              Label
-                            </button>
+                            <button className="btn btn-secondary btn-sm" onClick={() => downloadLabel(s)}> {translate("Label")} </button>
                           )}
                         </div>
                       </td>
@@ -348,29 +346,26 @@ export default function BostaPage() {
         <div style={{ display: 'grid', gap: 16 }}>
           <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ flex: 1 }}>
-              <p className="text-label" style={{ color:'var(--color-text-dim)' }}>Tracking Sync</p>
-              <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 4 }}>
-                Fetches live status from Bosta API for all active shipments (not yet delivered or failed) and updates their status in the system.
-              </p>
+              <p className="text-label" style={{ color:'var(--color-text-dim)' }}>{translate("Tracking Sync")}</p>
+              <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 4 }}> {translate("Fetches live status from Bosta API for all active shipments (not yet delivered or failed) and updates their status in the system.")} </p>
             </div>
             <button className="btn btn-primary" onClick={triggerSync} disabled={syncing}>
-              {syncing ? 'Syncing...' : 'Sync Now'}
+              {syncing ? translate("Syncing...") : translate("Sync Now")}
             </button>
           </div>
 
           {syncResult && (
-            <div className="card" style={{ borderLeft: `4px solid ${syncResult.success ? 'var(--color-success)' : 'var(--color-error)'}` }}>
-              <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 8 }}>Last Sync Result</p>
+            <div className="card" style={{ borderInlineStart: `4px solid ${syncResult.success ? 'var(--color-success)' : 'var(--color-error)'}` }}>
+              <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 8 }}>{translate("Last Sync Result")}</p>
               <p style={{ fontSize: 13 }}>
                 <span className={`badge badge-${syncResult.success ? 'success' : 'error'}`}>
-                  {syncResult.success ? 'Success' : 'Failed'}
+                  {syncResult.success ? translate("Success") : translate("Failed")}
                 </span>
-                <span style={{ marginLeft: 10, color: 'var(--color-text-muted)' }}>{syncResult.message}</span>
+                <span style={{ marginInlineStart: 10, color: 'var(--color-text-muted)' }}>{syncResult.message}</span>
               </p>
               {syncResult.syncedCount !== undefined && (
                 <p className="font-mono" style={{ fontSize: 24, fontWeight: 800, marginTop: 12 }}>
-                  {syncResult.syncedCount} shipments updated
-                </p>
+                  {syncResult.syncedCount} {translate("shipments updated")} </p>
               )}
               {syncResult.error && (
                 <p style={{ color: 'var(--color-error)', fontSize: 13, marginTop: 8 }}>{syncResult.error}</p>
@@ -379,13 +374,13 @@ export default function BostaPage() {
           )}
 
           <div className="card">
-            <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 12 }}>How Tracking Sync Works</p>
-            <ol style={{ paddingLeft: 20, fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 2 }}>
-              <li>Finds all Bosta shipments with status not in <em>delivered</em> or <em>failed</em></li>
-              <li>Calls the Bosta tracking API for each shipment&apos;s tracking number</li>
-              <li>Maps Bosta status codes to system statuses (DELIVERED → delivered, IN_TRANSIT → out_for_delivery, etc.)</li>
-              <li>Updates delivery order status and logs a sync event in the delivery log</li>
-              <li>If a shipment is delivered, also marks the linked order and invoice as paid</li>
+            <p className="text-label" style={{ color:'var(--color-text-dim)', marginBottom: 12 }}>{translate("How Tracking Sync Works")}</p>
+            <ol style={{ paddingInlineStart: 20, fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 2 }}>
+              <li>{translate("Finds all Bosta shipments with status not in")} <em>{translate("delivered")}</em> {translate("or")} <em>{translate("failed")}</em></li>
+              <li>{translate("Calls the Bosta tracking API for each shipment's tracking number")}</li>
+              <li>{translate("Maps Bosta status codes to system statuses (DELIVERED → delivered, IN_TRANSIT → out_for_delivery, etc.)")}</li>
+              <li>{translate("Updates delivery order status and logs a sync event in the delivery log")}</li>
+              <li>{translate("If a shipment is delivered, also marks the linked order and invoice as paid")}</li>
             </ol>
           </div>
         </div>
@@ -411,7 +406,7 @@ function BostaSummaryCards({ analytics }) {
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
       {cards.map(([label, value, color]) => (
         <div className="card" key={label}>
-          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>{label}</p>
+          <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>{translate(label)}</p>
           <p className="font-mono" style={{ fontSize: 20, fontWeight: 800, color: color || 'var(--color-text)' }}>{value}</p>
         </div>
       ))}
