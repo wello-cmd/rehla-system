@@ -1,5 +1,5 @@
 import { getIntlLocale } from '../i18n/index.js';
-import { translate } from '../i18n/index.js';
+import { translate, formatPeriodLabel } from '../i18n/index.js';
 import { useState } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatNumber } from '../lib/formatters';
@@ -75,22 +75,22 @@ export default function AnalyticsPage() {
           ))}
           {period.label && (
             <span style={{ marginInlineStart:'auto', fontSize:11, fontFamily:'var(--font-mono)', color:'var(--color-text-dim)', alignSelf:'center' }}>
-              {translate(period.label)}
+              {formatPeriodLabel(period.label)}
             </span>
           )}
         </div>
 
         {error && (
           <div className="card" role="alert">
-            <p>{translate("Could not load")} {requestedPeriod.label || translate("the requested period")}. {translate(error)}</p>
-            <p>{appliedPeriod ? translate('Showing the last successful report: {period}. These results have not refreshed.', {period:appliedPeriod.label || translate('All time')}) : translate("No analytics report is available. Values are unavailable until loading succeeds.")}</p>
+            <p>{translate("Could not load")} {formatPeriodLabel(requestedPeriod.label) || translate("the requested period")}. {translate(error)}</p>
+            <p>{appliedPeriod ? translate('Showing the last successful report: {period}. These results have not refreshed.', {period:formatPeriodLabel(appliedPeriod.label) || translate('All time')}) : translate("No analytics report is available. Values are unavailable until loading succeeds.")}</p>
             <button className="btn btn-secondary btn-sm" onClick={() => loader.load(requestedPeriod)}>{translate("Retry")}</button>
           </div>
         )}
 
         {loading && (
           <div style={{ padding:'60px 0', textAlign:'center', color:'var(--color-text-dim)' }}>
-            <p role="status">{translate("Loading")} {requestedPeriod.label || 'analytics'}…</p>
+            <p role="status">{translate("Loading")} {formatPeriodLabel(requestedPeriod.label) || translate('Analytics')}…</p>
             <div className="skeleton" style={{ height:40, marginBottom:16 }} />
             <div className="skeleton" style={{ height:300 }} />
           </div>

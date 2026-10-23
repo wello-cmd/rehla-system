@@ -1,5 +1,5 @@
 import { getIntlLocale } from '../i18n/index.js';
-import { translate } from '../i18n/index.js';
+import { translate, formatPeriodLabel } from '../i18n/index.js';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
@@ -76,7 +76,7 @@ export default function DashboardPage() {
   const statusTotal = statuses.reduce((total,[,value]) => total + value, 0);
   const actions = <>
     <details className="period-control" onKeyDown={event => { if(event.key === 'Escape') event.currentTarget.open = false; }}>
-      <summary className="btn btn-secondary"><span className="material-symbols-outlined" aria-hidden="true" style={{fontSize:17}}>calendar_month</span>{period.label || translate("Select period")}<span className="material-symbols-outlined" aria-hidden="true" style={{fontSize:16}}>expand_more</span></summary>
+      <summary className="btn btn-secondary"><span className="material-symbols-outlined" aria-hidden="true" style={{fontSize:17}}>calendar_month</span>{formatPeriodLabel(period.label) || translate("Select period")}<span className="material-symbols-outlined" aria-hidden="true" style={{fontSize:16}}>expand_more</span></summary>
       <div className="period-popover"><PeriodSelector onChange={handlePeriod} /><button className="btn btn-ghost btn-sm" onClick={event => { event.currentTarget.closest('details').open = false; }}>{translate("Done")}</button></div>
     </details>
     <button className="btn btn-secondary" disabled={loading} onClick={() => fetchDashboard(period)}><span className={`material-symbols-outlined ${loading ? 'spinner' : ''}`} aria-hidden="true" style={{fontSize:18}}>refresh</span>{loading ? translate("Refreshing…") : translate("Refresh")}</button>
@@ -93,7 +93,7 @@ export default function DashboardPage() {
         <Metric label={translate("Inventory value")} value={money(inventoryValue?.retail_value)} note={translate('{count} units · Current stock', {count:formatNumber(inventoryValue?.total_units || 0)})} icon="inventory_2" loading={loading} error={panelErrors.inventory} />
       </section>
       <div className="dashboard-main-grid">
-        <Panel title={translate("Revenue, expenses & profit")} extra={<span>{translate(period.label)}</span>} loading={loading} error={panelErrors.finance}>
+        <Panel title={translate("Revenue, expenses & profit")} extra={<span>{formatPeriodLabel(period.label)}</span>} loading={loading} error={panelErrors.finance}>
           {finKpis.length ? <><ResponsiveContainer width="100%" height={330}><ComposedChart data={finKpis} margin={{top:8,right:12,left:0,bottom:12}} accessibilityLayer><CartesianGrid stroke="var(--color-border-light)" vertical={false} /><XAxis dataKey="period" tick={{fill:'var(--color-text-muted)',fontSize:10}} tickLine={false} axisLine={false} minTickGap={24} /><YAxis tickFormatter={value => Number(value) >= 1000 ? `${(value/1000).toFixed(0)}k` : value} tick={{fill:'var(--color-text-muted)',fontSize:10}} axisLine={false} tickLine={false} width={46} /><Tooltip contentStyle={TT} formatter={(value,name) => [money(value),name]} /><Legend formatter={value => <span style={{color:'var(--color-text)'}}>{value}</span>} verticalAlign="top" align="left" iconType="circle" iconSize={7} wrapperStyle={{fontSize:11,paddingBottom:28}} /><Bar dataKey="revenue" name={translate("Revenue")} fill="var(--color-chart-revenue)" radius={[2,2,0,0]} isAnimationActive={false} /><Bar dataKey="expenses" name={translate("Expenses")} fill="var(--color-chart-expenses)" radius={[2,2,0,0]} isAnimationActive={false} /><Line dataKey="profit" name={translate("Profit")} stroke="var(--color-chart-profit)" strokeWidth={2.5} dot={false} isAnimationActive={false} /></ComposedChart></ResponsiveContainer><p className="metric-note">{translate("Paid-order revenue and approved expenses for the selected period.")}</p></> : <Empty>{translate("No financial data for this period.")}</Empty>}
         </Panel>
         <div className="dashboard-side">
@@ -114,7 +114,7 @@ export default function DashboardPage() {
           <div className="delivery-service"><span className="material-symbols-outlined" aria-hidden="true">local_shipping</span><div><strong>{translate("Rehla in-house delivery")}</strong><p>{translate("Managed separately. Not linked to Shopify yet.")}</p><Link className="btn btn-ghost btn-sm" to="/delivery?delivery_type=own_driver" style={{paddingInlineStart:0}}>{translate("View in-house deliveries")}<span className="material-symbols-outlined directional-icon" aria-hidden="true" style={{fontSize:16}}>arrow_forward</span></Link></div></div>
         </Panel>
       </div>
-      <p className="dashboard-footnote">{translate(period.label)} {translate("· Outstanding invoices cover all dates. Inventory reflects current stock.")}</p>
+      <p className="dashboard-footnote">{formatPeriodLabel(period.label)} {translate("· Outstanding invoices cover all dates. Inventory reflects current stock.")}</p>
     </div>
   </DashboardShell>;
 }

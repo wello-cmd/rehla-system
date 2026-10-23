@@ -1,6 +1,6 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { getLanguage, getIntlLocale, setLanguage, subscribeLanguage, translate } from '../src/i18n/index.js';
+import { formatPeriodLabel, getLanguage, getIntlLocale, setLanguage, subscribeLanguage, translate } from '../src/i18n/index.js';
 import { formatEGP, formatDate, formatDateTime, timeAgo } from '../src/lib/formatters.js';
 
 afterEach(() => setLanguage('en'));
@@ -89,4 +89,17 @@ test('status copy is readable in both languages without mutating the original AP
   setLanguage('ar');
   assert.equal(translate(code), 'خرج للتوصيل');
   assert.equal(code, 'out_for_delivery');
+});
+
+
+test('applied period changes language without changing its dates or stored label', () => {
+  const applied = Object.freeze({label:'Oct 2026',start:'2026-10-01',end:'2026-10-31'});
+  assert.equal(formatPeriodLabel(applied.label), 'Oct 2026');
+  setLanguage('ar');
+  assert.equal(formatPeriodLabel(applied.label), 'أكتوبر 2026');
+  assert.equal(formatPeriodLabel('Q2 2026'), 'الربع 2 2026');
+  assert.equal(formatPeriodLabel('H1 2026'), 'النصف 1 2026');
+  assert.equal(applied.label, 'Oct 2026');
+  setLanguage('en');
+  assert.equal(formatPeriodLabel(applied.label), 'Oct 2026');
 });

@@ -37,3 +37,18 @@ export function translate(key, values = {}) {
   }
   return message.replace(/\{(\w+)\}/g, (match, name) => Object.hasOwn(values, name) ? String(values[name]) : match);
 }
+
+// Period labels stay in source language in report state so a language switch
+// changes presentation without re-fetching or relabelling the applied dates.
+export function formatPeriodLabel(label) {
+  if (!label || language === 'en') return translate(label);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const month = /^(\w{3}) (\d{4})$/.exec(label);
+  if (month && months.includes(month[1])) return `${translate(month[1])} ${month[2]}`;
+  const period = /^(Q[1-4]|H[12]|Year) (\d{4})$/.exec(label);
+  if (period) {
+    const prefix = period[1][0] === 'Q' ? 'الربع' : period[1][0] === 'H' ? 'النصف' : 'سنة';
+    return `${prefix}${period[1] === 'Year' ? '' : ` ${period[1][1]}`} ${period[2]}`;
+  }
+  return translate(label);
+}

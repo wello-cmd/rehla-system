@@ -1,4 +1,4 @@
-import { translate } from '../i18n/index.js';
+import { translate, formatPeriodLabel } from '../i18n/index.js';
 // PeriodSelector — period-based date range picker
 // Modes: day | month | quarter | half | year | custom
 import { useState, useEffect } from 'react';
@@ -12,12 +12,12 @@ function lastDay(year, month) {
 function getPeriodDates(mode, year, month, quarter, half, dayDate, customStart, customEnd) {
   const pad = n => String(n).padStart(2, '0');
   if (mode === 'day') {
-    return { start: dayDate, end: dayDate, groupBy: 'day', label: dayDate || translate('Select a day') };
+    return { start: dayDate, end: dayDate, groupBy: 'day', label: dayDate || 'Select a day' };
   }
   if (mode === 'month') {
     const start = `${year}-${pad(month)}-01`;
     const end = `${year}-${pad(month)}-${lastDay(year, month)}`;
-    return { start, end, groupBy: 'day', label: `${translate(MONTHS[month - 1])} ${year}` };
+    return { start, end, groupBy: 'day', label: `${MONTHS[month - 1]} ${year}` };
   }
   if (mode === 'quarter') {
     const qStart = (quarter - 1) * 3 + 1;
@@ -32,14 +32,14 @@ function getPeriodDates(mode, year, month, quarter, half, dayDate, customStart, 
     return { start, end, groupBy: 'month', label: `H${half} ${year}` };
   }
   if (mode === 'year') {
-    return { start: `${year}-01-01`, end: `${year}-12-31`, groupBy: 'month', label: `${translate('Year')} ${year}` };
+    return { start: `${year}-01-01`, end: `${year}-12-31`, groupBy: 'month', label: `Year ${year}` };
   }
   // custom
   return {
     start: customStart,
     end: customEnd,
     groupBy: 'month',
-    label: customStart && customEnd ? `${customStart} → ${customEnd}` : translate('Set dates')
+    label: customStart && customEnd ? `${customStart} → ${customEnd}` : 'Set dates'
   };
 }
 
@@ -167,7 +167,7 @@ export default function PeriodSelector({ onChange }) {
       {/* Current period label */}
       {mode !== 'custom' && current.label && (
         <span style={{ marginInlineStart: 'auto', fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--color-text-dim)' }}>
-          {translate(current.label)}
+          {formatPeriodLabel(current.label)}
         </span>
       )}
     </div>
