@@ -205,7 +205,7 @@ export default function CustomersPage() {
           ))}
         </div>
         <span style={{ fontSize: 12, color: 'var(--color-text-dim)', fontFamily: 'var(--font-mono)' }}>
-          {filtered.length} customers
+          {hasLoaded ? `${filtered.length} customers` : loading ? 'Loading customers…' : 'Customer count unavailable'}
         </span>
       </div>
 
