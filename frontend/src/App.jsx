@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { getRoleLandingPath } from './lib/roles';
+import { getRoleLandingPath, INVOICE_CREATE_ROLES } from './lib/roles';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
@@ -129,7 +129,7 @@ function AppContent() {
         } />
 
         <Route path="/invoices/new" element={
-          <ProtectedRoute allowedRoles={['ceo', 'admin']}>
+          <ProtectedRoute allowedRoles={INVOICE_CREATE_ROLES}>
             <InvoiceCreatePage />
           </ProtectedRoute>
         } />

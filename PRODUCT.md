@@ -24,7 +24,7 @@ Preserve existing data, permissions, authentication, workflows and integration b
 
 ## Brand Commitments
 
-Keep the Rehla name. The replacement visual direction remains to be selected.
+Keep the Rehla name. The approved visual direction is Dispatch Desk (DESIGN.md).
 
 ## Evidence on Hand
 
@@ -33,3 +33,7 @@ Existing interface in frontend/src, with shared layout and UI components. No new
 ## Delivery model confirmed 20 October 2026
 
 Shopify orders are handed to Bosta. Rehla also operates in-house delivery, which is not yet linked to Shopify. Delivery providers are not separate sales channels and must not be counted as independent revenue sources.
+
+## Collection and remittance confirmed
+
+Track customer payment to the courier separately from courier remittance to Rehla. Delivery status alone does not prove remittance. Financial schema and historical reconciliation remain a later, separately specified data pass.

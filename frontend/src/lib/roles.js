@@ -8,3 +8,6 @@ export function getRoleLandingPath(role) {
     default: return '/forbidden';
   }
 }
+
+export const INVOICE_CREATE_ROLES = Object.freeze(['ceo', 'admin']);
+export const canCreateInvoice = role => INVOICE_CREATE_ROLES.includes(role);

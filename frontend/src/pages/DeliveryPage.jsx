@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import LoadNotice from '../components/ui/LoadNotice';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { formatEGP, formatDate, getStatusColor } from '../lib/formatters';
@@ -31,6 +32,9 @@ const CHART_COLORS = ['#6366f1','#3fb950','#f0883e','#58a6ff','#f85149','#a371f7
 const TT = { background:'var(--color-bg-elevated)', border:'1px solid var(--color-border)', color:'var(--color-text)', fontSize:12, borderRadius:6 };
 
 export default function DeliveryPage() {
+  const loadSequence = useRef(0);
+  const [loadError, setLoadError] = useState(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [searchParams] = useSearchParams();
   const {user} = useAuth();
   const canReport = ['admin','ceo','dispatcher','accountant'].includes(user?.role);
@@ -60,6 +64,8 @@ export default function DeliveryPage() {
   const [quickDriverId, setQuickDriverId] = useState('');
 
   async function fetchData() {
+    const request = ++loadSequence.current;
+    setLoadError(null);
     setLoading(true);
     try {
       const params = new URLSearchParams(Object.entries(filters).filter(([, value]) => value));
@@ -69,14 +75,16 @@ export default function DeliveryPage() {
         canReport ? api.get('/delivery/summary') : Promise.resolve(null),
         canReport ? api.get('/delivery/analytics') : Promise.resolve(null)
       ]);
+      if (request !== loadSequence.current) return;
+      setHasLoaded(true);
       setDeliveries(ordersData);
       setDrivers(driversData);
       setSummary(summaryData);
       setAnalytics(analyticsData);
     } catch (err) {
-      toast.error(err.message || 'Failed to load delivery module');
+      if (request === loadSequence.current) setLoadError(err.message || 'Could not load deliveries.');
     } finally {
-      setLoading(false);
+      if (request === loadSequence.current) setLoading(false);
     }
   }
 
@@ -242,11 +250,13 @@ export default function DeliveryPage() {
 
   return (
     <DashboardShell title="Delivery Management">
+      <LoadNotice error={loadError} loading={loading} onRetry={fetchData} stale={hasLoaded} />
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
         {[['dispatcher', 'Dispatcher'], ['dispatch-queue', 'Dispatch Queue'], ['drivers', 'Drivers'], ['analytics', 'Analytics']].filter(([id]) => id === 'dispatcher' || (id === 'drivers' ? canManageDrivers : id === 'analytics' ? canReport : canDispatch)).map(([id, label]) => (
           <button
             key={id}
             className={`btn ${activeTab === id ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+            aria-pressed={activeTab === id}
             onClick={() => { setActiveTab(id); if (id === 'dispatch-queue') fetchQueue(); }}
           >
             {label}
@@ -256,7 +266,7 @@ export default function DeliveryPage() {
 
       {activeTab === 'dispatcher' && (
         <>
-          {canReport && <SummaryCards summary={summary} />}
+          {canReport && hasLoaded && <SummaryCards summary={summary} />}
 
           <form onSubmit={applyFilters} className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
             <select className="input select" aria-label="Filter by delivery status" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
@@ -296,7 +306,7 @@ export default function DeliveryPage() {
                 <tbody>
                   {loading ? (
                     <tr><td colSpan="9" style={{ padding: 32, textAlign: 'center' }}>Loading deliveries...</td></tr>
-                  ) : deliveries.length === 0 ? (
+                  ) : loadError && !hasLoaded ? <tr><td colSpan="9" style={{padding:32}}>Delivery data is unavailable. Use Retry above.</td></tr> : deliveries.length === 0 ? (
                     <tr><td colSpan="9" style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-dim)' }}>No delivery orders found.</td></tr>
                   ) : deliveries.map(delivery => (
                     <tr key={delivery.id}>

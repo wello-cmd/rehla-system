@@ -1,8 +1,12 @@
 import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { getPageParent } from '../../lib/navigation';
 import Sidebar from './Sidebar';
 import { Toaster } from 'react-hot-toast';
 
 export default function DashboardShell({ children, title, subtitle, actions }) {
+  const {pathname} = useLocation();
+  const parent = getPageParent(pathname);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -29,7 +33,7 @@ export default function DashboardShell({ children, title, subtitle, actions }) {
         </div>
 
         <div className="workspace-bar">
-          <p>Workspace <span aria-hidden="true">/</span> <strong>{title === 'Business overview' ? 'Overview' : title || 'Rehla'}</strong></p>
+          <p>Workspace <span aria-hidden="true">/</span> {parent && <><Link to={parent.path}>{parent.label}</Link><span aria-hidden="true">/</span></>}<strong>{title === 'Business overview' ? 'Overview' : title || 'Rehla'}</strong></p>
           <span className="workspace-currency">EGP <span className="material-symbols-outlined" aria-hidden="true">language</span></span>
         </div>
 

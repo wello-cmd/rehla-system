@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, Link } from 'react-router-dom';
+import { isNavigationActive } from '../../lib/navigation';
 import ThemeToggle from '../ui/ThemeToggle';
 
 const NAV_GROUPS = [
@@ -138,7 +139,7 @@ export default function Sidebar({ isOpen, onClose }) {
             const visible = group.items.filter(i => i.roles.includes(user?.role));
             return visible.length ? <div className="nav-group" key={group.label}>
               <p className="nav-group-label">{group.label}</p>
-              {visible.map(item => <Link key={item.path} to={item.path} aria-current={location.pathname === item.path ? 'page' : undefined} className="nav-link">
+              {visible.map(item => <Link key={item.path} to={item.path} aria-current={isNavigationActive(item.path, location.pathname) ? 'page' : undefined} className="nav-link">
                 <span className="material-symbols-outlined" aria-hidden="true">{item.icon}</span><span>{item.label}</span>
               </Link>)}
             </div> : null;

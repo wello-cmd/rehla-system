@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import LoadNotice from '../components/ui/LoadNotice';
+import { useAuth } from '../context/AuthContext';
+import { canCreateInvoice } from '../lib/roles';
 import { api } from '../lib/api';
 import { formatEGP, formatNumber, formatDate, getStatusColor } from '../lib/formatters';
 import { useNavigate } from 'react-router-dom';
@@ -6,6 +9,9 @@ import DashboardShell from '../components/layout/DashboardShell';
 import toast from 'react-hot-toast';
 
 export default function InvoicesPage() {
+  const {user} = useAuth();
+  const [readError, setReadError] = useState(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [invoices, setInvoices] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,16 +27,18 @@ export default function InvoicesPage() {
   const navigate = useNavigate();
 
   async function fetchInvoices() {
+    setReadError(null);
+    setLoading(true);
     try {
       const [invData, summaryData] = await Promise.all([
         api.get('/invoices'),
         api.get('/invoices/summary')
       ]);
+      setHasLoaded(true);
       setInvoices(invData);
       setSummary(summaryData);
     } catch (err) {
-      toast.error('Failed to load invoices');
-      console.error(err);
+      setReadError(err.message || 'Could not load invoices.');
     } finally {
       setLoading(false);
     }
@@ -134,7 +142,8 @@ export default function InvoicesPage() {
 
   return (
     <DashboardShell title="Invoice Management">
-      {loading ? renderSkeleton() : (
+      <LoadNotice error={readError} loading={loading} onRetry={fetchInvoices} stale={hasLoaded} />
+      {loading ? renderSkeleton() : readError && !hasLoaded ? null : (
         <>
           {/* KPI Summary Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
@@ -170,11 +179,13 @@ export default function InvoicesPage() {
                 style={{ maxWidth: '280px' }}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                aria-label="Search invoices"
                 placeholder="Search invoice number, client..."
               />
               <select
                 className="input select"
                 style={{ maxWidth: '160px' }}
+                aria-label="Filter invoices by status"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
@@ -192,9 +203,9 @@ export default function InvoicesPage() {
               <button className="btn btn-secondary" onClick={handleFlagOverdue}>
                 Check Overdue
               </button>
-              <button className="btn btn-primary" onClick={() => navigate('/invoices/new')}>
+              {canCreateInvoice(user?.role) && <button className="btn btn-primary" onClick={() => navigate('/invoices/new')}>
                 New Invoice
-              </button>
+              </button>}
             </div>
           </div>
 

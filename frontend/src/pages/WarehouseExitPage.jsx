@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, lazy, Suspense } from 'react';
+import LoadNotice from '../components/ui/LoadNotice';
 import { api } from '../lib/api';
 import { prepareCheckoutAttempt } from '../lib/checkoutAttempt';
 import DashboardShell from '../components/layout/DashboardShell';
@@ -19,6 +20,7 @@ export default function WarehouseExitPage() {
   const [orderInput, setOrderInput] = useState('');
   const [attachedOrder, setAttachedOrder] = useState(null); // pack-progress object or null
   const [attaching, setAttaching] = useState(false);
+  const [queueError, setQueueError] = useState(null);
   const [queue, setQueue] = useState([]);
   const [queueLoading, setQueueLoading] = useState(false);
 
@@ -28,9 +30,10 @@ export default function WarehouseExitPage() {
 
   async function loadQueue() {
     setQueueLoading(true);
+    setQueueError(null);
     try {
       setQueue(await api.get('/inventory/warehouse/queue'));
-    } catch { /* non-critical */ }
+    } catch { setQueueError('Could not load the ready-to-ship queue.'); }
     finally { setQueueLoading(false); }
   }
 
@@ -196,14 +199,17 @@ export default function WarehouseExitPage() {
               </button>
             </form>
 
-            {queue.length > 0 && (
+            {(
+
               <div style={{ marginTop: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <span style={{ fontSize: 12, color: 'var(--color-text-dim)' }}>Ready to ship ({queue.length})</span>
                   <button className="btn btn-secondary btn-sm" type="button" onClick={loadQueue} disabled={queueLoading} style={{ fontSize: 11 }}>
-                    {queueLoading ? '...' : '⟲'}
+                    {queueLoading ? 'Loading…' : 'Refresh queue'}
                   </button>
                 </div>
+                <LoadNotice error={queueError} loading={queueLoading} onRetry={loadQueue} stale={queue.length > 0} />
+                {!queueLoading && !queueError && queue.length === 0 && <p style={{fontSize:12,color:'var(--color-text-muted)'}}>No orders are ready to ship.</p>}
                 {queue.slice(0, 6).map((q, i) => (
                   <button
                     key={q.id}

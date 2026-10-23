@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { formatEGP } from '../lib/formatters';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import DashboardShell from '../components/layout/DashboardShell';
 import toast from 'react-hot-toast';
 
@@ -113,15 +113,15 @@ export default function InvoiceCreatePage() {
   }
 
   return (
-    <DashboardShell title="Create New Invoice">
+    <DashboardShell title="Create invoice" actions={<Link className="btn btn-secondary" to="/invoices">Back to invoices</Link>}>
       <form onSubmit={handleSubmit} style={{ maxWidth: '800px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '32px' }}>
           {/* Client Selection & Customer details */}
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>Client Information</p>
             <div>
-              <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>B2B Client (Optional)</label>
-              <select className="input select" value={clientId} onChange={handleClientChange}>
+              <label htmlFor="invoice-client" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>B2B Client (Optional)</label>
+              <select id="invoice-client" className="input select" value={clientId} onChange={handleClientChange}>
                 <option value="">-- Custom/Individual Customer --</option>
                 {clients.map(c => (
                   <option key={c.id} value={c.id}>
@@ -131,8 +131,8 @@ export default function InvoiceCreatePage() {
               </select>
             </div>
             <div>
-              <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Customer Contact Name</label>
-              <input
+              <label htmlFor="invoice-customer" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Customer Contact Name</label>
+              <input id="invoice-customer"
                 className="input"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
@@ -141,8 +141,8 @@ export default function InvoiceCreatePage() {
               />
             </div>
             <div>
-              <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Customer Email (Optional)</label>
-              <input
+              <label htmlFor="invoice-email" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Customer Email (Optional)</label>
+              <input id="invoice-email"
                 type="email"
                 className="input"
                 value={customerEmail}
@@ -156,8 +156,8 @@ export default function InvoiceCreatePage() {
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <p className="text-label" style={{ color: 'var(--color-text-dim)' }}>Dates & Notes</p>
             <div>
-              <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Issue Date</label>
-              <input
+              <label htmlFor="invoice-issued" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Issue Date</label>
+              <input id="invoice-issued"
                 type="date"
                 className="input"
                 value={issueDate}
@@ -166,8 +166,8 @@ export default function InvoiceCreatePage() {
               />
             </div>
             <div>
-              <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Due Date</label>
-              <input
+              <label htmlFor="invoice-due" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Due Date</label>
+              <input id="invoice-due"
                 type="date"
                 className="input"
                 value={dueDate}
@@ -176,8 +176,8 @@ export default function InvoiceCreatePage() {
               />
             </div>
             <div>
-              <label className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Memo / Notes</label>
-              <textarea
+              <label htmlFor="invoice-notes" className="text-label" style={{ fontSize: '10px', display: 'block', marginBottom: '6px' }}>Memo / Notes</label>
+              <textarea id="invoice-notes"
                 className="input"
                 style={{ height: '78px', resize: 'none' }}
                 value={notes}
@@ -203,6 +203,7 @@ export default function InvoiceCreatePage() {
                 <div className="item-desc">
                   <input
                     className="input"
+                    aria-label={`Description for item ${index + 1}`}
                     value={item.description}
                     onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                     placeholder="Description / Product name"
@@ -215,6 +216,7 @@ export default function InvoiceCreatePage() {
                       type="number"
                       min="1"
                       className="input"
+                      aria-label={`Quantity for item ${index + 1}`}
                       value={item.quantity}
                       onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value, 10) || '')}
                       placeholder="Qty"
@@ -227,6 +229,7 @@ export default function InvoiceCreatePage() {
                       step="0.01"
                       min="0.01"
                       className="input"
+                      aria-label={`Unit price for item ${index + 1}`}
                       value={item.unit_price}
                       onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
                       placeholder="Unit Price"
@@ -240,7 +243,7 @@ export default function InvoiceCreatePage() {
                 <button
                   type="button"
                   className="btn btn-danger btn-sm item-delete"
-                  onClick={() => removeItem(index)}
+                  aria-label={`Remove item ${index + 1}`} onClick={() => removeItem(index)}
                   disabled={items.length === 1}
                   style={{ padding: '12px' }}
                 >

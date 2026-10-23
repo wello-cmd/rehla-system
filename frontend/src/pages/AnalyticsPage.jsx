@@ -1,9 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatNumber } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
 import PeriodSelector from '../components/PeriodSelector';
-import toast from 'react-hot-toast';
+import { createAnalyticsReportLoader } from '../lib/analyticsReport';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   Legend, LineChart, Line, PieChart, Pie, Cell, ComposedChart
@@ -26,51 +26,19 @@ function KpiCard({ label, value, sub, color }) {
 
 export default function AnalyticsPage() {
   const [activeTab, setActiveTab]     = useState('sales');
-  const [loading, setLoading]         = useState(false);
-  const [period, setPeriod]           = useState({});
-  const [salesData, setSalesData]     = useState(null);
-  const [topProducts, setTopProducts] = useState(null);
-  const [productData, setProductData] = useState(null);
-  const [deliveryData, setDeliveryData]   = useState(null);
-  const [costComp, setCostComp]           = useState(null);
-  const [finKpis, setFinKpis]             = useState([]);
-
-  const fetchAll = useCallback(async (p) => {
-    setLoading(true);
-    try {
-      const parts = [
-        p.start   ? `start=${p.start}`     : '',
-        p.end     ? `end=${p.end}`         : '',
-        p.groupBy ? `groupBy=${p.groupBy}` : '',
-      ].filter(Boolean);
-      const qs = parts.length ? `?${parts.join('&')}` : '';
-      const dqs = [p.start ? `start=${p.start}` : '', p.end ? `end=${p.end}` : ''].filter(Boolean);
-      const delQ = dqs.length ? `?${dqs.join('&')}` : '';
-
-      const [sales, top, prod, deliv, cost, fin] = await Promise.all([
-        api.get(`/analytics/sales${qs}`),
-        api.get(`/analytics/top-products${qs}`),
-        api.get('/analytics/products'),
-        api.get(`/analytics/delivery${delQ}`),
-        api.get(`/analytics/delivery/cost-comparison${delQ}`),
-        api.get(`/analytics/financial-kpis${qs}`),
-      ]);
-      setSalesData(sales);
-      setTopProducts(top);
-      setProductData(prod);
-      setDeliveryData(deliv);
-      setCostComp(cost);
-      setFinKpis(fin);
-    } catch {
-      toast.error('Failed to load analytics');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [report, setReport] = useState({ requestedPeriod: {}, appliedPeriod: null, data: null, loading: false, error: null });
+  const [loader] = useState(() => createAnalyticsReportLoader(url => api.get(url), setReport));
+  const { loading, requestedPeriod, appliedPeriod, error } = report;
+  const period = appliedPeriod || {};
+  const salesData = report.data?.sales;
+  const topProducts = report.data?.topProducts;
+  const productData = report.data?.products;
+  const deliveryData = report.data?.delivery;
+  const costComp = report.data?.costs;
+  const finKpis = report.data?.finance || [];
 
   function handlePeriod(p) {
-    setPeriod(p);
-    fetchAll(p);
+    loader.load(p);
   }
 
   const TABS = ['sales','products','delivery','financial'];
@@ -95,7 +63,7 @@ export default function AnalyticsPage() {
         {/* Tabs */}
         <div style={{ display:'flex', gap:4, borderBottom:'1px solid var(--color-border-light)', paddingBottom:4 }}>
           {TABS.map(t => (
-            <button key={t} onClick={() => setActiveTab(t)} className="btn btn-sm" style={{
+            <button key={t} aria-pressed={activeTab === t} onClick={() => setActiveTab(t)} className="btn btn-sm" style={{
               background:   activeTab===t ? 'var(--color-bg-active)' : 'transparent',
               borderColor:  activeTab===t ? 'var(--color-border)'    : 'transparent',
               color:        activeTab===t ? 'var(--color-text)'      : 'var(--color-text-muted)',
@@ -110,14 +78,23 @@ export default function AnalyticsPage() {
           )}
         </div>
 
+        {error && (
+          <div className="card" role="alert">
+            <p>Could not load {requestedPeriod.label || 'the requested period'}. {error}</p>
+            <p>{appliedPeriod ? `Showing the last successful report: ${appliedPeriod.label || 'All time'}. These results have not refreshed.` : 'No analytics report is available. Values are unavailable until loading succeeds.'}</p>
+            <button className="btn btn-secondary btn-sm" onClick={() => loader.load(requestedPeriod)}>Retry</button>
+          </div>
+        )}
+
         {loading && (
           <div style={{ padding:'60px 0', textAlign:'center', color:'var(--color-text-dim)' }}>
+            <p role="status">Loading {requestedPeriod.label || 'analytics'}…</p>
             <div className="skeleton" style={{ height:40, marginBottom:16 }} />
             <div className="skeleton" style={{ height:300 }} />
           </div>
         )}
 
-        {!loading && (
+        {!loading && report.data && (
           <>
             {/* ── SALES ── */}
             {activeTab === 'sales' && salesData && (

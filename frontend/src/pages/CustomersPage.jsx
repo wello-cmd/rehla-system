@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { api } from '../lib/api';
 import { formatEGP, formatDate } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
+import LoadNotice from '../components/ui/LoadNotice';
 import toast from 'react-hot-toast';
 
 function Badge({ status }) {
@@ -13,6 +14,9 @@ function Badge({ status }) {
 }
 
 export default function CustomersPage() {
+  const csvRef = useRef(null);
+  const [loadError, setLoadError] = useState(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [customers, setCustomers]         = useState([]);
   const [anonymousCount, setAnonCount]    = useState(0);
   const [anonymousRevenue, setAnonRev]    = useState(0);
@@ -25,13 +29,15 @@ export default function CustomersPage() {
 
   async function load() {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await api.get('/customers');
       setCustomers(data.customers || []);
       setAnonCount(data.anonymousCount || 0);
       setAnonRev(data.anonymousRevenue || 0);
+      setHasLoaded(true);
     } catch {
-      toast.error('Failed to load customers');
+      setLoadError('Could not load customers.');
     } finally {
       setLoading(false);
     }
@@ -104,24 +110,25 @@ export default function CustomersPage() {
 
   return (
     <DashboardShell title="Customers">
+      <LoadNotice error={loadError} loading={loading} onRetry={load} stale={hasLoaded} />
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 14, marginBottom: 24 }}>
         <div className="card">
           <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>Total Customers</p>
-          <p style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{customers.length}</p>
+          <p style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{hasLoaded ? customers.length : loading ? 'Loading…' : 'Unavailable'}</p>
         </div>
         <div className="card">
           <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>Total Orders</p>
-          <p style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{totalOrders}</p>
+          <p style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{hasLoaded ? totalOrders : loading ? 'Loading…' : 'Unavailable'}</p>
         </div>
         <div className="card">
           <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>Total Revenue</p>
-          <p style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{formatEGP(totalRevenue)}</p>
+          <p style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{hasLoaded ? formatEGP(totalRevenue) : loading ? 'Loading…' : 'Unavailable'}</p>
         </div>
         <div className="card">
           <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 6 }}>Repeat Customers</p>
           <p style={{ fontSize: 28, fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
-            {customers.filter(c => c.order_count > 1).length}
+            {hasLoaded ? customers.filter(c => c.order_count > 1).length : loading ? 'Loading…' : 'Unavailable'}
           </p>
           <p style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>
             {customers.length > 0
@@ -157,7 +164,7 @@ export default function CustomersPage() {
 
       {/* Search + Sort */}
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
-        <label
+        <button type="button" disabled={importing} onClick={() => csvRef.current?.click()}
           style={{
             display: 'flex', alignItems: 'center', gap: 6, cursor: importing ? 'not-allowed' : 'pointer',
             padding: '6px 12px', borderRadius: 4, border: '1px solid var(--color-border)',
@@ -168,11 +175,11 @@ export default function CustomersPage() {
         >
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>upload_file</span>
           {importing ? 'Importing…' : 'Import Shopify CSV'}
-          <input type="file" accept=".csv" style={{ display: 'none' }} onChange={handleCsvImport} disabled={importing} />
-        </label>
+        </button>
+        <input ref={csvRef} aria-label="Import Shopify customers CSV" type="file" accept=".csv" hidden onChange={handleCsvImport} disabled={importing} />
         <input
           className="input"
-          placeholder="Search by name, phone, or email..."
+          aria-label="Search customers" placeholder="Search by name, phone, or email..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{ flex: 1, minWidth: 240, padding: '8px 12px', fontSize: 13 }}
@@ -185,7 +192,7 @@ export default function CustomersPage() {
           ].map(s => (
             <button
               key={s.id}
-              onClick={() => setSortBy(s.id)}
+              aria-pressed={sortBy === s.id} onClick={() => setSortBy(s.id)}
               className="btn btn-sm"
               style={{
                 background:  sortBy === s.id ? 'var(--color-bg-active)' : 'transparent',
@@ -207,7 +214,7 @@ export default function CustomersPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[1,2,3,4,5].map(i => <div key={i} className="skeleton" style={{ height: 56 }} />)}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : loadError && !hasLoaded ? null : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-dim)' }}>
           No customers found
         </div>
@@ -217,7 +224,6 @@ export default function CustomersPage() {
             <div key={c.key} className="card" style={{ padding: 0, overflow: 'hidden' }}>
               {/* Customer row */}
               <div
-                onClick={() => setExpanded(expanded === c.key ? null : c.key)}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '2fr 1.4fr 1.6fr 80px 100px 110px 90px 32px',
@@ -231,7 +237,7 @@ export default function CustomersPage() {
               >
                 {/* Name */}
                 <div>
-                  <p style={{ fontWeight: 600, fontSize: 14 }}>{c.name || '(No name)'}</p>
+                  <button type="button" className="customer-expand" aria-expanded={expanded === c.key} aria-controls={`customer-orders-${encodeURIComponent(c.key)}`} onClick={() => setExpanded(expanded === c.key ? null : c.key)}>{c.name || '(No name)'}<span className="material-symbols-outlined" aria-hidden="true">{expanded === c.key ? 'expand_less' : 'expand_more'}</span></button>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 2 }}>
                     {c.order_count > 1 && (
                       <span style={{ fontSize: 10, color: 'var(--color-success)', fontWeight: 500 }}>
@@ -313,7 +319,7 @@ export default function CustomersPage() {
 
               {/* Expanded order history */}
               {expanded === c.key && (
-                <div style={{ borderTop: '1px solid var(--color-border-light)', background: 'var(--color-bg)', padding: '12px 16px' }}>
+                <div id={`customer-orders-${encodeURIComponent(c.key)}`} style={{ borderTop: '1px solid var(--color-border-light)', background: 'var(--color-bg)', padding: '12px 16px' }}>
                   <p className="text-label" style={{ color: 'var(--color-text-dim)', marginBottom: 10, fontSize: 11 }}>
                     ORDER HISTORY ({c.orders.length}{c.order_count > 20 ? '+' : ''})
                   </p>

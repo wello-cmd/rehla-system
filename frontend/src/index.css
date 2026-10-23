@@ -941,3 +941,9 @@ button, input, select, textarea { font:inherit; }
   .login-form-wrap { max-width:420px; }
 }
 @media (prefers-reduced-motion:reduce) { .spinner { animation:none; } .nav-link { transition:none; } }
+
+.customer-expand { background:transparent; color:var(--color-text); border:0; padding:0; cursor:pointer; font-size:14px; font-weight:600; text-align:left; display:flex; align-items:center; gap:6px; min-height:36px; }
+.customer-expand:hover { color:var(--color-brand); }
+.customer-expand .material-symbols-outlined { font-size:18px; }
+.workspace-bar a { color:var(--color-text-muted); }
+@media(max-width:768px) { .customer-expand { min-height:44px; } }

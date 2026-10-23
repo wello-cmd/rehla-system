@@ -1,6 +1,7 @@
 // Inventory Management Page — FR-WH-01 through FR-WH-15
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { api } from '../lib/api';
+import { buildBarcodeSelection, barcodeCopies } from '../lib/barcodeSelection';
 import { formatEGP, formatNumber, getStatusColor } from '../lib/formatters';
 import DashboardShell from '../components/layout/DashboardShell';
 import AccessibleDialog from '../components/ui/AccessibleDialog';
@@ -9,6 +10,9 @@ import toast from 'react-hot-toast';
 export default function InventoryPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [readError, setReadError] = useState('');
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const inventoryRequest = useRef(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -144,6 +148,8 @@ export default function InventoryPage() {
   }
 
   async function fetchProducts() {
+    const request = ++inventoryRequest.current;
+    setReadError('');
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -151,11 +157,13 @@ export default function InventoryPage() {
       if (endDate) params.append('end_date', endDate);
       
       const data = await api.get(`/inventory?${params.toString()}`);
+      if (request !== inventoryRequest.current) return;
       setProducts(data);
-    } catch (err) {
-      toast.error('Failed to load inventory');
+      setHasLoaded(true);
+    } catch {
+      if (request === inventoryRequest.current) setReadError('Inventory could not be loaded.');
     } finally {
-      setLoading(false);
+      if (request === inventoryRequest.current) setLoading(false);
     }
   }
 
@@ -339,40 +347,16 @@ export default function InventoryPage() {
   }
 
   async function handleBulkPrintBarcodes() {
-    // Build items payload from selections
-    const items = [];
-    for (const [productId, variantIds] of Object.entries(bulkVariantSelections)) {
-      const filtered = variantIds.filter(v => v !== '__product__');
-      if (variantIds.includes('__product__') || filtered.length === 0) {
-        items.push({ product_id: productId, variant_ids: [] });
-      } else {
-        items.push({ product_id: productId, variant_ids: filtered });
-      }
-    }
-    if (items.length === 0) {
-      toast.error('No products/variants selected for barcodes.');
+    const plan = bulkPrintPlan;
+    if (!plan.total) {
+      toast.error('No products/variants selected with printable copies.');
       return;
     }
     try {
-      const result = await api.post('/inventory/barcode/bulk-variants', { items });
+      const result = await api.post('/inventory/barcode/bulk-variants', { items: plan.items });
+      const copiesFor = item => barcodeCopies(plan, item);
 
-      // Resolve how many copies to print per label.
-      // "Match stock" prints one sticker per physical unit; otherwise use the global copies count.
-      const stockByVariant = {};
-      const stockByProduct = {};
-      for (const p of bulkBarcodeProducts) {
-        stockByProduct[p.id] = Number(p.stock_quantity) || 0;
-        for (const v of (p.variants || [])) stockByVariant[v.id] = Number(v.stock_quantity) || 0;
-      }
-      const PER_LABEL_CAP = 200; // guard against runaway print jobs
-      const copiesFor = (item) => {
-        const n = bulkUseStock
-          ? (item.variant_id ? stockByVariant[item.variant_id] : stockByProduct[item.id]) ?? 0
-          : Number(bulkCopies) || 1;
-        return Math.max(0, Math.min(n, PER_LABEL_CAP));
-      };
-
-      const printable = result.filter(i => i.barcode_image);
+      const printable = result.filter(i => i.barcode_image && copiesFor(i) > 0);
       const totalLabels = printable.reduce((s, i) => s + copiesFor(i), 0);
       if (totalLabels === 0) {
         toast.error('Nothing to print — selected items have 0 copies (check stock or copies count).');
@@ -440,23 +424,11 @@ export default function InventoryPage() {
     });
   }, [products, searchTerm, sortBy]);
 
-  // Live count of physical labels that will print, given current variant + copies selections
-  const bulkLabelTotal = useMemo(() => {
-    let total = 0;
-    for (const p of bulkBarcodeProducts) {
-      const sel = bulkVariantSelections[p.id] || [];
-      const realVariantIds = sel.filter(v => v !== '__product__');
-      if (sel.includes('__product__') || realVariantIds.length === 0) {
-        total += bulkUseStock ? (Number(p.stock_quantity) || 0) : Number(bulkCopies) || 1;
-      } else {
-        for (const vid of realVariantIds) {
-          const v = (p.variants || []).find(x => x.id === vid);
-          total += bulkUseStock ? (Number(v?.stock_quantity) || 0) : Number(bulkCopies) || 1;
-        }
-      }
-    }
-    return total;
-  }, [bulkBarcodeProducts, bulkVariantSelections, bulkCopies, bulkUseStock]);
+  // The preview, request, and printed output share one normalized selection.
+  const bulkPrintPlan = useMemo(() => buildBarcodeSelection(
+    bulkBarcodeProducts, bulkVariantSelections, { copies: bulkCopies, useStock: bulkUseStock }
+  ), [bulkBarcodeProducts, bulkVariantSelections, bulkCopies, bulkUseStock]);
+  const bulkLabelTotal = bulkPrintPlan.total;
 
   const lowStockCount = useMemo(() => {
     return products.filter(p => p.stock_quantity < 10).length;
@@ -472,8 +444,17 @@ export default function InventoryPage() {
 
   return (
     <DashboardShell title="Inventory Management">
+      {readError && (
+        <div className="card" role="alert" style={{ marginBottom: 16 }}>
+          <p>{readError} {hasLoaded ? 'Showing the last successful inventory. Stock and movement figures may be out of date or reflect the previous movement period.' : 'Stock totals are unavailable.'}</p>
+          <button className="btn btn-secondary btn-sm" onClick={fetchProducts} disabled={loading}>Retry inventory</button>
+        </div>
+      )}
+      <p style={{ color: 'var(--color-text-muted)', marginBottom: 12, fontSize: 13 }}>
+        Stock and retail value show the latest loaded snapshot. Movement dates apply only to Left Warehouse and Sold.
+      </p>
       {/* Summary Row */}
-      <div style={STYLES.summaryGrid}>
+      {hasLoaded ? <div style={STYLES.summaryGrid}>
         <div className="card" style={STYLES.summaryCard}>
           <p className="text-label" style={STYLES.cardLabel}>Total SKUs</p>
           <p className="font-mono" style={STYLES.cardValueMono}>{formatNumber(products.length)}</p>
@@ -490,7 +471,7 @@ export default function InventoryPage() {
           <p className="text-label" style={STYLES.cardLabel}>Retail Value</p>
           <p className="font-mono" style={STYLES.cardValueRetail}>{formatEGP(retailValue)}</p>
         </div>
-      </div>
+      </div> : <div className="card" style={{ marginBottom: 16 }} role="status">{loading ? 'Loading inventory totals…' : 'Inventory totals unavailable'}</div>}
 
       {/* Actions Bar */}
       <div className="inv-actions" style={STYLES.actionsBar}>
@@ -512,6 +493,7 @@ export default function InventoryPage() {
             <button
               key={s.id}
               onClick={() => setSortBy(s.id)}
+              aria-pressed={sortBy === s.id}
               className="btn btn-sm"
               style={{
                 background:  sortBy === s.id ? 'var(--color-bg-active)' : 'transparent',
@@ -524,7 +506,8 @@ export default function InventoryPage() {
             </button>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div role="group" aria-label="Movement period" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span className="text-label">Movement period</span>
           <input type="date" className="input" value={startDate} onChange={e => setStartDate(e.target.value)} aria-label="Start date" title="Start Date" />
           <span style={{ color: 'var(--color-text-dim)' }}>—</span>
           <input type="date" className="input" value={endDate} onChange={e => setEndDate(e.target.value)} aria-label="End date" title="End Date" />
@@ -536,7 +519,7 @@ export default function InventoryPage() {
           {syncing ? 'Syncing...' : '⟲ Shopify Sync'}
         </button>
         <button className="btn btn-secondary btn-sm" onClick={handleExportCSVClick}>
-          ↓ Export CSV
+          ↓ Export all products
         </button>
         {selectedProducts.length > 0 && (
           <button className="btn btn-primary btn-sm" onClick={handleBulkBarcodeStart}>
@@ -620,7 +603,7 @@ export default function InventoryPage() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={10} style={STYLES.noProductsCell}>No products found</td></tr>
+                <tr><td colSpan={11} style={STYLES.noProductsCell}>{readError && !hasLoaded ? 'Inventory unavailable. Use Retry inventory above.' : 'No products found'}</td></tr>
               )}
             </tbody>
           </table>
@@ -632,7 +615,7 @@ export default function InventoryPage() {
         {loading ? (
           [...Array(5)].map((_, i) => <div key={`mc-skel-${i}`} className="skeleton" style={{ height: 96, borderRadius: 10 }} />)
         ) : filtered.length === 0 ? (
-          <div className="card" style={{ textAlign: 'center', padding: 30, color: 'var(--color-text-dim)' }}>No products found</div>
+          <div className="card" style={{ textAlign: 'center', padding: 30, color: 'var(--color-text-dim)' }}>{readError && !hasLoaded ? 'Inventory unavailable. Use Retry inventory above.' : 'No products found'}</div>
         ) : filtered.map(product => (
           <div key={product.id} className="card" style={{ padding: 14 }}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -823,15 +806,16 @@ export default function InventoryPage() {
                   type="number"
                   min="1"
                   max="200"
+                  step="1"
                   id="barcode-copies" value={bulkCopies}
                   disabled={bulkUseStock}
-                  onChange={e => setBulkCopies(Math.max(1, Math.min(200, Number(e.target.value) || 1)))}
+                  onChange={e => setBulkCopies(Math.max(1, Math.min(200, Math.floor(Number(e.target.value)) || 1)))}
                   style={{ width: 80, opacity: bulkUseStock ? 0.5 : 1 }}
                 />
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12 }}>
                 <input type="checkbox" checked={bulkUseStock} onChange={e => setBulkUseStock(e.target.checked)} />
-                <span>Match stock qty <span style={{ color: 'var(--color-text-dim)' }}>(one label per unit)</span></span>
+                <span>Match stock qty <span style={{ color: 'var(--color-text-dim)' }}>(one label per unit, up to 200 per barcode)</span></span>
               </label>
             </div>
 
@@ -870,8 +854,11 @@ export default function InventoryPage() {
                 </div>
 
                 {product.variants.length === 0 ? (
-                  <p style={{ fontSize: 12, color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
-                    No variants — will use product-level barcode.{' '}
+                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <input type="checkbox" checked={(bulkVariantSelections[product.id] || []).includes('__product__')} onChange={() => toggleBulkVariant(product.id, '__product__')} />
+                      Include product barcode (no variants)
+                    </label>
                     <button
                       type="button"
                       onClick={() => { setShowBulkBarcodeModal(false); openVariants(product); }}
@@ -879,7 +866,7 @@ export default function InventoryPage() {
                     >
                       Add variants
                     </button>
-                  </p>
+                  </div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
                     {product.variants.map(v => {
